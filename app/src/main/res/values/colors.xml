@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Deep dark splash background that matches AstraVeilTheme.AstraBackground. -->
+    <color name="astra_window_background">#FF0B0D12</color>
+    <color name="astra_accent">#FF8B5CF6</color>
+    <color name="astra_teal">#FF2DD4BF</color>
+</resources>

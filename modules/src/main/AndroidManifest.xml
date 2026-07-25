@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  :modules — Astra Module runtime.
+  No components of its own; the runtime is driven by the AstraVeil daemon
+  process which owns a single `ModuleManager` instance.
+-->
+<manifest />

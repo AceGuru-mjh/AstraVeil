@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package astra.v1;
+
+// AstraVeil IPC protocol — spoken between AstraUI (app) and the AstraDaemon
+// (`astrad`) over a Unix Domain Socket at /dev/astra/astrad.sock.
+//
+// Framing on the wire:
+//   [4-byte big-endian length][N-byte AstraRequest  OR  AstraResponse payload]
+//
+// Phase 0: the daemon accepts the request types below and returns JSON-encoded
+// payloads inside AstraResponse.payload. A future revision will replace the
+// JSON string with fully-typed protobuf messages (CapabilityInfo, RootInfo, ...).
+
+option java_package = "com.astraveil.ipc.protobuf";
+option java_multiple_files = true;
+
+// --------------------------------------------------------------------- requests
+
+enum RequestType {
+  REQUEST_TYPE_UNSPECIFIED = 0;
+  REQUEST_TYPE_PING = 1;          // liveness probe
+  REQUEST_TYPE_GET_CAPABILITY = 2; // device capability scan
+  REQUEST_TYPE_GET_PROVIDER = 3;  // active root provider detection
+  REQUEST_TYPE_EXECUTE = 4;       // run a shell command via the active provider
+  REQUEST_TYPE_MODULE_LIST = 5;   // enumerate installed .avm modules
+  REQUEST_TYPE_MODULE_INSTALL = 6;
+  REQUEST_TYPE_MODULE_UNINSTALL = 7;
+  REQUEST_TYPE_PERMISSION_GRANT = 8;
+  REQUEST_TYPE_PERMISSION_REVOKE = 9;
+}
+
+message AstraRequest {
+  RequestType type = 1;
+  string request_id = 2;          // client-generated correlation id
+  string payload = 3;             // request-type-specific JSON (Phase 0)
+}
+
+// -------------------------------------------------------------------- responses
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_OK = 1;
+  STATUS_ERROR = 2;
+  STATUS_UNAUTHORIZED = 3;        // permission denied by the policy engine
+  STATUS_PROVIDER_UNAVAILABLE = 4; // no root backend detected
+}
+
+message AstraResponse {
+  string request_id = 1;          // echoes AstraRequest.request_id
+  Status status = 2;
+  string payload = 3;             // response JSON (Phase 0)
+  string error_message = 4;       // populated when status != STATUS_OK
+}
+
+// -------------------------------------------------------- typed message bodies
+// (reserved for Phase 1; Phase 0 carries JSON strings in `payload` above).
+
+message CapabilityProto {
+  string android_version = 1;
+  int32 api_level = 2;
+  string abi = 3;
+  string kernel_version = 4;
+  string selinux_status = 5;
+  bool root_available = 6;
+  bool overlay_fs = 7;
+  bool namespace = 8;
+  bool hook = 9;
+  string device_model = 10;
+  string device_brand = 11;
+  string fingerprint = 12;
+}
+
+message RootInfoProto {
+  string provider_name = 1;
+  string display_name = 2;
+  string version = 3;
+  int32 version_code = 4;
+  bool su_available = 5;
+  string module_path = 6;
+  repeated string supported_features = 7;
+  bool detected = 8;
+}
+
+message ExecResultProto {
+  int32 exit_code = 1;
+  string stdout = 2;
+  string stderr = 3;
+  bool success = 4;
+}

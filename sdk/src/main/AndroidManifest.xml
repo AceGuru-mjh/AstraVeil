@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  :sdk — public stable API surface for third-party .avm module developers.
+  This module ships no components of its own; it is a pure Kotlin library that
+  third-party modules depend on at compile time.
+-->
+<manifest />

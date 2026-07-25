@@ -1,0 +1,25 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+*.keystore
+!debug.keystore
+
+# Rust / Cargo build artefacts
+/rust/target
+/rust/**/*.rs.bk
+
+# Native build
+/native/build
+/daemon/build
+
+# Local config
+secrets.properties
+*.log

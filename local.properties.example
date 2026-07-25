@@ -1,0 +1,10 @@
+## Copy this file to `local.properties` and adjust the path to your SDK.
+## `local.properties` is git-ignored and machine-specific.
+
+sdk.dir=/home/your-user/Android/Sdk
+
+## Optional: point to the Android NDK if you build the :native module.
+# ndk.dir=/home/your-user/Android/Sdk/ndk/27.0.12077973
+
+## Optional: Rust toolchain for cargo-ndk (used by the :rust crate).
+# rust.toolchain.dir=/home/your-user/.cargo
