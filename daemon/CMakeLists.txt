@@ -36,6 +36,12 @@ set(ASTRAD_SOURCES
     src/module/module_manager.cpp
     src/module/module_permission_checker.cpp
     src/module/module_runtime.cpp
+    src/security/permission.cpp
+    src/security/permission_database.cpp
+    src/security/security_engine.cpp
+    src/security/audit_logger.cpp
+    src/security/risk_engine.cpp
+    src/security/signature_verifier.cpp
     src/provider/provider_manager.cpp
     src/provider/no_root_provider.cpp
     src/provider/magisk_provider.cpp
