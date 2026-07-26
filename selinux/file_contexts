@@ -1,0 +1,8 @@
+# file_contexts — AstraVeil file label assignments
+#
+# Used by load_policy / restorecon at install time to label the Astra
+# on-disk layout so the .te fragments above match.
+
+/dev/astra(/.*)?          u:object_r:astra_socket_t:s0
+/data/astra(/.*)?         u:object_r:astra_data_t:s0
+/data/astra/modules(/.*)? u:object_r:astra_module_data_t:s0

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "updated": "2026-07-26",
+  "categories": [
+    "system-tools",
+    "customization",
+    "performance",
+    "security"
+  ],
+  "modules": [
+    {
+      "id": "example.tool",
+      "name": "Example Tool",
+      "version": "1.0",
+      "author": "developer",
+      "category": "system-tools",
+      "permissions": ["ROOT_ACCESS"],
+      "security_score": 30,
+      "risk_level": "MEDIUM",
+      "description": "Reference AVM module demonstrating the SDK surface."
+    }
+  ]
+}

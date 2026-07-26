@@ -14,6 +14,8 @@ std::string capability_name(Capability c) {
         case Capability::IPC_ACCESS:       return "IPC_ACCESS";
         case Capability::MODULE_RUNTIME:      return "MODULE_RUNTIME";
         case Capability::NAMESPACE_ISOLATION: return "NAMESPACE_ISOLATION";
+        case Capability::ASTRA_ROOT:          return "ASTRA_ROOT";
+        case Capability::OVERLAYFS:           return "OVERLAYFS";
     }
     return "UNKNOWN";
 }
@@ -30,6 +32,8 @@ std::vector<Capability> all_capabilities() {
         Capability::IPC_ACCESS,
         Capability::MODULE_RUNTIME,
         Capability::NAMESPACE_ISOLATION,
+        Capability::ASTRA_ROOT,
+        Capability::OVERLAYFS,
     };
 }
 

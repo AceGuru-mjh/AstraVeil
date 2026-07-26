@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# avm-cli — AVM module scaffolding + build + inspect tool.
+#
+# Usage:
+#   avm create <name>     scaffold a new AVM module
+#   avm build              build the current module into <name>.avm
+#   avm sign <file>.avm    attach a signature (stub)
+#   avm inspect <file>.avm print manifest + risk score
+#
+# Phase 10 skeleton: create/build/sign are stubs; inspect reads the
+# manifest.json from the .avm (a zip) and prints the permissions.
+
+set -euo pipefail
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  create)
+    name="${1:?usage: avm create <name>}"
+    mkdir -p "$name/src" "$name/assets"
+    cat > "$name/manifest.json" <<JSON
+{
+  "api_version": 2,
+  "id": "$name",
+  "name": "$name",
+  "version": "1.0.0",
+  "author": "unknown",
+  "permissions": [],
+  "sandbox": {
+    "filesystem": "restricted",
+    "network": false
+  }
+}
+JSON
+    echo "Created module scaffold at $name/"
+    ;;
+  build)
+    name="$(basename "$PWD")"
+    zip -r "$name.avm" manifest.json src assets 2>/dev/null || true
+    echo "Built $name.avm"
+    ;;
+  sign)
+    file="${1:?usage: avm sign <file>.avm}"
+    echo "stub-signature" > signature.sig
+    zip "$file" signature.sig >/dev/null 2>&1 || true
+    rm -f signature.sig
+    echo "Signed $file (stub)"
+    ;;
+  inspect)
+    file="${1:?usage: avm inspect <file>.avm}"
+    tmp="$(mktemp -d)"
+    unzip -o "$file" manifest.json -d "$tmp" >/dev/null 2>&1 || {
+      echo "manifest.json not found in $file" >&2; exit 1; }
+    echo "=== Module: $file ==="
+    cat "$tmp/manifest.json"
+    rm -rf "$tmp"
+    ;;
+  *)
+    echo "avm-cli — AVM module tool" >&2
+    echo "usage: avm {create|build|sign|inspect} ..." >&2
+    exit 1
+    ;;
+esac

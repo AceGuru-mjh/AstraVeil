@@ -47,6 +47,30 @@ set(ASTRAD_SOURCES
     src/provider/magisk_provider.cpp
     src/provider/kernelsu_provider.cpp
     src/provider/apatch_provider.cpp
+    src/provider/astra_root_provider.cpp
+    src/root/root_runtime.cpp
+    src/root/namespace_manager.cpp
+    src/root/namespace_context.cpp
+    src/root/overlay_manager.cpp
+    src/root/overlay_config.cpp
+    src/root/boot_manager.cpp
+    src/root/command_runtime.cpp
+    src/root/namespace_executor.cpp
+    src/root/file_manager.cpp
+    src/root/mount_manager.cpp
+    src/root/hook_manager.cpp
+    src/root/astra_root.cpp
+    src/platform/android_platform.cpp
+    src/boot/boot_parser.cpp
+    src/boot/android_boot_provider.cpp
+    src/android/property_manager.cpp
+    src/android/zygote_bridge.cpp
+    src/android/system_server_bridge.cpp
+    src/security/selinux_manager.cpp
+    src/security/policy_loader.cpp
+    src/recovery/rollback_manager.cpp
+    src/recovery/crash_guard.cpp
+    src/update/update_manager.cpp
 )
 
 add_executable(astrad ${ASTRAD_SOURCES})

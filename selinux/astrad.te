@@ -1,0 +1,33 @@
+# astrad.te — SELinux policy for the AstraVeil daemon (astrad)
+#
+# AstraRoot does NOT disable SELinux. This policy grants astrad the
+# minimal capability set it needs (sys_admin for mount namespaces,
+# dac_override for overlay upperdir writes, setuid/setgid for the su
+# path) and denies everything else. Enforce-mode safe.
+
+type astrad, domain;
+type astrad_exec, exec_type, file_type;
+
+init_daemon_domain(astrad)
+
+# Capabilities required for the AstraRoot runtime:
+#   sys_admin     — mount namespaces, overlay mounts
+#   dac_override   — write to overlay upperdirs owned by other UIDs
+#   setuid/setgid — drop privileges for sandboxed module processes
+allow astrad self:capability { sys_admin dac_override setuid setgid };
+
+# The daemon reads system files (build.prop, /proc, /sys/fs/selinux).
+allow astrad system_file:file { read open getattr };
+allow astrad system_file:dir  { read search };
+
+# It executes its own helper binaries (su, mount).
+allow astrad astrad_exec:file { read open execute execute_no_trans };
+
+# Overlay upperdirs live under /data/astra.
+type astra_data_t, file_type, data_file_type;
+allow astrad astra_data_t:dir  { create add_name remove_name write read search };
+allow astrad astra_data_t:file { create read write open unlink getattr };
+
+# The Astra socket lives at /dev/astra/astrad.sock.
+type astra_socket_t, file_type;
+allow astrad astra_socket_t:sock_file { create unlink };

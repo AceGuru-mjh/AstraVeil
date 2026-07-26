@@ -23,6 +23,8 @@ enum class Capability {
     IPC_ACCESS,           ///< provider-brokered IPC to modules
     MODULE_RUNTIME,       ///< the AVM module runtime is available
     NAMESPACE_ISOLATION,  ///< full namespace isolation (mnt+pid+user)
+    ASTRA_ROOT,           ///< AstraRoot native backend is active
+    OVERLAYFS,            ///< OverlayFS system layer is mounted
 };
 
 /// Human-readable name of a capability, e.g. "ROOT_ACCESS".
