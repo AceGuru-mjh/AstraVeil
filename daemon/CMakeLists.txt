@@ -41,6 +41,8 @@ set(ASTRAD_SOURCES
     src/ipc/ipc_server.cpp
     src/ipc/request_handler.cpp
     src/provider/provider_registry.cpp
+    src/security_bridge/policy_bridge.cpp
+    src/sandbox/sandbox_manager.cpp
     src/security/permission.cpp
     src/security/permission_database.cpp
     src/security/security_engine.cpp
