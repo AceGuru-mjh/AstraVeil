@@ -30,6 +30,7 @@ set(ASTRAD_SOURCES
     src/sandbox/sandbox.cpp
     src/logger/logger.cpp
     src/permission/no_root_provider.cpp
+    src/provider/provider_detector.cpp
 )
 
 add_executable(astrad ${ASTRAD_SOURCES})

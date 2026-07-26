@@ -10,6 +10,7 @@
 
 #include "astra/daemon.hpp"
 #include "astra/service/permission_service.hpp"
+#include "astra/provider/provider_detector.hpp"
 
 #include <getopt.h>
 
@@ -104,6 +105,8 @@ int main(int argc, char** argv) {
     astra::service::ProviderService provider_service;
     astra::executor::CommandExecutor executor;
     astra::service::PermissionService permission_service;
+    auto root_provider =
+        astra::provider::ProviderDetector::detect();
 
     // Wire the IPC handler. The payload's first byte selects the service;
     // the remainder is a UTF-8 JSON body (ignored by GetCapability /
@@ -123,7 +126,10 @@ int main(int argc, char** argv) {
                 break;
             }
             case RequestType::GetProvider: {
-                response_json = provider_service.detect_provider();
+                response_json =
+                    "{\"provider\":\""
+                    + root_provider->name()
+                    + "\"}";
                 const std::string name = provider_service.detect_provider_name();
                 ctx.active_provider = name;
                 ctx.provider_online.store(name != "none");
