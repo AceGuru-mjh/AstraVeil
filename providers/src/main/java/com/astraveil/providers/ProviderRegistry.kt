@@ -2,6 +2,10 @@ package com.astraveil.providers
 
 import com.astraveil.core.event.AstraEvent
 import com.astraveil.core.event.EventBus
+import com.astraveil.providers.apatch.APatchProvider
+import com.astraveil.providers.astraroot.AstraRootProvider
+import com.astraveil.providers.kernelsu.KernelSUProvider
+import com.astraveil.providers.magisk.MagiskProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
