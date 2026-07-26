@@ -10,6 +10,7 @@
 
 #include "astra/daemon.hpp"
 #include "astra/service/permission_service.hpp"
+#include "astra/provider/provider_manager.hpp"
 
 #include <getopt.h>
 
@@ -103,7 +104,17 @@ int main(int argc, char** argv) {
     astra::service::CapabilityService capability_service;
     astra::service::ProviderService provider_service;
     astra::executor::CommandExecutor executor;
-    astra::service::PermissionService permission_service;
+
+    astra::provider::ProviderManager provider_manager;
+    provider_manager.initialize();
+
+    astra::service::PermissionService permission_service(provider_manager);
+
+    {
+        auto* rp = provider_manager.current();
+        const std::string pname = rp ? rp->name() : "none";
+        ALOGI("astrad: active root provider = %s", pname.c_str());
+    }
 
     // Wire the IPC handler. The payload's first byte selects the service;
     // the remainder is a UTF-8 JSON body (ignored by GetCapability /
@@ -123,10 +134,17 @@ int main(int argc, char** argv) {
                 break;
             }
             case RequestType::GetProvider: {
-                response_json = provider_service.detect_provider();
-                const std::string name = provider_service.detect_provider_name();
-                ctx.active_provider = name;
-                ctx.provider_online.store(name != "none");
+                auto* rp = provider_manager.current();
+                const std::string pname = rp ? rp->name() : "none";
+                const int ptype = rp ? static_cast<int>(rp->type()) : 0;
+                const bool pavail = rp ? rp->available() : false;
+                std::ostringstream po;
+                po << "{\"provider\":\"" << json_escape(pname)
+                   << "\",\"type\":" << ptype
+                   << ",\"available\":" << (pavail ? "true" : "false") << "}";
+                response_json = po.str();
+                ctx.active_provider = pname;
+                ctx.provider_online.store(pname != "none");
                 break;
             }
             case RequestType::Execute: {
