@@ -21,4 +21,9 @@ std::string NoRootProvider::name() const {
     return "none";
 }
 
+std::vector<capability::Capability> NoRootProvider::capabilities() const {
+    // No root backend -> no capabilities.
+    return {};
+}
+
 }  // namespace astra::provider

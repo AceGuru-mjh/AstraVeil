@@ -4,8 +4,10 @@
 
 namespace astra::provider {
 
-/// KernelSU root backend. Detected via /data/adb/ksu.
-class KernelSUProvider final : public RootProvider {
+/// APatch root backend. Patch-based root that injects a su binary by
+/// patching the kernel image directly (no kernel rebuild required).
+/// Detected via /data/adb/ap.
+class APatchProvider final : public RootProvider {
 public:
     RootType type() const override;
     bool available() const override;

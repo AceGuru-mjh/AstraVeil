@@ -14,6 +14,7 @@ public:
         std::string& output
     ) override;
     std::string name() const override;
+    std::vector<capability::Capability> capabilities() const override;
 };
 
 }  // namespace astra::provider
