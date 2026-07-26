@@ -9,6 +9,7 @@
 // `astra.Request` instead of the manual framing.
 
 #include "astra/daemon.hpp"
+#include "astra/service/permission_service.hpp"
 
 #include <getopt.h>
 
@@ -102,6 +103,7 @@ int main(int argc, char** argv) {
     astra::service::CapabilityService capability_service;
     astra::service::ProviderService provider_service;
     astra::executor::CommandExecutor executor;
+    astra::service::PermissionService permission_service;
 
     // Wire the IPC handler. The payload's first byte selects the service;
     // the remainder is a UTF-8 JSON body (ignored by GetCapability /
@@ -128,6 +130,12 @@ int main(int argc, char** argv) {
                 break;
             }
             case RequestType::Execute: {
+                if (!permission_service.can_execute(body)) {
+                    response_json =
+                        "{\"error\":\"permission_denied\"}";
+                    break;
+                }
+
                 // `body` is the shell command to run as the daemon's uid.
                 const auto result = executor.execute(body);
                 std::ostringstream out;
