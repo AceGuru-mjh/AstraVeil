@@ -1,6 +1,7 @@
 #include "astra/execution/execution_pipeline.hpp"
 
 #include "astra/provider/provider_manager.hpp"
+#include "astra/security/policy_bridge.hpp"
 
 #include "astra/logger/logger.hpp"
 
@@ -14,14 +15,28 @@ bool ExecutionPipeline::run(
     const std::string& command
 ) {
     /*
-     * Phase 3:
+     * Phase 2.3:
      *
-     * 根据 Capability 选择 Provider.
+     * The Rust PolicyBridge is now the enforced security boundary.
+     * Before any root operation reaches a provider, Rust must return
+     * ALLOW. The Kotlin PermissionEngine is a fast-path cache; Rust is
+     * the final authority.
      *
-     * For now we delegate to the active provider via the manager and
-     * log the capability tag so the audit trail records it. Permission
-     * / risk / sandbox gates are inserted here in Phase 5.
+     *   ExecutionPipeline
+     *       ↓
+     *   PolicyBridge (Rust)
+     *       ↓ ALLOW?
+     *   Provider
      */
+    PolicyBridge policy;
+    const auto decision = policy.check();
+    if (decision != PolicyResult::ALLOW) {
+        ALOGW("ExecutionPipeline: policy denied capability=%s (%d)",
+              capability.c_str(),
+              decision == PolicyResult::DENY ? 1 : 2);
+        return false;
+    }
+
     auto* provider = manager_.current();
     if (!provider || !provider->available()) {
         ALOGW("ExecutionPipeline: no provider available for capability %s",

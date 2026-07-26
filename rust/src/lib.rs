@@ -22,6 +22,8 @@
 //! fast and reproducible.
 
 pub mod attestation;
+pub mod execution_policy;
+pub mod ffi;
 pub mod policy;
 pub mod sandbox;
 
