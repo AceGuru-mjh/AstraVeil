@@ -13,14 +13,16 @@ namespace astra::capability {
 /// the matrix merges them and the permission engine gates modules
 /// against the result.
 enum class Capability {
-    ROOT_ACCESS,        ///< can elevate to uid 0
-    SYSTEM_WRITE,       ///< can write /system (via overlay/bind)
-    MOUNT_NAMESPACE,    ///< can create mount namespaces
-    KERNEL_INTERFACE,   ///< direct kernel hook / syscall surface
-    BOOT_PATCH,         ///< can patch boot/vendor_boot/init_boot
-    SELINUX_CONTROL,    ///< can set SELinux mode / policies
-    NETWORK,            ///< provider-managed network namespace
-    IPC_ACCESS,         ///< provider-brokered IPC to modules
+    ROOT_ACCESS,          ///< can elevate to uid 0
+    SELINUX_CONTROL,      ///< can set SELinux mode / policies
+    MOUNT_NAMESPACE,      ///< can create mount namespaces
+    BOOT_PATCH,           ///< can patch boot/vendor_boot/init_boot
+    SYSTEM_WRITE,         ///< can write /system (via overlay/bind)
+    KERNEL_INTERFACE,     ///< direct kernel hook / syscall surface
+    NETWORK,              ///< provider-managed network namespace
+    IPC_ACCESS,           ///< provider-brokered IPC to modules
+    MODULE_RUNTIME,       ///< the AVM module runtime is available
+    NAMESPACE_ISOLATION,  ///< full namespace isolation (mnt+pid+user)
 };
 
 /// Human-readable name of a capability, e.g. "ROOT_ACCESS".
@@ -29,8 +31,9 @@ enum class Capability {
 std::string capability_name(Capability c);
 
 /// Every capability in the enum, in declaration order. Used by the
-/// capability matrix to iterate and emit a full report regardless of
-/// which provider is active.
+/// capability matrix (Phase 5) to iterate and emit a full report
+/// regardless of which provider is active, and by the permission
+/// engine (Phase 6/7) to gate module permissions.
 std::vector<Capability> all_capabilities();
 
 }  // namespace astra::capability
