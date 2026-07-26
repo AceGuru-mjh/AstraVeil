@@ -88,3 +88,19 @@ message ExecResultProto {
   string stderr = 3;
   bool success = 4;
 }
+
+// -------------------------------------------------------------- module (Phase 6)
+// AVM module management messages. Carried in AstraRequest/AstraResponse
+// `payload` (as JSON in Phase 0) for InstallModule / RemoveModule /
+// StartModule / StopModule / ListModules requests.
+
+message ModuleInfo {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+}
+
+message ModuleAction {
+  string id = 1;
+  string action = 2;
+}

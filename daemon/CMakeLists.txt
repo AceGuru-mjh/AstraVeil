@@ -32,6 +32,10 @@ set(ASTRAD_SOURCES
     src/capability/capability.cpp
     src/capability/capability_matrix.cpp
     src/capability/capability_detector.cpp
+    src/module/manifest_parser.cpp
+    src/module/module_manager.cpp
+    src/module/module_permission_checker.cpp
+    src/module/module_runtime.cpp
     src/provider/provider_manager.cpp
     src/provider/no_root_provider.cpp
     src/provider/magisk_provider.cpp

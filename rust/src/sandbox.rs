@@ -95,6 +95,50 @@ impl Sandbox {
     }
 }
 
+/// Compact, AVM-facing sandbox policy.
+///
+/// While [`SandboxConfig`] is the full daemon-side description (root
+/// dir, path lists, permission ceiling), [`SandboxPolicy`] is the
+/// simpler declaration that appears inside an AVM module's manifest
+/// `sandbox` block and that the Rust policy engine reasons about. The
+/// daemon's `Sandbox` class is built by expanding a `SandboxPolicy`
+/// into a full `SandboxConfig`.
+///
+/// Fields:
+/// * `filesystem` — one of `"readonly"`, `"restricted"`, `"none"`.
+/// * `network` — whether the module may open sockets.
+/// * `root` — whether the module may escalate to uid 0 (only honoured
+///   when the device capability matrix reports `ROOT_ACCESS`).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SandboxPolicy {
+    pub filesystem: String,
+    pub network: bool,
+    pub root: bool,
+}
+
+impl SandboxPolicy {
+    /// The default restricted policy applied to every AVM module
+    /// unless its manifest explicitly requests otherwise: read-only
+    /// filesystem, no network, no root.
+    pub fn restricted() -> Self {
+        Self {
+            filesystem: "readonly".into(),
+            network: false,
+            root: false,
+        }
+    }
+
+    /// Maximum-lockdown policy: no filesystem access at all, no
+    /// network, no root. Used for untrusted or unsigned modules.
+    pub fn deny_all() -> Self {
+        Self {
+            filesystem: "none".into(),
+            network: false,
+            root: false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
