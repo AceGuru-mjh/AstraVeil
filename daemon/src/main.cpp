@@ -13,6 +13,13 @@
 #include "astra/provider/provider_manager.hpp"
 #include "astra/capability/capability.hpp"
 #include "astra/capability/capability_detector.hpp"
+#include "astra/module/module_manager.hpp"
+#include "astra/module/module_runtime.hpp"
+#include "astra/security/permission.hpp"
+#include "astra/security/security_engine.hpp"
+#include "astra/security/audit_logger.hpp"
+#include "astra/security/risk_engine.hpp"
+#include "astra/security/signature_verifier.hpp"
 
 #include <getopt.h>
 
@@ -22,6 +29,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -59,6 +67,16 @@ enum class RequestType : std::uint8_t {
     Execute             = 0x03,
     Ping                = 0x04,
     GetCapabilityMatrix = 0x05,
+    InstallModule       = 0x06,
+    RemoveModule        = 0x07,
+    StartModule         = 0x08,
+    StopModule          = 0x09,
+    ListModules         = 0x0A,
+    QueryPermission     = 0x0B,
+    GrantPermission     = 0x0C,
+    RevokePermission    = 0x0D,
+    GetRiskScore        = 0x0E,
+    GetAuditLog         = 0x0F,
 };
 
 void print_help(const char* argv0) {
@@ -120,6 +138,20 @@ int main(int argc, char** argv) {
     astra::capability::CapabilityDetector capability_detector;
     auto capability_matrix =
         capability_detector.detect(provider_manager.current());
+
+    // AVM module registry + runtime. The runtime reads the live
+    // capability matrix so module permission checks reflect the current
+    // device + provider state.
+    astra::module::ModuleManager module_manager;
+    astra::module::ModuleRuntime module_runtime(capability_matrix);
+
+    // Security framework: the authorisation decision point (SecurityEngine),
+    // the audit trail (AuditLogger), the risk scorer (RiskEngine), and the
+    // module signature checker (SignatureVerifier).
+    astra::security::SecurityEngine security_engine(capability_matrix);
+    astra::security::AuditLogger audit_logger;
+    astra::security::RiskEngine risk_engine;
+    astra::security::SignatureVerifier signature_verifier;
 
     {
         auto* rp = provider_manager.current();
@@ -204,6 +236,165 @@ int main(int argc, char** argv) {
                 capability_matrix =
                     capability_detector.detect(provider_manager.current());
                 response_json = capability_matrix.json();
+                break;
+            }
+            case RequestType::InstallModule: {
+                // `body` is the on-disk path to the .avm package.
+                const bool ok = module_manager.install(body);
+                response_json = ok
+                    ? "{\"installed\":true}"
+                    : "{\"installed\":false,\"error\":\"install_failed\"}";
+                break;
+            }
+            case RequestType::RemoveModule: {
+                // `body` is the module id.
+                const bool ok = module_manager.remove(body);
+                response_json = ok
+                    ? "{\"removed\":true}"
+                    : "{\"removed\":false,\"error\":\"not_found\"}";
+                break;
+            }
+            case RequestType::StartModule: {
+                // `body` is the module id; find it then ask the runtime
+                // to start it (manifest → permission check → sandbox → load).
+                auto mods = module_manager.list();
+                bool started = false;
+                for (auto& m : mods) {
+                    if (m.manifest.id == body) {
+                        started = module_runtime.start(m);
+                        break;
+                    }
+                }
+                response_json = started
+                    ? "{\"started\":true}"
+                    : "{\"started\":false,\"error\":\"denied_or_not_found\"}";
+                break;
+            }
+            case RequestType::StopModule: {
+                const bool ok = module_runtime.stop(body);
+                response_json = ok
+                    ? "{\"stopped\":true}"
+                    : "{\"stopped\":false}";
+                break;
+            }
+            case RequestType::ListModules: {
+                auto mods = module_manager.list();
+                std::ostringstream mo;
+                mo << "[";
+                bool first = true;
+                for (const auto& m : mods) {
+                    if (!first) mo << ",";
+                    first = false;
+                    mo << "{\"id\":\"" << json_escape(m.manifest.id) << "\""
+                       << ",\"name\":\"" << json_escape(m.manifest.name) << "\""
+                       << ",\"version\":\"" << json_escape(m.manifest.version) << "\""
+                       << ",\"path\":\"" << json_escape(m.path) << "\"}";
+                }
+                mo << "]";
+                response_json = mo.str();
+                break;
+            }
+            case RequestType::QueryPermission: {
+                // body = "<module_id>:<permission>" — resolve and run
+                // the full SecurityEngine decision tree, then audit.
+                const auto sep = body.find(':');
+                if (sep == std::string::npos) {
+                    response_json = "{\"granted\":false,\"message\":\"bad request\"}";
+                    break;
+                }
+                const std::string mod = body.substr(0, sep);
+                const std::string perm_name = body.substr(sep + 1);
+                astra::security::Permission perm;
+                if (!astra::security::permission_from_name(perm_name, perm)) {
+                    response_json = "{\"granted\":false,\"message\":\"unknown permission\"}";
+                    break;
+                }
+                const bool ok = security_engine.authorize(
+                    astra::security::PermissionRequest{mod, perm, ""});
+                audit_logger.log(mod, perm_name, ok);
+                response_json = ok
+                    ? "{\"granted\":true,\"message\":\"allow\"}"
+                    : "{\"granted\":false,\"message\":\"denied\"}";
+                break;
+            }
+            case RequestType::GrantPermission: {
+                // body = "<module_id>:<permission>" — user accepted the
+                // AstraUI permission dialog.
+                const auto sep = body.find(':');
+                if (sep == std::string::npos) {
+                    response_json = "{\"granted\":false}";
+                    break;
+                }
+                const std::string mod = body.substr(0, sep);
+                const std::string perm_name = body.substr(sep + 1);
+                astra::security::Permission perm;
+                if (!astra::security::permission_from_name(perm_name, perm)) {
+                    response_json = "{\"granted\":false}";
+                    break;
+                }
+                const bool ok = security_engine.grant(mod, perm);
+                audit_logger.log(mod, "GRANT:" + perm_name, ok);
+                response_json = ok ? "{\"granted\":true}" : "{\"granted\":false}";
+                break;
+            }
+            case RequestType::RevokePermission: {
+                // body = "<module_id>:<permission>"
+                const auto sep = body.find(':');
+                if (sep == std::string::npos) {
+                    response_json = "{\"revoked\":false}";
+                    break;
+                }
+                const std::string mod = body.substr(0, sep);
+                const std::string perm_name = body.substr(sep + 1);
+                astra::security::Permission perm;
+                if (!astra::security::permission_from_name(perm_name, perm)) {
+                    response_json = "{\"revoked\":false}";
+                    break;
+                }
+                const bool ok = security_engine.revoke(mod, perm);
+                audit_logger.log(mod, "REVOKE:" + perm_name, ok);
+                response_json = ok ? "{\"revoked\":true}" : "{\"revoked\":false}";
+                break;
+            }
+            case RequestType::GetRiskScore: {
+                // body = module id — find it and score its manifest.
+                auto mods = module_manager.list();
+                bool found = false;
+                int score = 0;
+                std::string level_str = "LOW";
+                for (const auto& m : mods) {
+                    if (m.manifest.id == body) {
+                        found = true;
+                        score = risk_engine.calculate(m.manifest);
+                        level_str = risk_engine.level(m.manifest);
+                        break;
+                    }
+                }
+                if (!found) {
+                    response_json = "{\"error\":\"not_found\"}";
+                    break;
+                }
+                std::ostringstream ro;
+                ro << "{\"module\":\"" << json_escape(body)
+                   << "\",\"risk\":" << score
+                   << ",\"level\":\"" << level_str << "\"}";
+                response_json = ro.str();
+                break;
+            }
+            case RequestType::GetAuditLog: {
+                // Return the last N lines of the audit log (best-effort).
+                std::ifstream af("/data/astra/log/security.log");
+                std::ostringstream ro;
+                ro << "[";
+                std::string line;
+                bool first = true;
+                while (std::getline(af, line)) {
+                    if (!first) ro << ",";
+                    first = false;
+                    ro << line;
+                }
+                ro << "]";
+                response_json = ro.str();
                 break;
             }
             default: {

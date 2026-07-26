@@ -1,0 +1,24 @@
+# module.te — SELinux policy for AVM module processes spawned by astrad
+#
+# Modules run in a confined domain (astra_module_t) that inherits the
+# AstraRoot namespace but has a strictly smaller capability surface
+# than the daemon itself.
+
+type astra_module_t, domain;
+type astra_module_exec, exec_type, file_type;
+
+# Modules are entered via astrad.
+domain_trans(astrad, astra_module_exec, astra_module_t)
+
+# Modules may read system files but NOT write them directly — writes
+# must go through the overlay layer.
+allow astra_module_t system_file:file { read open getattr };
+allow astra_module_t system_file:dir  { read search };
+
+# Modules may read/write their own data dir only.
+type astra_module_data_t, file_type, data_file_type;
+allow astra_module_t astra_module_data_t:dir  { create add_name remove_name write read search };
+allow astra_module_t astra_module_data_t:file { create read write open unlink getattr };
+
+# Modules never get sys_admin, dac_override, or setuid. The sandbox
+# layer (Phase 8) drops these before exec.

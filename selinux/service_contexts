@@ -1,0 +1,6 @@
+# service_contexts — AstraVeil binder service labels
+#
+# The Astra binder service (registered by SystemServerBridge) runs in
+# the astrad domain.
+
+astra.service u:object_r:astrad:s0
