@@ -25,9 +25,11 @@ set(ASTRAD_SOURCES
     src/ipc/socket_server.cpp
     src/service/capability_service.cpp
     src/service/provider_service.cpp
+    src/service/permission_service.cpp
     src/executor/command_executor.cpp
     src/sandbox/sandbox.cpp
     src/logger/logger.cpp
+    src/permission/no_root_provider.cpp
 )
 
 add_executable(astrad ${ASTRAD_SOURCES})
