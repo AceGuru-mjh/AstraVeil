@@ -1,5 +1,7 @@
 #include "astra/provider/magisk_provider.hpp"
 
+#include "astra/capability/capability.hpp"
+
 #include <filesystem>
 
 namespace astra::provider {
@@ -33,6 +35,19 @@ bool MagiskProvider::execute(
 
 std::string MagiskProvider::name() const {
     return "Magisk";
+}
+
+std::vector<capability::Capability> MagiskProvider::capabilities() const {
+    // Magisk offers root, overlay-based /system writes, mount namespaces,
+    // boot-image patching (its core install mechanism), and SELinux
+    // control. It does not expose a kernel hook surface.
+    return {
+        capability::Capability::ROOT_ACCESS,
+        capability::Capability::SYSTEM_WRITE,
+        capability::Capability::MOUNT_NAMESPACE,
+        capability::Capability::BOOT_PATCH,
+        capability::Capability::SELINUX_CONTROL,
+    };
 }
 
 }  // namespace astra::provider

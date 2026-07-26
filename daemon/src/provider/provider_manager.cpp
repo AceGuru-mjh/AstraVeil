@@ -3,6 +3,7 @@
 #include "astra/provider/no_root_provider.hpp"
 #include "astra/provider/magisk_provider.hpp"
 #include "astra/provider/kernelsu_provider.hpp"
+#include "astra/provider/apatch_provider.hpp"
 
 namespace astra::provider {
 
@@ -14,6 +15,8 @@ void ProviderManager::initialize() {
      *
      * KernelSU
      *   ↓
+     * APatch
+     *   ↓
      * Magisk
      *   ↓
      * NoRoot
@@ -22,6 +25,12 @@ void ProviderManager::initialize() {
     auto ksu = std::make_unique<KernelSUProvider>();
     if (ksu->available()) {
         provider_ = std::move(ksu);
+        return;
+    }
+
+    auto apatch = std::make_unique<APatchProvider>();
+    if (apatch->available()) {
+        provider_ = std::move(apatch);
         return;
     }
 
@@ -43,6 +52,13 @@ RootType ProviderManager::type() {
         return RootType::NONE;
     }
     return provider_->type();
+}
+
+std::vector<capability::Capability> ProviderManager::capabilities() {
+    if (!provider_) {
+        return {};
+    }
+    return provider_->capabilities();
 }
 
 }  // namespace astra::provider

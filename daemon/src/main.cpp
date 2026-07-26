@@ -11,9 +11,11 @@
 #include "astra/daemon.hpp"
 #include "astra/service/permission_service.hpp"
 #include "astra/provider/provider_manager.hpp"
+#include "astra/capability/capability.hpp"
 
 #include <getopt.h>
 
+#include <algorithm>
 #include <atomic>
 #include <csignal>
 #include <cstdio>
@@ -138,11 +140,30 @@ int main(int argc, char** argv) {
                 const std::string pname = rp ? rp->name() : "none";
                 const int ptype = rp ? static_cast<int>(rp->type()) : 0;
                 const bool pavail = rp ? rp->available() : false;
+
+                // Build the capability matrix: every capability in the
+                // enum is emitted with a boolean indicating whether the
+                // active provider offers it. NoRoot reports none, so on
+                // an unrooted device every entry is false.
+                const auto caps = provider_manager.capabilities();
                 std::ostringstream po;
-                po << "{\"provider\":\"" << json_escape(pname)
-                   << "\",\"type\":" << ptype
-                   << ",\"available\":" << (pavail ? "true" : "false") << "}";
+                po << "{\"root\":{"
+                   << "\"provider\":\"" << json_escape(pname) << "\""
+                   << ",\"type\":" << ptype
+                   << ",\"available\":" << (pavail ? "true" : "false")
+                   << "},\"capabilities\":{";
+                bool first = true;
+                for (const auto c : astra::capability::all_capabilities()) {
+                    if (!first) po << ",";
+                    first = false;
+                    const bool offered =
+                        std::find(caps.begin(), caps.end(), c) != caps.end();
+                    po << "\"" << astra::capability::capability_name(c)
+                       << "\":" << (offered ? "true" : "false");
+                }
+                po << "}}";
                 response_json = po.str();
+
                 ctx.active_provider = pname;
                 ctx.provider_online.store(pname != "none");
                 break;

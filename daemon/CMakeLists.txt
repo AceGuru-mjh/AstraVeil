@@ -29,10 +29,12 @@ set(ASTRAD_SOURCES
     src/executor/command_executor.cpp
     src/sandbox/sandbox.cpp
     src/logger/logger.cpp
+    src/capability/capability.cpp
     src/provider/provider_manager.cpp
     src/provider/no_root_provider.cpp
     src/provider/magisk_provider.cpp
     src/provider/kernelsu_provider.cpp
+    src/provider/apatch_provider.cpp
 )
 
 add_executable(astrad ${ASTRAD_SOURCES})
