@@ -30,6 +30,8 @@ set(ASTRAD_SOURCES
     src/sandbox/sandbox.cpp
     src/logger/logger.cpp
     src/capability/capability.cpp
+    src/capability/capability_matrix.cpp
+    src/capability/capability_detector.cpp
     src/provider/provider_manager.cpp
     src/provider/no_root_provider.cpp
     src/provider/magisk_provider.cpp

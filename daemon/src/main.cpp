@@ -12,6 +12,7 @@
 #include "astra/service/permission_service.hpp"
 #include "astra/provider/provider_manager.hpp"
 #include "astra/capability/capability.hpp"
+#include "astra/capability/capability_detector.hpp"
 
 #include <getopt.h>
 
@@ -53,10 +54,11 @@ std::string json_escape(const std::string& s) {
 
 /// Request-type discriminator byte. Lives as the first payload byte.
 enum class RequestType : std::uint8_t {
-    GetCapability = 0x01,
-    GetProvider   = 0x02,
-    Execute       = 0x03,
-    Ping          = 0x04,
+    GetCapability       = 0x01,
+    GetProvider         = 0x02,
+    Execute             = 0x03,
+    Ping                = 0x04,
+    GetCapabilityMatrix = 0x05,
 };
 
 void print_help(const char* argv0) {
@@ -112,10 +114,18 @@ int main(int argc, char** argv) {
 
     astra::service::PermissionService permission_service(provider_manager);
 
+    // Build the device capability matrix once at startup from the active
+    // provider + independent device probes. Re-detect on GetCapabilityMatrix
+    // so a provider change or SELinux flip is reflected without a restart.
+    astra::capability::CapabilityDetector capability_detector;
+    auto capability_matrix =
+        capability_detector.detect(provider_manager.current());
+
     {
         auto* rp = provider_manager.current();
         const std::string pname = rp ? rp->name() : "none";
         ALOGI("astrad: active root provider = %s", pname.c_str());
+        ALOGI("astrad: capability matrix = %s", capability_matrix.json().c_str());
     }
 
     // Wire the IPC handler. The payload's first byte selects the service;
@@ -186,6 +196,14 @@ int main(int argc, char** argv) {
             }
             case RequestType::Ping: {
                 response_json = "{\"pong\":true,\"version\":\"" + ctx.version + "\"}";
+                break;
+            }
+            case RequestType::GetCapabilityMatrix: {
+                // Re-probe so callers always see the live matrix rather
+                // than a stale snapshot from daemon startup.
+                capability_matrix =
+                    capability_detector.detect(provider_manager.current());
+                response_json = capability_matrix.json();
                 break;
             }
             default: {

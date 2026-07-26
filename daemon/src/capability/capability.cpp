@@ -12,6 +12,8 @@ std::string capability_name(Capability c) {
         case Capability::SELINUX_CONTROL:  return "SELINUX_CONTROL";
         case Capability::NETWORK:          return "NETWORK";
         case Capability::IPC_ACCESS:       return "IPC_ACCESS";
+        case Capability::MODULE_RUNTIME:      return "MODULE_RUNTIME";
+        case Capability::NAMESPACE_ISOLATION: return "NAMESPACE_ISOLATION";
     }
     return "UNKNOWN";
 }
@@ -26,6 +28,8 @@ std::vector<Capability> all_capabilities() {
         Capability::SELINUX_CONTROL,
         Capability::NETWORK,
         Capability::IPC_ACCESS,
+        Capability::MODULE_RUNTIME,
+        Capability::NAMESPACE_ISOLATION,
     };
 }
 
