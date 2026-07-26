@@ -166,6 +166,33 @@ class PermissionEngine(private val eventBus: EventBus) {
     fun has(permission: String): Boolean = canExecute(BUILTIN_MODULE_ID, permission)
 
     /**
+     * v3 decision entry point.
+     *
+     * Evaluates a [PermissionRequest] through the full decision tree and
+     * returns a three-valued [PermissionDecision]:
+     *
+     *   ALLOW             — module already holds the permission
+     *   REQUIRE_APPROVAL  — permission not yet granted; the UI should prompt
+     *   DENY              — a dangerous permission was requested while
+     *                       dangerous approval is withheld
+     *
+     * This is the non-destructive v3 surface; the existing `request` /
+     * `canExecute` APIs remain for v2 callers.
+     */
+    fun evaluate(request: PermissionRequest): PermissionDecision {
+        // 1. Already granted? → ALLOW without prompting.
+        if (canExecute(request.moduleId, request.capability)) {
+            return PermissionDecision.ALLOW
+        }
+        // 2. Dangerous + no approval? → hard DENY.
+        if (request.capability in dangerousPermissions && !dangerousApproval) {
+            return PermissionDecision.DENY
+        }
+        // 3. Otherwise the user must be prompted.
+        return PermissionDecision.REQUIRE_APPROVAL
+    }
+
+    /**
      * Publish [event] on the bus using the non-suspending [EventBus.tryEmit]
      * so callers are not required to be inside a coroutine.
      */

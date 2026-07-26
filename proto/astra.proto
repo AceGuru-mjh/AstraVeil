@@ -120,3 +120,21 @@ message PermissionResponse {
   bool granted = 1;
   string message = 2;
 }
+
+// -------------------------------------------------------- execution (v3)
+// Structured execution request carrying the originating module + the
+// capability it claims + the command, so the daemon can attribute every
+// root operation to a source for the audit log and permission engine.
+
+message ExecuteRequest {
+  string request_id = 1;
+  string module_id = 2;
+  string capability = 3;
+  string command = 4;
+}
+
+message ExecuteResponse {
+  bool success = 1;
+  string output = 2;
+  string error = 3;
+}

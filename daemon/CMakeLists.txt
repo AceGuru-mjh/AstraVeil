@@ -36,6 +36,8 @@ set(ASTRAD_SOURCES
     src/module/module_manager.cpp
     src/module/module_permission_checker.cpp
     src/module/module_runtime.cpp
+    src/module/module_runner.cpp
+    src/execution/execution_pipeline.cpp
     src/security/permission.cpp
     src/security/permission_database.cpp
     src/security/security_engine.cpp

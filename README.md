@@ -2,20 +2,71 @@
 
 # AstraVeil
 
-**Android Root Abstraction Platform**
+**Android Root Capability Operating Layer**
 
-A unified, capability-driven control plane that sits above Magisk, KernelSU,
-APatch and — eventually — its own native `AstraRoot` backend.
+Not a root tool. Not a Magisk clone. AstraVeil is a capability operating
+layer that abstracts root backends (Magisk / KernelSU / APatch / AstraRoot)
+behind a capability matrix, a Rust security policy, and isolated module
+execution.
 
-`v0.1.0` · Phase 0 (Foundation)
+`v3.0` · Architecture Refactor
 
 </div>
 
 ---
 
+## Provider Philosophy
+
+> **AstraVeil does not create root. AstraVeil abstracts root capabilities.**
+
+This is the single most important sentence in the project. AstraVeil is
+frequently misread as "another root tool". It is not. AstraVeil never obtains
+root itself — it discovers which root backend is present, probes what that
+backend + the device + the kernel + SELinux + the boot layout actually allow,
+and exposes the result as a **capability matrix** that modules and the UI read
+instead of guessing.
+
+The difference:
+
+| | Root tool | AstraVeil |
+|---|---|---|
+| Question it answers | "is there root?" | "what can the device do?" |
+| Module trust | module = root | module runs isolated, root is brokered |
+| Backend coupling | hardcoded | pluggable `RootProvider` |
+| Security model | root = all permissions | Kotlin intent → Rust policy → C++ execution |
+
+## Trust Model
+
+Trust descends every layer. Each layer does only its job and never trusts the
+layer above it more than necessary.
+
+```
+User          (intent: authorise)
+  ↓
+AstraUI       (interaction)
+  ↓
+AstraCore     (judgement + coordination, Kotlin)
+  ↓
+Rust Policy   (Allow / Deny / RequireApproval + risk)
+  ↓
+AstraDaemon   (execution only, C++20)
+  ↓
+RootProvider  (capability provider)
+  ↓
+Kernel        (hardware, fully untrusted)
+```
+
+- **Kotlin AstraCore** owns user intent, permission state, config, UI.
+- **Rust Security** owns the policy decision, risk score, module verification.
+- **C++ AstraDaemon** owns execution, namespace, mount, process, IPC — and
+  **does not trust any module**. Modules run in their own isolated process
+  (`ModuleRunner`), never inside the daemon.
+
+---
+
 ## What is AstraVeil?
 
-AstraVeil is **not** a Magisk fork. It is a *root abstraction platform*: a single
+AstraVeil is a *root abstraction platform*: a single
 control plane that abstracts over every existing Android root backend through
 one plugin interface — `RootProvider` — and adds a capability engine, a
 permission broker, a sandboxed module runtime and (future) its own kernel-level
