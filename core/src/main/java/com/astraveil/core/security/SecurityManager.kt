@@ -62,7 +62,7 @@ class SecurityManager {
      * [Build.DEBUG] is `true`). Used to relax certain policy checks during
      * development.
      */
-    fun isDebugBuild(): Boolean = Build.DEBUG
+    fun isDebugBuild(): Boolean = false
 
     /**
      * Produce an attestation token that providers can use to validate the
