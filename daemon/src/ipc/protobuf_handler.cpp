@@ -1,5 +1,7 @@
 #include "astra/ipc/protobuf_handler.hpp"
 
+#include <cstdint>
+
 #include "astra/ipc/message_router.hpp"
 #include "astra/logger/logger.hpp"
 
