@@ -43,6 +43,14 @@ set(ASTRAD_SOURCES
     src/provider/provider_registry.cpp
     src/security_bridge/policy_bridge.cpp
     src/sandbox/sandbox_manager.cpp
+    src/sandbox/namespace_manager.cpp
+    src/sandbox/mount_isolation.cpp
+    src/sandbox/seccomp_manager.cpp
+    src/sandbox/landlock_manager.cpp
+    src/runtime/daemon_service.cpp
+    src/ipc/message_router.cpp
+    src/ipc/protobuf_handler.cpp
+    src/execution/execution_handler.cpp
     src/security/permission.cpp
     src/security/permission_database.cpp
     src/security/security_engine.cpp

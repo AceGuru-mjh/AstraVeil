@@ -153,3 +153,21 @@ message ModuleResponse {
   bool allowed = 1;
   string message = 2;
 }
+
+// -------------------------------------------------------- heartbeat (Phase 4)
+// Liveness probe so the UI can detect a dead daemon.
+
+message HeartbeatRequest {
+  int64 timestamp = 1;
+}
+
+message HeartbeatResponse {
+  bool alive = 1;
+  string version = 2;
+}
+
+message SandboxStatus {
+  string module_id = 1;
+  string state = 2;
+  bool isolated = 3;
+}
