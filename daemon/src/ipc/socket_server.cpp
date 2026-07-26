@@ -64,6 +64,10 @@ SocketServer::~SocketServer() {
     }
 }
 
+void SocketServer::set_handler(Handler handler) {
+    handler_ = handler;
+}
+
 bool SocketServer::read_exact(int fd, void* out, std::size_t n) {
     auto* p = static_cast<std::uint8_t*>(out);
     std::size_t got = 0;
