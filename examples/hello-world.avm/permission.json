@@ -1,0 +1,12 @@
+{
+    "permissions": [
+        {
+            "capability": "system.info",
+            "reason": "Read Android system information (Build.*, kernel, SELinux)",
+            "risk": 5
+        }
+    ],
+    "signature": {
+        "required": false
+    }
+}

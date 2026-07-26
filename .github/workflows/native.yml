@@ -1,0 +1,19 @@
+name: Native Daemon Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+      - name: Configure daemon
+        run: cmake -S daemon -B build-daemon -DCMAKE_CXX_STANDARD=20
+      - name: Build daemon
+        run: cmake --build build-daemon -j
