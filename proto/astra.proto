@@ -104,3 +104,19 @@ message ModuleAction {
   string id = 1;
   string action = 2;
 }
+
+// ----------------------------------------------------- security (Phase 7)
+// AVM module permission authorization messages. Carried in
+// AstraRequest/AstraResponse `payload` for QueryPermission / GrantPermission /
+// RevokePermission / GetRiskScore / GetAuditLog requests.
+
+message PermissionRequest {
+  string module_id = 1;
+  string permission = 2;
+  string reason = 3;
+}
+
+message PermissionResponse {
+  bool granted = 1;
+  string message = 2;
+}
