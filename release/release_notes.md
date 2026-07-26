@@ -1,8 +1,8 @@
-# AstraVeil v0.1.0-alpha — Release Notes
+# AstraVeil v1.0.0 — Release Notes
 
 ## Overview
 
-First public Alpha of AstraVeil — the Android Root Capability
+First stable release of AstraVeil — the Android Root Capability
 Operating Layer. Not a root tool; a capability abstraction platform
 above Magisk / KernelSU / APatch / (future) AstraRoot.
 
@@ -16,10 +16,12 @@ above Magisk / KernelSU / APatch / (future) AstraRoot.
 - **AVM Module Runtime** — .avm format, ModuleValidator, sandbox lifecycle
 - **Native Sandbox** — unshare + seccomp + landlock isolation
 - **Example Module** — hello-world.avm demonstrating the SDK surface
+- **Gradle Wrapper** — Gradle 8.10.2 for consistent builds
+- **CI/CD Pipelines** — Android APK, Native daemon, and Rust test workflows
 
 ## Known limitations
 
-- Provider execute() is placeholder (real `su -c` wiring in 0.2)
+- Provider execute() is placeholder (real `su -c` wiring in 1.1)
 - protobuf not yet linked into CMake build (text frame IPC)
 - AstraRoot backend is a stub (Phase 7)
 - No module store / OTA updates
@@ -29,3 +31,9 @@ above Magisk / KernelSU / APatch / (future) AstraRoot.
 - Android 10 (SDK 29) or later
 - ARM64 device
 - SELinux enforcing (permissive supported with warnings)
+- Java 17 or later
+
+## Next versions
+
+- **v1.0.1** — Performance optimizations and bug fixes
+- **v1.0.2** — Additional device compatibility improvements
