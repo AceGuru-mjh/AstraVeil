@@ -155,5 +155,5 @@ object EventBus {
      * ```
      */
     inline fun <reified T : AstraEvent> eventsOf(): Flow<T> =
-        flow.asSharedFlow().filterIsInstance()
+        events.filterIsInstance()
 }
