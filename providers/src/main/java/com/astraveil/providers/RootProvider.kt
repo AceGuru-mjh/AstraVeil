@@ -57,6 +57,31 @@ interface RootProvider {
      * arbitrary mounts — in that case return `false` rather than throwing.
      */
     suspend fun mount(source: String, target: String, options: String): Boolean
+
+    // ---------------------------------------------------------------- v3 API
+    // Non-destructive v3 additions. Existing v2 providers inherit empty
+    // defaults; new v3 providers override to advertise real capabilities
+    // and accept structured [ExecutionRequest]s.
+
+    /**
+     * v3: the [ProviderCapability] set this backend advertises when
+     * active. Default: empty (the v2 backends that have not been
+     * migrated yet report no v3 capabilities).
+     */
+    suspend fun capabilities(): Set<ProviderCapability> = emptySet()
+
+    /**
+     * v3: run [request] through this backend. Default delegates to the
+     * v2 `execute(command)` path so v2 providers keep working.
+     */
+    suspend fun execute(request: ExecutionRequest): ExecutionResult {
+        val r = execute(request.command)
+        return ExecutionResult(
+            success = r.success,
+            output = r.stdout,
+            error = if (r.success) null else r.stderr,
+        )
+    }
 }
 
 /**
