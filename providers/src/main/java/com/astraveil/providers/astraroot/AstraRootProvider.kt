@@ -1,5 +1,6 @@
 package com.astraveil.providers.astraroot
 
+import com.astraveil.providers.ProviderCapability
 import com.astraveil.providers.ProviderExecResult
 import com.astraveil.providers.RootInfo
 import com.astraveil.providers.RootProvider
@@ -106,4 +107,8 @@ class AstraRootProvider : RootProvider {
         target: String,
         options: String
     ): Boolean = withContext(Dispatchers.IO) { false }
+
+    // v3 capability surface — AstraRoot will advertise the full set once
+    // its runtime ships; for now it reports none because available()=false.
+    override suspend fun capabilities(): Set<ProviderCapability> = emptySet()
 }
