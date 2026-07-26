@@ -3,13 +3,26 @@
 #include "astra/logger/logger.hpp"
 
 // Rust FFI — declared in rust/src/ffi.rs, linked from libastra_rust.a.
-extern "C" int policy_check();
-extern "C" int policy_check_with(
-    const char* module_id,
-    const char* capability,
-    unsigned int risk_level,
-    bool approved
-);
+// When the Rust static library is NOT linked (e.g. CI builds without
+// cargo-ndk), these weak symbols fall back to a default-allow stub so
+// the daemon compiles and runs. On production device builds the real
+// Rust implementation overrides them.
+extern "C" {
+/// Weak default: allow (0). Overridden by libastra_rust.a when linked.
+__attribute__((weak)) int policy_check() {
+    return 0;  // Allow
+}
+
+/// Weak default: allow (0). Overridden by libastra_rust.a when linked.
+__attribute__((weak)) int policy_check_with(
+    const char* /*module_id*/,
+    const char* /*capability*/,
+    unsigned int /*risk_level*/,
+    bool /*approved*/
+) {
+    return 0;  // Allow
+}
+}
 
 namespace astra {
 

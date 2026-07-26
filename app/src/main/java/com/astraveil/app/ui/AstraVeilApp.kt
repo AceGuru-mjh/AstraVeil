@@ -10,10 +10,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SettingsInputComponent
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.SettingsInputComponent
 import androidx.compose.material3.Icon
@@ -39,6 +41,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.astraveil.app.BuildConfig
+import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
 import com.astraveil.app.ui.screens.ModulesScreen
@@ -96,6 +99,9 @@ fun AstraVeilApp() {
             }
             composable(Destinations.Modules.route) {
                 ModulesScreen(viewModel = viewModel)
+            }
+            composable(Destinations.About.route) {
+                AboutScreen()
             }
         }
     }
@@ -212,7 +218,14 @@ sealed class Destinations(
         iconSelected = Icons.Filled.Apps
     )
 
+    data object About : Destinations(
+        route = "about",
+        label = "About",
+        icon = Icons.Outlined.Info,
+        iconSelected = Icons.Filled.Info
+    )
+
     companion object {
-        val list = listOf(Dashboard, Capability, Provider, Modules)
+        val list = listOf(Dashboard, Capability, Provider, Modules, About)
     }
 }

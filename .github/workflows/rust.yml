@@ -11,8 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
+
       - name: Build
         run: cargo build --manifest-path rust/Cargo.toml
+
       - name: Test
         run: cargo test --manifest-path rust/Cargo.toml
