@@ -1,48 +1,33 @@
 #include "astra/service/permission_service.hpp"
 
-#include <unistd.h>
+#include "astra/provider/provider_manager.hpp"
+#include "astra/provider/root_provider.hpp"
 
 namespace astra::service {
 
-class BasicPermissionProvider final
-        : public permission::PermissionProvider {
-public:
-    permission::PermissionLevel level() const override {
-        if (getuid() == 0) {
-            return permission::PermissionLevel::ROOT;
-        }
-
-        return permission::PermissionLevel::NONE;
-    }
-
-    bool allow_execute(
-        const std::string&
-    ) const override {
-        return false;
-    }
-
-    std::string name() const override {
-        return "basic";
-    }
-};
-
-PermissionService::PermissionService() {
-    provider_ = std::make_unique<
-        BasicPermissionProvider
-    >();
-}
+PermissionService::PermissionService(
+    provider::ProviderManager& manager
+) : manager_(manager) {}
 
 bool PermissionService::can_execute(
-    const std::string& command
+    const std::string& /*command*/
 ) const {
-    return provider_
-        && provider_->allow_execute(command);
+    /*
+     * Delegate to the active RootProvider. When NoRootProvider is
+     * active (available() == false) all execution is denied — this is
+     * the Phase-1 default. Once Magisk / KernelSU / APatch /
+     * AstraRoot providers are detected, available() returns true and
+     * execution is permitted.
+     *
+     * Future: per-command policy enforcement will live here.
+     */
+    auto* p = manager_.current();
+    return p && p->available();
 }
 
 std::string PermissionService::provider_name() const {
-    return provider_
-        ? provider_->name()
-        : "none";
+    auto* p = manager_.current();
+    return p ? p->name() : "none";
 }
 
 }  // namespace astra::service
