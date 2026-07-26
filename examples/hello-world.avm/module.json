@@ -1,0 +1,19 @@
+{
+    "id": "com.astraveil.hello",
+    "name": "Hello World",
+    "version": "1.0.0",
+    "api": 2,
+    "author": "AstraVeil",
+    "description": "Official AstraVeil demo module — reads system info via the capability API",
+    "permissions": [
+        {
+            "capability": "system.info",
+            "reason": "Read Android system information",
+            "risk": 5
+        }
+    ],
+    "sandbox": {
+        "filesystem": "restricted",
+        "network": false
+    }
+}

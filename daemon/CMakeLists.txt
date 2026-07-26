@@ -51,6 +51,7 @@ set(ASTRAD_SOURCES
     src/ipc/message_router.cpp
     src/ipc/protobuf_handler.cpp
     src/execution/execution_handler.cpp
+    src/recovery/recovery_manager.cpp
     src/security/permission.cpp
     src/security/permission_database.cpp
     src/security/security_engine.cpp
