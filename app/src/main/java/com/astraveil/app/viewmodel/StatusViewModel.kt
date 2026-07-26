@@ -68,7 +68,7 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val core = AstraVeilApplication.core
                 runCatching { core.refreshCapability() }
-                    .onFailure { AstraLogger.w(TAG, "refreshCapability failed", it) }
+                    .onFailure { AstraLogger.w(TAG, "refreshCapability failed: ${it.message}") }
 
                 val capability = runCatching { core.capability }
                     .getOrNull()
