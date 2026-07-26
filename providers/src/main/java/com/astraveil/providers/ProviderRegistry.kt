@@ -133,4 +133,21 @@ object ProviderRegistry {
         cachedActive = null
         cachedAll = null
     }
+
+    /**
+     * v3: resolve [capability] to the first available provider that
+     * advertises it. Returns `null` if no provider is available or no
+     * available provider offers the capability.
+     *
+     * This is the v3 entry point — callers ask "which provider can do
+     * MOUNT_NAMESPACE?" instead of "is Magisk present?".
+     */
+    suspend fun find(capability: ProviderCapability): RootProvider? {
+        for (provider in providers) {
+            if (provider.available() && capability in provider.capabilities()) {
+                return provider
+            }
+        }
+        return null
+    }
 }

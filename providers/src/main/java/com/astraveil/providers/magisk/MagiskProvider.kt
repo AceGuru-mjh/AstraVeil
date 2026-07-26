@@ -1,5 +1,6 @@
 package com.astraveil.providers.magisk
 
+import com.astraveil.providers.ProviderCapability
 import com.astraveil.providers.ProviderExecResult
 import com.astraveil.providers.RootInfo
 import com.astraveil.providers.RootProvider
@@ -76,6 +77,16 @@ class MagiskProvider : RootProvider {
         val result = runProcess(arrayOf("su", "-c", "mount -o $options $source $target"))
         result.success
     }
+
+    // v3 capability surface.
+    override suspend fun capabilities(): Set<ProviderCapability> = setOf(
+        ProviderCapability.ROOT_EXECUTION,
+        ProviderCapability.MOUNT_NAMESPACE,
+        ProviderCapability.OVERLAY_FS,
+        ProviderCapability.SYSTEM_PROPERTY,
+        ProviderCapability.BOOT_PATCH,
+        ProviderCapability.SELINUX_CONTROL,
+    )
 
     // ---- internals --------------------------------------------------------
 
