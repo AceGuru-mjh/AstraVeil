@@ -1,44 +1,37 @@
 package com.astraveil.core.device
 
 import android.os.Build
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import com.astraveil.core.device.boot.BootDetector
+import com.astraveil.core.device.kernel.KernelDetector
+import com.astraveil.core.device.selinux.SelinuxDetector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-/**
- * Reads the real Android device state: SDK, manufacturer, model, kernel,
- * SELinux mode. All probes are non-root — they read `Build.*` and run
- * `getenforce` via a plain shell.
- */
-class DeviceInspector {
+class DeviceInspector(
+    private val kernelDetector: KernelDetector = KernelDetector(),
+    private val bootDetector: BootDetector = BootDetector(),
+    private val selinuxDetector: SelinuxDetector = SelinuxDetector(),
+) {
+    suspend fun inspect(): DeviceProfile = withContext(Dispatchers.IO) {
+        val kernel = kernelDetector.detect()
+        val boot = bootDetector.detect()
+        val selinux = selinuxDetector.detect()
 
-    fun sdk(): Int = Build.VERSION.SDK_INT
-
-    fun androidVersion(): String = Build.VERSION.RELEASE ?: "unknown"
-
-    fun manufacturer(): String = Build.MANUFACTURER ?: "unknown"
-
-    fun model(): String = Build.MODEL ?: "unknown"
-
-    fun kernel(): String = System.getProperty("os.version") ?: "unknown"
-
-    fun selinux(): String {
-        return try {
-            val process = Runtime.getRuntime().exec(
-                arrayOf("sh", "-c", "getenforce")
-            )
-            BufferedReader(InputStreamReader(process.inputStream))
-                .readLine() ?: "unknown"
-        } catch (e: Exception) {
-            "unknown"
-        }
+        DeviceProfile(
+            manufacturer = Build.MANUFACTURER ?: "",
+            brand = Build.BRAND ?: "",
+            model = Build.MODEL ?: "",
+            androidSdk = Build.VERSION.SDK_INT,
+            androidVersion = Build.VERSION.RELEASE ?: "",
+            kernelVersion = kernel.version,
+            kernelOverlayFs = kernel.overlayFs,
+            kernelEbpf = kernel.ebpf,
+            kernelLandlock = kernel.landlock,
+            bootUnlocked = boot.unlocked,
+            bootVerifiedBoot = boot.verifiedBoot,
+            selinuxMode = selinux.mode,
+            selinuxEnforcing = selinux.enforcing,
+            selinuxPolicyVersion = selinux.policyVersion,
+        )
     }
-
-    fun inspect(): AndroidProfile = AndroidProfile(
-        sdk = sdk(),
-        androidVersion = androidVersion(),
-        manufacturer = manufacturer(),
-        model = model(),
-        kernel = kernel(),
-        selinux = selinux(),
-    )
 }
