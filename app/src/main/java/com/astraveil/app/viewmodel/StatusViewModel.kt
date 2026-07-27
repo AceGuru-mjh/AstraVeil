@@ -1,17 +1,21 @@
 package com.astraveil.app.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.astraveil.app.BuildConfig
 import com.astraveil.core.capability.CapabilityInfo
 import com.astraveil.providers.RootInfo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class StatusViewModel : ViewModel() {
+class StatusViewModel(app: Application) : AndroidViewModel(app) {
 
     enum class DaemonStatus { OFFLINE, CONNECTING, ONLINE }
 

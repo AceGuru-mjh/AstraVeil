@@ -18,13 +18,16 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -41,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.astraveil.app.ui.components.StatusCard
 import com.astraveil.app.ui.components.StatusPill
+import com.astraveil.app.ui.components.QuickActionCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -49,16 +53,11 @@ import com.astraveil.app.ui.theme.AstraWarning
 import com.astraveil.app.viewmodel.StatusViewModel
 import com.astraveil.core.capability.SelinuxStatus
 
-/**
- * AstraUI Dashboard — the central control center.
- *
- * Renders a vertically scrolling list of [StatusCard]s summarising the
- * system: header, system status, privilege backend, capabilities, modules,
- * security. A refresh FAB sits at the bottom-right and triggers
- * [StatusViewModel.refresh].
- */
 @Composable
-fun DashboardScreen(viewModel: StatusViewModel) {
+fun DashboardScreen(
+    viewModel: StatusViewModel,
+    onNavigate: (String) -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -74,10 +73,11 @@ fun DashboardScreen(viewModel: StatusViewModel) {
         ) {
             item { HeaderCard(state) }
             item { SystemStatusCard(state) }
-            item { PrivilegeBackendCard(state) }
+            item { PrivilegeBackendCard(state, onNavigate) }
             item { CapabilitiesCard(state) }
-            item { ModulesCard(state) }
+            item { ModulesCard(state, onNavigate) }
             item { SecurityCard(state) }
+            item { QuickActionsSection(onNavigate) }
         }
 
         ExtendedFloatingActionButton(
@@ -163,7 +163,7 @@ private fun SystemStatusCard(state: StatusViewModel.UiState) {
 }
 
 @Composable
-private fun PrivilegeBackendCard(state: StatusViewModel.UiState) {
+private fun PrivilegeBackendCard(state: StatusViewModel.UiState, onNavigate: (String) -> Unit) {
     val detected = state.providerName != "None"
     val accent = if (detected) AstraSuccess else AstraWarning
     StatusCard(
@@ -194,6 +194,14 @@ private fun PrivilegeBackendCard(state: StatusViewModel.UiState) {
                 )
             }
         }
+        if (detected) {
+            QuickActionCard(
+                title = "Test Root Capability",
+                icon = Icons.Filled.Terminal,
+                onClick = { onNavigate("provider") },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -219,7 +227,7 @@ private fun CapabilitiesCard(state: StatusViewModel.UiState) {
 }
 
 @Composable
-private fun ModulesCard(state: StatusViewModel.UiState) {
+private fun ModulesCard(state: StatusViewModel.UiState, onNavigate: (String) -> Unit) {
     StatusCard(
         title = "Modules",
         icon = Icons.Filled.Apps,
@@ -248,6 +256,12 @@ private fun ModulesCard(state: StatusViewModel.UiState) {
                 )
             }
         }
+        QuickActionCard(
+            title = "Install Module",
+            icon = Icons.Filled.Download,
+            onClick = { onNavigate("modules") },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -278,6 +292,36 @@ private fun SecurityCard(state: StatusViewModel.UiState) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+    }
+}
+
+@Composable
+private fun QuickActionsSection(onNavigate: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = "QUICK ACTIONS",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = AstraAccent,
+        )
+        QuickActionCard(
+            title = "Install Module",
+            icon = Icons.Filled.Download,
+            onClick = { onNavigate("modules") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        QuickActionCard(
+            title = "Root Test",
+            icon = Icons.Filled.PlayArrow,
+            onClick = { onNavigate("provider") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        QuickActionCard(
+            title = "Security",
+            icon = Icons.Filled.Security,
+            onClick = { onNavigate("provider") },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
