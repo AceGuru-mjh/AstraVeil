@@ -136,7 +136,7 @@ private fun DiagnosticActions(
 
 @Composable
 private fun SystemRecommendationsCard(state: StatusViewModel.UiState) {
-    val manufacturer = state.capability.manufacturer.lowercase()
+    val manufacturer = state.deviceProfile.manufacturer.lowercase()
     val isSamsung = manufacturer.contains("samsung")
     val isXiaomi = manufacturer.contains("xiaomi")
 

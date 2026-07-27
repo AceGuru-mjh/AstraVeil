@@ -108,7 +108,9 @@ class AstraRootProvider : RootProvider {
      */
     override suspend fun execute(request: ExecutionRequest): ExecutionResult =
         withContext(Dispatchers.IO) {
-            val engine = com.astraveil.providers.ProviderRegistry.permissionEngine
+            val engine = runCatching {
+                com.astraveil.app.AstraVeilApplication.core.permissionEngine
+            }.getOrNull()
 
             // Check permission in permission engine
             val authorized = engine?.canExecute(request.moduleId, "su") ?: true

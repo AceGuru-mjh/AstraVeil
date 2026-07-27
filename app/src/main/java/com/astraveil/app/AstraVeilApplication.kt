@@ -18,7 +18,6 @@ class AstraVeilApplication : Application() {
         appScope.launch {
             core.initialize()
             com.astraveil.providers.ProviderRegistry.eventBus = core.eventBus
-            com.astraveil.providers.ProviderRegistry.permissionEngine = core.permissionEngine
         }
     }
 
