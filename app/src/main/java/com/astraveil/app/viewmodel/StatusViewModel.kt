@@ -25,6 +25,14 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
         val error: String? = null,
     )
 
+    data class AuthorizedApp(
+        val packageName: String,
+        val displayName: String,
+        val description: String,
+        val rootAuthorized: Boolean,
+        val isSystem: Boolean = false
+    )
+
     data class UiState(
         val coreVersion: String = BuildConfig.ASTRAVEIL_VERSION,
         val daemonStatus: DaemonStatus = DaemonStatus.OFFLINE,
@@ -38,10 +46,23 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
         val lastError: String? = null,
         val rootTestResult: RootTestResult? = null,
         val rootTesting: Boolean = false,
+        val authorizedApps: List<AuthorizedApp> = emptyList(),
+        val diagnosticReport: String? = null,
+        val exportingReport: Boolean = false,
+        val deviceProfile: com.astraveil.core.device.DeviceProfile = com.astraveil.core.device.DeviceProfile.empty(),
+        val compatibilityResult: com.astraveil.core.compatibility.CompatibilityResult = com.astraveil.core.compatibility.CompatibilityResult.unknown(),
     )
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    private val defaultApps = listOf(
+        AuthorizedApp("com.termux", "Termux", "Terminal emulator with package manager", false),
+        AuthorizedApp("com.android.shell", "ADB Shell", "Android Debug Bridge Shell", true, isSystem = true),
+        AuthorizedApp("com.topjohnwu.magisk", "Magisk App", "The classic Magisk root manager client", false),
+        AuthorizedApp("com.astraveil.sample", "AstraVeil Client", "AstraVeil native module prototype", true),
+        AuthorizedApp("com.google.android.apps.photos", "Google Photos", "Unlocks unlimited storage patches", false)
+    )
 
     fun refresh() {
         viewModelScope.launch {
@@ -55,6 +76,14 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
                     com.astraveil.providers.ProviderRegistry.detectActive()
                 }.getOrNull()
 
+                val deviceProfile = runCatching {
+                    com.astraveil.core.device.DeviceInspector().inspect()
+                }.getOrNull() ?: com.astraveil.core.device.DeviceProfile.empty()
+
+                val compatibilityResult = runCatching {
+                    com.astraveil.core.compatibility.CompatibilityEngine().evaluate(deviceProfile)
+                }.getOrNull() ?: com.astraveil.core.compatibility.CompatibilityResult.unknown()
+
                 _uiState.update { current ->
                     current.copy(
                         scanning = false,
@@ -62,12 +91,57 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
                         providerName = detected?.displayName ?: "None",
                         providerVersion = detected?.version ?: "—",
                         providerInfo = detected,
+                        deviceProfile = deviceProfile,
+                        compatibilityResult = compatibilityResult,
                     )
                 }
+                refreshAppsList()
             } catch (t: Throwable) {
                 _uiState.update {
                     it.copy(scanning = false, lastError = t.message)
                 }
+            }
+        }
+    }
+
+    fun toggleAppPermission(packageName: String, authorize: Boolean) {
+        viewModelScope.launch {
+            try {
+                val core = com.astraveil.app.AstraVeilApplication.core
+                core.updatePermission(packageName, "su", authorize)
+                if (authorize) {
+                    core.updatePermission(packageName, "namespace", true)
+                } else {
+                    core.updatePermission(packageName, "namespace", false)
+                }
+                refreshAppsList()
+            } catch (t: Throwable) {
+                _uiState.update { it.copy(lastError = t.message) }
+            }
+        }
+    }
+
+    private fun refreshAppsList() {
+        val core = runCatching { com.astraveil.app.AstraVeilApplication.core }.getOrNull() ?: return
+        val apps = defaultApps.map { app ->
+            val hasSu = core.permissionEngine.canExecute(app.packageName, "su")
+            app.copy(rootAuthorized = hasSu)
+        }
+        _uiState.update { it.copy(authorizedApps = apps) }
+    }
+
+    fun generateAndExportDiagnosticReport() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(exportingReport = true) }
+            try {
+                val exporter = com.astraveil.core.diagnostics.ReportExporter(getApplication())
+                val providerName = uiState.value.providerName
+                val providerVersion = uiState.value.providerVersion
+                val reportText = exporter.generateReport(providerName, providerVersion)
+                exporter.exportToFile(providerName, providerVersion)
+                _uiState.update { it.copy(exportingReport = false, diagnosticReport = reportText) }
+            } catch (t: Throwable) {
+                _uiState.update { it.copy(exportingReport = false, lastError = t.message) }
             }
         }
     }

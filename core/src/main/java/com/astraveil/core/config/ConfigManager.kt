@@ -28,6 +28,7 @@ data class AstraConfig(
     var moduleAutoStart: Boolean = true,
     var dangerousApproval: Boolean = false,
     var logLevel: String = "INFO",
+    var authorizedPackages: Map<String, Set<String>> = emptyMap(),
 )
 
 /**

@@ -54,6 +54,22 @@ class PermissionEngine(private val eventBus: EventBus) {
     @Volatile
     private var dangerousApproval: Boolean = false
 
+    /** Load a map of moduleId to granted permission names. */
+    fun loadPermissions(data: Map<String, Set<String>>) {
+        synchronized(lock) {
+            granted.clear()
+            data.forEach { (moduleId, perms) ->
+                granted[moduleId] = PermissionSet(perms)
+            }
+        }
+        AstraLogger.i("PermissionEngine", "Loaded permissions for ${data.size} packages.")
+    }
+
+    /** Dump a snapshot map of moduleId to granted permission names. */
+    fun dumpPermissions(): Map<String, Set<String>> = synchronized(lock) {
+        granted.mapValues { it.value.permissions }
+    }
+
     /**
      * Attempt to grant [permission] to [moduleId] subject to the
      * dangerous-permission policy.

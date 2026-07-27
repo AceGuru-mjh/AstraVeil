@@ -1,38 +1,12 @@
 package com.astraveil.app.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -42,9 +16,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.astraveil.app.ui.components.QuickActionCard
 import com.astraveil.app.ui.components.StatusCard
 import com.astraveil.app.ui.components.StatusPill
-import com.astraveil.app.ui.components.QuickActionCard
+import com.astraveil.app.ui.design.GlassCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -52,6 +27,7 @@ import com.astraveil.app.ui.theme.AstraTeal
 import com.astraveil.app.ui.theme.AstraWarning
 import com.astraveil.app.viewmodel.StatusViewModel
 import com.astraveil.core.capability.SelinuxStatus
+import com.astraveil.core.compatibility.CompatibilityLevel
 
 @Composable
 fun DashboardScreen(
@@ -63,7 +39,7 @@ fun DashboardScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
                 top = 8.dp,
@@ -73,6 +49,8 @@ fun DashboardScreen(
         ) {
             item { HeaderCard(state) }
             item { SystemStatusCard(state) }
+            item { DeviceIntelligenceCard(state) }
+            item { CompatibilityAssessmentCard(state) }
             item { PrivilegeBackendCard(state, onNavigate) }
             item { CapabilitiesCard(state) }
             item { ModulesCard(state, onNavigate) }
@@ -163,6 +141,117 @@ private fun SystemStatusCard(state: StatusViewModel.UiState) {
 }
 
 @Composable
+private fun DeviceIntelligenceCard(state: StatusViewModel.UiState) {
+    val dev = state.deviceProfile
+    StatusCard(
+        title = "Device Intelligence",
+        icon = Icons.Filled.Devices,
+        status = dev.model.ifBlank { "Scanning" },
+        accent = AstraAccent
+    ) {
+        DataRow(
+            icon = Icons.Filled.Info,
+            label = "Manufacturer / Brand",
+            value = "${dev.manufacturer.ifBlank { "unknown" }} / ${dev.brand.ifBlank { "unknown" }}"
+        )
+        DataRow(
+            icon = Icons.Filled.LockOpen,
+            label = "Bootloader State",
+            value = if (dev.bootUnlocked) "Unlocked (Orange)" else "Locked (Green)",
+            valueColor = if (dev.bootUnlocked) AstraSuccess else AstraWarning
+        )
+        DataRow(
+            icon = Icons.Filled.VerifiedUser,
+            label = "SELinux Profile",
+            value = "${dev.selinuxMode} (v${dev.selinuxPolicyVersion})",
+            valueColor = if (dev.selinuxEnforcing) AstraSuccess else AstraWarning
+        )
+    }
+}
+
+@Composable
+private fun CompatibilityAssessmentCard(state: StatusViewModel.UiState) {
+    val res = state.compatibilityResult
+    val accentColor = when (res.level) {
+        CompatibilityLevel.EXCELLENT -> AstraSuccess
+        CompatibilityLevel.GOOD -> AstraTeal
+        CompatibilityLevel.LIMITED -> AstraWarning
+        CompatibilityLevel.UNSUPPORTED -> AstraError
+    }
+
+    StatusCard(
+        title = "Compatibility Assessment",
+        icon = Icons.Filled.Equalizer,
+        status = "${res.score}/100",
+        accent = accentColor
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Environment Level: ",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Box(
+                modifier = Modifier
+                    .background(accentColor.copy(alpha = 0.18f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = res.level.name,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor
+                )
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        LinearProgressIndicator(
+            progress = { res.score / 100f },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color = accentColor,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+
+        if (res.warnings.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "System Warnings / Recommendations:",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            res.warnings.forEach { warning ->
+                Row(
+                    modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = AstraWarning,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = warning,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PrivilegeBackendCard(state: StatusViewModel.UiState, onNavigate: (String) -> Unit) {
     val detected = state.providerName != "None"
     val accent = if (detected) AstraSuccess else AstraWarning
@@ -208,11 +297,12 @@ private fun PrivilegeBackendCard(state: StatusViewModel.UiState, onNavigate: (St
 @Composable
 private fun CapabilitiesCard(state: StatusViewModel.UiState) {
     val cap = state.capability
+    val dev = state.deviceProfile
     val items = listOf(
-        CapabilityRow("Mount Master", cap.mountSupported),
-        CapabilityRow("Namespace", cap.namespaceSupported),
-        CapabilityRow("Hook", cap.hookSupported),
-        CapabilityRow("OverlayFS", cap.overlayFsSupported)
+        CapabilityRow("Mount Master", cap.mountSupported, if (cap.mountSupported) 95 else 10),
+        CapabilityRow("Namespace", cap.namespaceSupported, if (cap.namespaceSupported) 90 else 10),
+        CapabilityRow("Hook", cap.hookSupported, if (cap.hookSupported) 80 else 10),
+        CapabilityRow("OverlayFS", cap.overlayFsSupported, if (dev.kernelOverlayFs) 95 else 15)
     )
     StatusCard(
         title = "Capabilities",
@@ -383,25 +473,38 @@ private fun DataRow(
     }
 }
 
-private data class CapabilityRow(val name: String, val supported: Boolean)
+private data class CapabilityRow(val name: String, val supported: Boolean, val confidence: Int)
 
 @Composable
 private fun CapabilityLine(row: CapabilityRow) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = row.name,
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
-        )
-        StatusPill(
-            text = if (row.supported) "Supported" else "Unsupported",
-            color = if (row.supported) AstraSuccess else AstraError,
-            icon = if (row.supported) Icons.Filled.CheckCircle else Icons.Filled.Close
-        )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = row.name,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            StatusPill(
+                text = if (row.supported) "${row.confidence}%" else "Unsupported",
+                color = if (row.supported) AstraSuccess else AstraError,
+                icon = if (row.supported) Icons.Filled.CheckCircle else Icons.Filled.Close
+            )
+        }
+        if (row.supported) {
+            Spacer(Modifier.height(2.dp))
+            LinearProgressIndicator(
+                progress = { row.confidence / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp),
+                color = AstraSuccess,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        }
     }
 }
 

@@ -47,7 +47,9 @@ import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
 import com.astraveil.app.ui.screens.ModulesScreen
+import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
+import com.astraveil.app.ui.screens.RootManagerScreen
 import com.astraveil.app.ui.settings.SettingsScreen
 import com.astraveil.app.viewmodel.StatusViewModel
 
@@ -103,6 +105,9 @@ fun AstraVeilApp() {
             composable(Destinations.Provider.route) {
                 ProviderScreen(viewModel = viewModel)
             }
+            composable(Destinations.Superuser.route) {
+                RootManagerScreen(viewModel = viewModel)
+            }
             composable(Destinations.Modules.route) {
                 ModulesScreen(viewModel = viewModel)
             }
@@ -111,6 +116,9 @@ fun AstraVeilApp() {
             }
             composable(Destinations.Settings.route) {
                 SettingsScreen(onNavigate = { route -> navController.navigate(route) })
+            }
+            composable("settings_diagnostics") {
+                DiagnosticsScreen(viewModel = viewModel)
             }
         }
     }
@@ -231,6 +239,12 @@ object Destinations {
         icon = Icons.Outlined.Apps,
         iconSelected = Icons.Filled.Apps,
     )
+    val Superuser = Destination(
+        route = "superuser",
+        label = "Superuser",
+        icon = Icons.Outlined.Security,
+        iconSelected = Icons.Filled.Security,
+    )
     val About = Destination(
         route = "about",
         label = "About",
@@ -244,5 +258,5 @@ object Destinations {
         iconSelected = Icons.Filled.Settings,
     )
 
-    val list = listOf(Dashboard, Capability, Provider, Modules, About, Settings)
+    val list = listOf(Dashboard, Capability, Provider, Superuser, Modules, Settings)
 }
