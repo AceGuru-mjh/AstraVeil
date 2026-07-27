@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.AstraVeil" parent="android:Theme.NoActionBar">
+    <style name="Theme.AstraVeil" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/astra_window_background</item>
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
