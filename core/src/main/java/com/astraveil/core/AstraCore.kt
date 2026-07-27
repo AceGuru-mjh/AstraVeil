@@ -76,16 +76,21 @@ class AstraCore(context: Context) {
      */
     suspend fun initialize() {
         logger.init("AstraVeil")
-        val cfg = config.load()
-        runCatching {
-            LogLevel.valueOf(cfg.logLevel.uppercase())
-        }.onSuccess { level ->
-            logger.setMinLevel(level)
-        }.onFailure {
+        try {
+            val cfg = config.load()
+            runCatching {
+                LogLevel.valueOf(cfg.logLevel.uppercase())
+            }.onSuccess { level ->
+                logger.setMinLevel(level)
+            }.onFailure {
+                logger.setMinLevel(LogLevel.INFO)
+            }
+            permissionEngine.setDangerousApproval(cfg.dangerousApproval)
+            logger.i("AstraCore", "Initialized; provider=${cfg.activeProvider}")
+        } catch (t: Throwable) {
+            logger.e("AstraCore", "initialize failed", t)
             logger.setMinLevel(LogLevel.INFO)
         }
-        permissionEngine.setDangerousApproval(cfg.dangerousApproval)
-        logger.i("AstraCore", "Initialized; provider=${cfg.activeProvider}")
     }
 
     /**
@@ -95,9 +100,14 @@ class AstraCore(context: Context) {
      * @return The freshly captured [CapabilityInfo].
      */
     suspend fun refreshCapability(): CapabilityInfo {
-        val info = capabilityEngine.scan()
-        capability = info
-        eventBus.emit(CapabilityUpdatedEvent(info))
-        return info
+        return try {
+            val info = capabilityEngine.scan()
+            capability = info
+            eventBus.emit(CapabilityUpdatedEvent(info))
+            info
+        } catch (t: Throwable) {
+            logger.e("AstraCore", "refreshCapability failed", t)
+            capability
+        }
     }
 }

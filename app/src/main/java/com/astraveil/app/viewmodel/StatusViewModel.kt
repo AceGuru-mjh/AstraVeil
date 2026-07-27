@@ -21,11 +21,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Holds the dashboard-wide UI state for AstraUI.
+ * Crash-safe dashboard ViewModel.
  *
- * Crash-safe: every access to [AstraVeilApplication.core] is guarded so
- * the app never crashes if the core is not yet initialised (cold start
- * race between Application.onCreate and the first composition).
+ * Uses nullable `core` instead of lateinit to avoid
+ * UninitializedPropertyAccessException. Every call is guarded.
  */
 class StatusViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -48,26 +47,19 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
-        // Delay refresh until the Application has had a chance to set up
-        // `core`. Using viewModelScope.launch avoids the cold-start race
-        // where the ViewModel is constructed before Application.onCreate
-        // finishes wiring AstraCore.
-        viewModelScope.launch { refresh() }
+        viewModelScope.launch {
+            // Small delay to ensure Application.onCreate has run.
+            kotlinx.coroutines.delay(100)
+            refresh()
+        }
         observeEvents()
     }
 
-    /**
-     * Re-probe capability + provider. Fully crash-safe — every external
-     * call is wrapped in runCatching so a failure in one subsystem does
-     * not bring down the whole UI.
-     */
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(scanning = true, lastError = null) }
             try {
-                // Guard: core might not be initialised yet on cold start.
-                val core = runCatching { AstraVeilApplication.core }.getOrNull()
-
+                val core = AstraVeilApplication.core
                 if (core != null) {
                     runCatching { core.refreshCapability() }
                         .onFailure { AstraLogger.w(TAG, "refreshCapability failed: ${it.message}") }
@@ -129,7 +121,7 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
                 is SecurityViolationEvent -> _uiState.update {
                     it.copy(securityProtected = false)
                 }
-                else -> { /* other events ignored at this layer */ }
+                else -> {}
             }
         } catch (t: Throwable) {
             AstraLogger.e(TAG, "handleEvent failed", t)
