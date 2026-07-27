@@ -1,26 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- AstraVeil launcher icon foreground: a stylised "A" shield glyph in violet/teal. -->
+<!-- Standard Android robot icon foreground (classic green Android robot). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Android robot body + head + eyes + antennae + arms + legs -->
+    <!-- Centered in the 108x108 safe-zone (visible area is ~72x72 centered). -->
     <group
-        android:scaleX="0.62"
-        android:scaleY="0.62"
-        android:translateX="20"
-        android:translateY="20">
-        <!-- Shield outline -->
+        android:scaleX="0.55"
+        android:scaleY="0.55"
+        android:translateX="24"
+        android:translateY="24">
+
+        <!-- Head (semi-circle) + body (rounded rectangle) -->
         <path
-            android:fillColor="#FF8B5CF6"
-            android:pathData="M54,12 L88,28 L88,58 C88,80 72,94 54,100 C36,94 20,80 20,58 L20,28 Z" />
-        <!-- Inner dark cutout -->
+            android:fillColor="#3DDC84"
+            android:pathData="M18,42 C18,28 30,18 45,18 C60,18 72,28 72,42 L72,60 L18,60 Z" />
+
+        <!-- Body -->
         <path
-            android:fillColor="#FF0B0D12"
-            android:pathData="M54,22 L80,34 L80,58 C80,75 68,86 54,91 C40,86 28,75 28,58 L28,34 Z" />
-        <!-- A glyph -->
+            android:fillColor="#3DDC84"
+            android:pathData="M18,60 L72,60 L72,78 C72,80 70,82 68,82 L22,82 C20,82 18,80 18,78 Z" />
+
+        <!-- Left eye -->
         <path
-            android:fillColor="#FF2DD4BF"
-            android:pathData="M40,72 L48,40 L60,40 L68,72 L61,72 L59,63 L49,63 L47,72 Z M50,57 L58,57 L54,46 Z" />
+            android:fillColor="#FFFFFF"
+            android:pathData="M34,36 C34,33 36,31 38,31 C40,31 42,33 42,36 C42,39 40,41 38,41 C36,41 34,39 34,36 Z" />
+
+        <!-- Right eye -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M48,36 C48,33 50,31 52,31 C54,31 56,33 56,36 C56,39 54,41 52,41 C50,41 48,39 48,36 Z" />
+
+        <!-- Left antenna -->
+        <path
+            android:fillColor="#3DDC84"
+            android:strokeColor="#3DDC84"
+            android:strokeWidth="3"
+            android:pathData="M32,22 L28,14" />
+
+        <!-- Right antenna -->
+        <path
+            android:fillColor="#3DDC84"
+            android:strokeColor="#3DDC84"
+            android:strokeWidth="3"
+            android:pathData="M58,22 L62,14" />
+
+        <!-- Left arm -->
+        <path
+            android:fillColor="#3DDC84"
+            android:pathData="M10,50 C6,50 3,53 3,57 L3,68 C3,70 5,72 7,72 C9,72 11,70 11,68 L11,57 C11,53 8,50 10,50 Z" />
+
+        <!-- Right arm -->
+        <path
+            android:fillColor="#3DDC84"
+            android:pathData="M80,50 C84,50 87,53 87,57 L87,68 C87,70 85,72 83,72 C81,72 79,70 79,68 L79,57 C79,53 82,50 80,50 Z" />
+
+        <!-- Left leg -->
+        <path
+            android:fillColor="#3DDC84"
+            android:pathData="M30,82 L30,92 C30,94 32,96 34,96 C36,96 38,94 38,92 L38,82 Z" />
+
+        <!-- Right leg -->
+        <path
+            android:fillColor="#3DDC84"
+            android:pathData="M52,82 L52,92 C52,94 54,96 56,96 C58,96 60,94 60,92 L60,82 Z" />
+
     </group>
 </vector>
