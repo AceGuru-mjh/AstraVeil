@@ -17,12 +17,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.astraveil.app.ui.components.StatusPill
+import com.astraveil.app.ui.design.GlassCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -71,6 +77,10 @@ fun ProviderScreen(viewModel: StatusViewModel) {
 
         if (activeName == "None") {
             item { NoProviderHint() }
+        }
+
+        if (activeName != "None") {
+            item { RootTestCard(viewModel, state) }
         }
 
         item { SectionLabel("Backend abstraction layer") }
@@ -216,6 +226,101 @@ private fun ProviderCard(
                 color = if (active) AstraSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
                 icon = if (active) Icons.Filled.CheckCircle else null
             )
+        }
+    }
+}
+
+// --------------------------------------------------------------------- root test
+
+@Composable
+private fun RootTestCard(
+    viewModel: StatusViewModel,
+    state: StatusViewModel.UiState,
+) {
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                "Root Capability Test",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                "Execute `id` through the active provider to verify root access.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Button(
+                onClick = { viewModel.testRootCapability() },
+                enabled = !state.rootTesting,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AstraAccent,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+            ) {
+                if (state.rootTesting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Text("  Testing…")
+                } else {
+                    Icon(Icons.Filled.PlayArrow, null, modifier = Modifier.size(18.dp))
+                    Text("  Test Root")
+                }
+            }
+
+            state.rootTestResult?.let { result ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (result.success)
+                            AstraSuccess.copy(alpha = 0.1f)
+                        else
+                            AstraError.copy(alpha = 0.1f)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                if (result.success) Icons.Filled.CheckCircle else Icons.Filled.Close,
+                                null,
+                                tint = if (result.success) AstraSuccess else AstraError,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                if (result.success) "Root Available" else "Root Denied",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (result.success) AstraSuccess else AstraError,
+                            )
+                        }
+                        if (result.output.isNotBlank()) {
+                            Text(
+                                result.output,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Text(
+                            "Provider: ${result.providerName}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        result.error?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AstraError,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
