@@ -1,60 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Networking (future telemetry / module downloads) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <!-- Foreground service for the AstraVeil daemon (planned, Phase 1+) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-
-    <!-- Module management needs to enumerate installed Astra Modules (.avm) -->
-    <!-- QUERY_ALL_PACKAGES is required to inspect installed app packages for
-         capability detection / module discovery. Submitted as sensitive
-         permission on Play Console (this is an off-store control center). -->
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
-
-    <!-- Post notifications for security / module events -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- Boot receiver for daemon autostart (planned) -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".AstraVeilApplication"
         android:allowBackup="false"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AstraVeil"
-        tools:targetApi="35">
+        android:theme="@style/Theme.AstraVeil">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
             android:label="@string/app_name"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.AstraVeil"
-            android:windowSoftInputMode="adjustResize">
+            android:theme="@style/Theme.AstraVeil">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <!-- Astra Module installer (.avm files) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="*/*" />
-                <data android:pathPattern=".*\\.avm" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
             </intent-filter>
         </activity>
 
