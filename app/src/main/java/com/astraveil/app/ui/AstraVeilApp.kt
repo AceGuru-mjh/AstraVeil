@@ -183,49 +183,51 @@ private fun AstraBottomBar(
 
 /**
  * Navigation destinations for AstraUI Phase 0.
+ *
+ * Uses a plain list of data class instances instead of sealed-class
+ * data objects. The previous sealed-class + companion-object pattern
+ * caused a NullPointerException at runtime: the companion object's
+ * `list` was initialized before the nested `data object` singletons
+ * were fully constructed, so `destination.route` threw NPE.
  */
-sealed class Destinations(
+data class Destination(
     val route: String,
     val label: String,
     val icon: ImageVector,
-    val iconSelected: ImageVector
-) {
-    data object Dashboard : Destinations(
+    val iconSelected: ImageVector,
+)
+
+object Destinations {
+    val Dashboard = Destination(
         route = "dashboard",
         label = "Dashboard",
         icon = Icons.Outlined.Dashboard,
-        iconSelected = Icons.Filled.Dashboard
+        iconSelected = Icons.Filled.Dashboard,
     )
-
-    data object Capability : Destinations(
+    val Capability = Destination(
         route = "capability",
         label = "Capability",
         icon = Icons.Outlined.SettingsInputComponent,
-        iconSelected = Icons.Filled.SettingsInputComponent
+        iconSelected = Icons.Filled.SettingsInputComponent,
     )
-
-    data object Provider : Destinations(
+    val Provider = Destination(
         route = "provider",
         label = "Provider",
         icon = Icons.Outlined.Security,
-        iconSelected = Icons.Filled.Security
+        iconSelected = Icons.Filled.Security,
     )
-
-    data object Modules : Destinations(
+    val Modules = Destination(
         route = "modules",
         label = "Modules",
         icon = Icons.Outlined.Apps,
-        iconSelected = Icons.Filled.Apps
+        iconSelected = Icons.Filled.Apps,
     )
-
-    data object About : Destinations(
+    val About = Destination(
         route = "about",
         label = "About",
         icon = Icons.Outlined.Info,
-        iconSelected = Icons.Filled.Info
+        iconSelected = Icons.Filled.Info,
     )
 
-    companion object {
-        val list = listOf(Dashboard, Capability, Provider, Modules, About)
-    }
+    val list = listOf(Dashboard, Capability, Provider, Modules, About)
 }
