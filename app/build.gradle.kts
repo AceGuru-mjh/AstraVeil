@@ -32,12 +32,15 @@ android {
         )
     }
 
+    val keystoreFile = file("astraveil.jks")
     signingConfigs {
         create("release") {
-            storeFile = file("astraveil.jks")
-            storePassword = "meng411722"
-            keyAlias = "astrabeil"
-            keyPassword = "meng411722"
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = "meng411722"
+                keyAlias = "astrabeil"
+                keyPassword = "meng411722"
+            }
         }
     }
 
@@ -48,9 +51,9 @@ android {
             versionNameSuffix = "-debug"
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = if (keystoreFile.exists()) signingConfigs.getByName("release") else null
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
