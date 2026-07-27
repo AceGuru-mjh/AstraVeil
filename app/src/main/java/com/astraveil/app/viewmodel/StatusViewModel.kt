@@ -23,19 +23,14 @@ import kotlinx.coroutines.launch
 /**
  * Holds the dashboard-wide UI state for AstraUI.
  *
- * The VM reads from the global [AstraVeilApplication.core] engine, polls
- * [ProviderRegistry] for the active root backend, and subscribes to the
- * core [EventBus] for live updates. UI state is exposed as a single
- * [StateFlow] of [UiState] to keep recomposition cheap.
+ * Crash-safe: every access to [AstraVeilApplication.core] is guarded so
+ * the app never crashes if the core is not yet initialised (cold start
+ * race between Application.onCreate and the first composition).
  */
 class StatusViewModel(app: Application) : AndroidViewModel(app) {
 
-    /** Lifecycle state of the AstraVeil daemon (Phase 0: always OFFLINE). */
     enum class DaemonStatus { OFFLINE, CONNECTING, ONLINE }
 
-    /**
-     * Immutable snapshot of everything AstraUI renders.
-     */
     data class UiState(
         val coreVersion: String = BuildConfig.ASTRAVEIL_VERSION,
         val daemonStatus: DaemonStatus = DaemonStatus.OFFLINE,
@@ -53,26 +48,34 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
-        refresh()
+        // Delay refresh until the Application has had a chance to set up
+        // `core`. Using viewModelScope.launch avoids the cold-start race
+        // where the ViewModel is constructed before Application.onCreate
+        // finishes wiring AstraCore.
+        viewModelScope.launch { refresh() }
         observeEvents()
     }
 
     /**
-     * Re-probe capability + provider. Sets [UiState.scanning] while running
-     * so the UI can show a progress affordance. Always runs on Dispatchers.IO
-     * (the core implementations are blocking).
+     * Re-probe capability + provider. Fully crash-safe — every external
+     * call is wrapped in runCatching so a failure in one subsystem does
+     * not bring down the whole UI.
      */
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(scanning = true, lastError = null) }
             try {
-                val core = AstraVeilApplication.core
-                runCatching { core.refreshCapability() }
-                    .onFailure { AstraLogger.w(TAG, "refreshCapability failed: ${it.message}") }
+                // Guard: core might not be initialised yet on cold start.
+                val core = runCatching { AstraVeilApplication.core }.getOrNull()
 
-                val capability = runCatching { core.capability }
-                    .getOrNull()
-                    ?: CapabilityInfo.empty()
+                if (core != null) {
+                    runCatching { core.refreshCapability() }
+                        .onFailure { AstraLogger.w(TAG, "refreshCapability failed: ${it.message}") }
+                }
+
+                val capability = core?.let {
+                    runCatching { it.capability }.getOrNull()
+                } ?: CapabilityInfo.empty()
 
                 val detected = runCatching { ProviderRegistry.detectActive() }
                     .getOrNull()
@@ -81,7 +84,7 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
                     current.copy(
                         scanning = false,
                         capability = capability,
-                        daemonStatus = DaemonStatus.OFFLINE, // Phase 0: no daemon yet
+                        daemonStatus = DaemonStatus.OFFLINE,
                         providerName = detected?.displayName ?: "None",
                         providerVersion = detected?.version ?: "—",
                         providerInfo = detected,
@@ -98,34 +101,38 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Subscribe to the core [EventBus] and reflect interesting events
-     * (capability changes, provider switch, security warnings) into [UiState].
-     */
     private fun observeEvents() {
         viewModelScope.launch {
-            EventBus.events.collect { event ->
-                handleEvent(event)
+            try {
+                EventBus.events.collect { event ->
+                    handleEvent(event)
+                }
+            } catch (t: Throwable) {
+                AstraLogger.e(TAG, "EventBus collect failed", t)
             }
         }
     }
 
     private fun handleEvent(event: AstraEvent) {
-        when (event) {
-            is CapabilityUpdatedEvent -> _uiState.update {
-                it.copy(capability = event.info)
+        try {
+            when (event) {
+                is CapabilityUpdatedEvent -> _uiState.update {
+                    it.copy(capability = event.info)
+                }
+                is ProviderAvailableEvent -> _uiState.update {
+                    it.copy(
+                        providerName = event.rootInfo.displayName,
+                        providerVersion = event.rootInfo.version,
+                        providerInfo = event.rootInfo
+                    )
+                }
+                is SecurityViolationEvent -> _uiState.update {
+                    it.copy(securityProtected = false)
+                }
+                else -> { /* other events ignored at this layer */ }
             }
-            is ProviderAvailableEvent -> _uiState.update {
-                it.copy(
-                    providerName = event.rootInfo.displayName,
-                    providerVersion = event.rootInfo.version,
-                    providerInfo = event.rootInfo
-                )
-            }
-            is SecurityViolationEvent -> _uiState.update {
-                it.copy(securityProtected = false)
-            }
-            else -> { /* other events ignored at this layer */ }
+        } catch (t: Throwable) {
+            AstraLogger.e(TAG, "handleEvent failed", t)
         }
     }
 

@@ -38,7 +38,7 @@ android {
             if (keystoreFile.exists()) {
                 storeFile = keystoreFile
                 storePassword = "meng411722"
-                keyAlias = "astrabeil"
+                keyAlias = "root8888"
                 keyPassword = "meng411722"
             }
         }
