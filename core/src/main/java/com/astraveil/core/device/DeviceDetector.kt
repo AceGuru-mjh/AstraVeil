@@ -2,23 +2,22 @@ package com.astraveil.core.device
 
 /**
  * Bridges [DeviceInspector] (raw probes) into the v3 capability
- * resolver pipeline. Produces both an [AndroidProfile] (for the UI)
- * and a [DeviceCapability] (for the resolver).
+ * resolver pipeline. Produces a [DeviceProfile] (for the UI and
+ * compatibility engine) and a [DeviceCapability] (for the resolver).
  */
 class DeviceDetector(
     private val inspector: DeviceInspector = DeviceInspector(),
 ) {
+    suspend fun detect(): DeviceProfile = inspector.inspect()
 
-    fun detect(): AndroidProfile = inspector.inspect()
-
-    fun capabilities(): DeviceCapability {
+    suspend fun capabilities(): DeviceCapability {
         val profile = detect()
         return DeviceCapability(
-            rootAvailable = false,  // provider layer fills this
-            mountNamespace = profile.kernel != "unknown",
-            overlayFs = false,      // kernel probe fills this
-            selinuxControl = profile.selinux == "Enforcing",
-            bootPatch = false,      // provider layer fills this
+            rootAvailable = false,
+            mountNamespace = profile.kernelVersion.isNotBlank(),
+            overlayFs = profile.kernelOverlayFs,
+            selinuxControl = profile.selinuxEnforcing,
+            bootPatch = false,
         )
     }
 }
