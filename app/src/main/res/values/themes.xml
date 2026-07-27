@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- AstraVeil is rendered with Jetpack Compose; this XML theme just gives
-         the activity a transparent status / nav bar and a no-action-bar chrome
-         while Compose is loading. It is intentionally minimal. -->
-    <style name="Theme.AstraVeil" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+    <style name="Theme.AstraVeil" parent="android:Theme.DeviceDefault.NoActionBar">
         <item name="android:windowBackground">@color/astra_window_background</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
     </style>
 </resources>
