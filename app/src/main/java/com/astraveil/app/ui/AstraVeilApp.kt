@@ -89,7 +89,10 @@ fun AstraVeilApp() {
                 .padding(innerPadding)
         ) {
             composable(Destinations.Dashboard.route) {
-                DashboardScreen(viewModel = viewModel)
+                DashboardScreen(
+                    viewModel = viewModel,
+                    onNavigate = { route -> navController.navigate(route) },
+                )
             }
             composable(Destinations.Capability.route) {
                 CapabilityScreen(viewModel = viewModel)
