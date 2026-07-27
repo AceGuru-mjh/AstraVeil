@@ -12,11 +12,13 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsInputComponent
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsInputComponent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +48,7 @@ import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
 import com.astraveil.app.ui.screens.ModulesScreen
 import com.astraveil.app.ui.screens.ProviderScreen
+import com.astraveil.app.ui.settings.SettingsScreen
 import com.astraveil.app.viewmodel.StatusViewModel
 
 /**
@@ -105,6 +108,9 @@ fun AstraVeilApp() {
             }
             composable(Destinations.About.route) {
                 AboutScreen()
+            }
+            composable(Destinations.Settings.route) {
+                SettingsScreen(onNavigate = { route -> navController.navigate(route) })
             }
         }
     }
@@ -231,6 +237,12 @@ object Destinations {
         icon = Icons.Outlined.Info,
         iconSelected = Icons.Filled.Info,
     )
+    val Settings = Destination(
+        route = "settings",
+        label = "Settings",
+        icon = Icons.Outlined.Settings,
+        iconSelected = Icons.Filled.Settings,
+    )
 
-    val list = listOf(Dashboard, Capability, Provider, Modules, About)
+    val list = listOf(Dashboard, Capability, Provider, Modules, About, Settings)
 }

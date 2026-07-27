@@ -1,7 +1,6 @@
 package com.astraveil.app.viewmodel
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.astraveil.app.BuildConfig
@@ -19,6 +18,13 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
 
     enum class DaemonStatus { OFFLINE, CONNECTING, ONLINE }
 
+    data class RootTestResult(
+        val success: Boolean,
+        val output: String,
+        val providerName: String,
+        val error: String? = null,
+    )
+
     data class UiState(
         val coreVersion: String = BuildConfig.ASTRAVEIL_VERSION,
         val daemonStatus: DaemonStatus = DaemonStatus.OFFLINE,
@@ -29,7 +35,9 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
         val modulesActive: Int = 0,
         val scanning: Boolean = false,
         val securityProtected: Boolean = true,
-        val lastError: String? = null
+        val lastError: String? = null,
+        val rootTestResult: RootTestResult? = null,
+        val rootTesting: Boolean = false,
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -59,6 +67,79 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
             } catch (t: Throwable) {
                 _uiState.update {
                     it.copy(scanning = false, lastError = t.message)
+                }
+            }
+        }
+    }
+
+    /**
+     * Test root capability by executing `id` through the active provider.
+     * On success: output contains "uid=0(root)".
+     * On failure: error message explains why.
+     */
+    fun testRootCapability() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(rootTesting = true) }
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    val info = runCatching {
+                        com.astraveil.providers.ProviderRegistry.detectActive()
+                    }.getOrNull()
+
+                    if (info == null) {
+                        return@withContext RootTestResult(
+                            success = false,
+                            output = "",
+                            providerName = "None",
+                            error = "No root provider detected",
+                        )
+                    }
+
+                    val provider = com.astraveil.providers.ProviderRegistry
+                        .byId(info.providerName)
+
+                    if (provider == null || !provider.available()) {
+                        return@withContext RootTestResult(
+                            success = false,
+                            output = "",
+                            providerName = info.displayName,
+                            error = "Provider not available",
+                        )
+                    }
+
+                    // Execute `id` via the provider.
+                    val execResult = runCatching {
+                        provider.execute("id")
+                    }.getOrNull()
+
+                    if (execResult == null || !execResult.success) {
+                        return@withContext RootTestResult(
+                            success = false,
+                            output = execResult?.stdout ?: "",
+                            providerName = provider.displayName,
+                            error = execResult?.stderr ?: "Execution failed",
+                        )
+                    }
+
+                    RootTestResult(
+                        success = true,
+                        output = execResult.stdout.trim(),
+                        providerName = provider.displayName,
+                    )
+                }
+
+                _uiState.update { it.copy(rootTesting = false, rootTestResult = result) }
+            } catch (t: Throwable) {
+                _uiState.update {
+                    it.copy(
+                        rootTesting = false,
+                        rootTestResult = RootTestResult(
+                            success = false,
+                            output = "",
+                            providerName = "Error",
+                            error = t.message,
+                        )
+                    )
                 }
             }
         }

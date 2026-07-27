@@ -1,0 +1,87 @@
+package com.astraveil.app.ui.settings
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Power
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.astraveil.app.ui.design.GlassCard
+import com.astraveil.app.ui.theme.AstraAccent
+
+data class SettingEntry(
+    val icon: ImageVector,
+    val title: String,
+    val subtitle: String,
+    val route: String,
+)
+
+object SettingEntries {
+    val General = SettingEntry(Icons.Filled.Palette, "General", "Theme, animations, glass effect", "settings_general")
+    val Security = SettingEntry(Icons.Filled.Security, "Security", "Permission mode, sandbox, audit", "settings_security")
+    val Provider = SettingEntry(Icons.Filled.Power, "Provider", "Root backend selection", "settings_provider")
+    val Modules = SettingEntry(Icons.Filled.Extension, "Modules", "Install source, auto-start, sandbox", "settings_modules")
+    val Daemon = SettingEntry(Icons.Filled.Devices, "Daemon", "Service status, socket, logs", "settings_daemon")
+    val Developer = SettingEntry(Icons.Filled.BugReport, "Developer", "Debug logs, IPC, unsafe capability", "settings_developer")
+    val About = SettingEntry(Icons.Filled.Info, "About", "Version, architecture, license", "settings_about")
+
+    val list = listOf(General, Security, Provider, Modules, Daemon, Developer, About)
+}
+
+@Composable
+fun SettingsScreen(
+    onNavigate: (String) -> Unit = {},
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground)
+                Text("Astra Control Center", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        items(SettingEntries.list) { entry ->
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(entry.icon, null, tint = AstraAccent, modifier = Modifier.padding(end = 14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface)
+                        Text(entry.subtitle, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
