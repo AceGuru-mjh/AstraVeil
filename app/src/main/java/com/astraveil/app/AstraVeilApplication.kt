@@ -1,9 +1,7 @@
 package com.astraveil.app
 
 import android.app.Application
-import com.astraveil.core.AstraCore
-import com.astraveil.core.logger.AstraLogger
-import com.astraveil.providers.ProviderRegistry
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,36 +11,33 @@ import kotlinx.coroutines.cancel
 /**
  * AstraVeil Application entry point.
  *
- * Crash-safe: the core engine is constructed inside a try-catch so a
- * failure during AstraCore construction does not crash the process.
- * The `core` lateinit is only set when construction succeeds; the
- * StatusViewModel guards its access with runCatching.
+ * Ultra crash-safe: everything is wrapped in try-catch. The app NEVER
+ * crashes from Application.onCreate — if core init fails, the UI shows
+ * defaults.
  */
 class AstraVeilApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
         instance = this
+        Log.i(TAG, "AstraVeilApplication.onCreate")
 
-        // Boot the core engine. Wrapped in try-catch so a failure does
-        // not crash the app — the UI shows "offline" state instead.
-        try {
-            val engine = AstraCore(this)
-            core = engine
+        // Boot the core engine in background. Every step is guarded.
+        appScope.launch {
+            try {
+                val engine = com.astraveil.core.AstraCore(this@AstraVeilApplication)
+                core = engine
+                Log.i(TAG, "AstraCore constructed")
 
-            // Wire the provider registry to the core event bus.
-            ProviderRegistry.eventBus = engine.eventBus
-
-            appScope.launch {
                 try {
                     engine.initialize()
-                    AstraLogger.i(TAG, "AstraCore initialised — AstraVeil ready.")
+                    Log.i(TAG, "AstraCore initialized")
                 } catch (t: Throwable) {
-                    AstraLogger.e(TAG, "AstraCore init failed", t)
+                    Log.e(TAG, "AstraCore init failed", t)
                 }
+            } catch (t: Throwable) {
+                Log.e(TAG, "AstraCore construction failed", t)
             }
-        } catch (t: Throwable) {
-            AstraLogger.e(TAG, "AstraCore construction failed", t)
         }
     }
 
@@ -58,15 +53,8 @@ class AstraVeilApplication : Application() {
         lateinit var instance: AstraVeilApplication
             private set
 
-        /**
-         * The global AstraVeil core engine.
-         *
-         * Set during [onCreate]. Callers MUST guard access with
-         * `runCatching { AstraVeilApplication.core }` because the
-         * lateinit may not be set if construction failed.
-         */
         @Volatile
-        lateinit var core: AstraCore
+        var core: com.astraveil.core.AstraCore? = null
             private set
 
         val appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
