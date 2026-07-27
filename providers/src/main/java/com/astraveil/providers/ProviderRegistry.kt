@@ -55,6 +55,9 @@ object ProviderRegistry {
     @Volatile
     var eventBus: EventBus? = null
 
+    @Volatile
+    var permissionEngine: com.astraveil.core.permission.PermissionEngine? = null
+
     /**
      * The ordered list of every backend AstraVeil knows how to drive.
      *
