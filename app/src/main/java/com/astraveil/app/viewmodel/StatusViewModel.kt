@@ -1,18 +1,9 @@
 package com.astraveil.app.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.astraveil.app.AstraVeilApplication
 import com.astraveil.app.BuildConfig
 import com.astraveil.core.capability.CapabilityInfo
-import com.astraveil.core.event.AstraEvent
-import com.astraveil.core.event.CapabilityUpdatedEvent
-import com.astraveil.core.event.EventBus
-import com.astraveil.core.event.SecurityViolationEvent
-import com.astraveil.core.logger.AstraLogger
-import com.astraveil.providers.ProviderAvailableEvent
-import com.astraveil.providers.ProviderRegistry
 import com.astraveil.providers.RootInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,13 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * Crash-safe dashboard ViewModel.
- *
- * Uses nullable `core` instead of lateinit to avoid
- * UninitializedPropertyAccessException. Every call is guarded.
- */
-class StatusViewModel(app: Application) : AndroidViewModel(app) {
+class StatusViewModel : ViewModel() {
 
     enum class DaemonStatus { OFFLINE, CONNECTING, ONLINE }
 
@@ -47,88 +32,35 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            // Small delay to ensure Application.onCreate has run.
-            kotlinx.coroutines.delay(100)
-            refresh()
-        }
-        observeEvents()
+        refresh()
     }
 
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(scanning = true, lastError = null) }
             try {
-                val core = AstraVeilApplication.core
-                if (core != null) {
-                    runCatching { core.refreshCapability() }
-                        .onFailure { AstraLogger.w(TAG, "refreshCapability failed: ${it.message}") }
-                }
+                val capability = runCatching {
+                    com.astraveil.core.capability.CapabilityEngine().scan()
+                }.getOrNull() ?: CapabilityInfo.empty()
 
-                val capability = core?.let {
-                    runCatching { it.capability }.getOrNull()
-                } ?: CapabilityInfo.empty()
-
-                val detected = runCatching { ProviderRegistry.detectActive() }
-                    .getOrNull()
+                val detected = runCatching {
+                    com.astraveil.providers.ProviderRegistry.detectActive()
+                }.getOrNull()
 
                 _uiState.update { current ->
                     current.copy(
                         scanning = false,
                         capability = capability,
-                        daemonStatus = DaemonStatus.OFFLINE,
                         providerName = detected?.displayName ?: "None",
                         providerVersion = detected?.version ?: "—",
                         providerInfo = detected,
-                        securityProtected = true
                     )
                 }
-                AstraLogger.i(TAG, "Refresh complete — provider=${detected?.providerName ?: "none"}")
             } catch (t: Throwable) {
-                AstraLogger.e(TAG, "Refresh failed", t)
                 _uiState.update {
-                    it.copy(scanning = false, lastError = t.message ?: t.javaClass.simpleName)
+                    it.copy(scanning = false, lastError = t.message)
                 }
             }
         }
-    }
-
-    private fun observeEvents() {
-        viewModelScope.launch {
-            try {
-                EventBus.events.collect { event ->
-                    handleEvent(event)
-                }
-            } catch (t: Throwable) {
-                AstraLogger.e(TAG, "EventBus collect failed", t)
-            }
-        }
-    }
-
-    private fun handleEvent(event: AstraEvent) {
-        try {
-            when (event) {
-                is CapabilityUpdatedEvent -> _uiState.update {
-                    it.copy(capability = event.info)
-                }
-                is ProviderAvailableEvent -> _uiState.update {
-                    it.copy(
-                        providerName = event.rootInfo.displayName,
-                        providerVersion = event.rootInfo.version,
-                        providerInfo = event.rootInfo
-                    )
-                }
-                is SecurityViolationEvent -> _uiState.update {
-                    it.copy(securityProtected = false)
-                }
-                else -> {}
-            }
-        } catch (t: Throwable) {
-            AstraLogger.e(TAG, "handleEvent failed", t)
-        }
-    }
-
-    private companion object {
-        private const val TAG = "StatusViewModel"
     }
 }
