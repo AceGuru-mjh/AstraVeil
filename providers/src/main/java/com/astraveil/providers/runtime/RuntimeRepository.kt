@@ -2,6 +2,9 @@ package com.astraveil.providers.runtime
 
 import com.astraveil.core.device.DeviceInspector
 import com.astraveil.core.device.DeviceProfile
+import com.astraveil.core.runtime.CapabilityStatus
+import com.astraveil.core.runtime.ProviderStatus
+import com.astraveil.core.runtime.RuntimeStatus
 
 
 
