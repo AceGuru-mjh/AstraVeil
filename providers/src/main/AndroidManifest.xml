@@ -1,7 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  :providers — Root abstraction layer.
-  This module ships no Activities / Services / Permissions of its own; it is a
-  pure Kotlin library consumed by :app, :modules and (transitively) :sdk.
--->
 <manifest />
