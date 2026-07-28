@@ -86,10 +86,32 @@ class AstraCore(context: Context) {
                 logger.setMinLevel(LogLevel.INFO)
             }
             permissionEngine.setDangerousApproval(cfg.dangerousApproval)
+            if (cfg.authorizedPackages.isEmpty()) {
+                cfg.authorizedPackages = mapOf(
+                    "com.android.shell" to setOf("su", "namespace", "mount"),
+                    "com.astraveil.sample" to setOf("su", "namespace")
+                )
+                config.save(cfg)
+            }
+            permissionEngine.loadPermissions(cfg.authorizedPackages)
             logger.i("AstraCore", "Initialized; provider=${cfg.activeProvider}")
         } catch (t: Throwable) {
             logger.e("AstraCore", "initialize failed", t)
             logger.setMinLevel(LogLevel.INFO)
+        }
+    }
+
+    /**
+     * Update the permission status of a package/module and persist the changes.
+     */
+    suspend fun updatePermission(moduleId: String, permission: String, granted: Boolean) {
+        if (granted) {
+            permissionEngine.grant(moduleId, permission)
+        } else {
+            permissionEngine.revoke(moduleId, permission)
+        }
+        config.update { cfg ->
+            cfg.authorizedPackages = permissionEngine.dumpPermissions()
         }
     }
 

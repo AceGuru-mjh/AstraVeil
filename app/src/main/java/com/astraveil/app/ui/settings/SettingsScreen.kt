@@ -1,5 +1,6 @@
 package com.astraveil.app.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,10 +43,11 @@ object SettingEntries {
     val Provider = SettingEntry(Icons.Filled.Power, "Provider", "Root backend selection", "settings_provider")
     val Modules = SettingEntry(Icons.Filled.Extension, "Modules", "Install source, auto-start, sandbox", "settings_modules")
     val Daemon = SettingEntry(Icons.Filled.Devices, "Daemon", "Service status, socket, logs", "settings_daemon")
+    val Diagnostics = SettingEntry(Icons.Filled.BugReport, "Diagnostics", "System health report, capabilities, warnings", "settings_diagnostics")
     val Developer = SettingEntry(Icons.Filled.BugReport, "Developer", "Debug logs, IPC, unsafe capability", "settings_developer")
     val About = SettingEntry(Icons.Filled.Info, "About", "Version, architecture, license", "settings_about")
 
-    val list = listOf(General, Security, Provider, Modules, Daemon, Developer, About)
+    val list = listOf(General, Security, Provider, Modules, Daemon, Diagnostics, Developer, About)
 }
 
 @Composable
@@ -66,9 +68,15 @@ fun SettingsScreen(
             }
         }
         items(SettingEntries.list) { entry ->
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigate(entry.route) }
+            ) {
                 androidx.compose.foundation.layout.Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(entry.icon, null, tint = AstraAccent, modifier = Modifier.padding(end = 14.dp))
