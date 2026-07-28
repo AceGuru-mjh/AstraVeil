@@ -5,6 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.astraveil.app.BuildConfig
 import com.astraveil.core.capability.CapabilityInfo
+import com.astraveil.core.runtime.CapabilityStatus
+import com.astraveil.core.runtime.ProviderStatus
+import com.astraveil.providers.runtime.RuntimeRepository
+import com.astraveil.core.runtime.RuntimeStatus
 import com.astraveil.providers.RootInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +19,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class StatusViewModel(app: Application) : AndroidViewModel(app) {
+
+    private val runtimeRepo = RuntimeRepository()
 
     enum class DaemonStatus { OFFLINE, CONNECTING, ONLINE }
 
@@ -51,6 +57,9 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
         val exportingReport: Boolean = false,
         val deviceProfile: com.astraveil.core.device.DeviceProfile = com.astraveil.core.device.DeviceProfile.empty(),
         val compatibilityResult: com.astraveil.core.compatibility.CompatibilityResult = com.astraveil.core.compatibility.CompatibilityResult.unknown(),
+        val runtimeStatus: RuntimeStatus = RuntimeStatus.offline(),
+        val providerStatus: ProviderStatus = ProviderStatus.none(),
+        val capabilityScores: List<CapabilityStatus> = emptyList(),
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -84,6 +93,14 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
                     com.astraveil.core.compatibility.CompatibilityEngine().evaluate(deviceProfile)
                 }.getOrNull() ?: com.astraveil.core.compatibility.CompatibilityResult.unknown()
 
+                // Runtime intelligence from RuntimeRepository
+                val runtimeStatus = runCatching { runtimeRepo.runtimeStatus() }.getOrNull()
+                    ?: RuntimeStatus.offline()
+                val providerStatus = runCatching { runtimeRepo.providerStatus() }.getOrNull()
+                    ?: ProviderStatus.none()
+                val capabilityScores = runCatching { runtimeRepo.capabilities() }.getOrNull()
+                    ?: emptyList()
+
                 _uiState.update { current ->
                     current.copy(
                         scanning = false,
@@ -93,6 +110,9 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
                         providerInfo = detected,
                         deviceProfile = deviceProfile,
                         compatibilityResult = compatibilityResult,
+                        runtimeStatus = runtimeStatus,
+                        providerStatus = providerStatus,
+                        capabilityScores = capabilityScores,
                     )
                 }
                 refreshAppsList()
