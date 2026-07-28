@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,10 +45,11 @@ object SettingEntries {
     val Modules = SettingEntry(Icons.Filled.Extension, "Modules", "Install source, auto-start, sandbox", "settings_modules")
     val Daemon = SettingEntry(Icons.Filled.Devices, "Daemon", "Service status, socket, logs", "settings_daemon")
     val Diagnostics = SettingEntry(Icons.Filled.BugReport, "Diagnostics", "System health report, capabilities, warnings", "settings_diagnostics")
+    val Updates = SettingEntry(Icons.Filled.SystemUpdate, "Updates", "Check for new versions, APK download", "settings_updates")
     val Developer = SettingEntry(Icons.Filled.BugReport, "Developer", "Debug logs, IPC, unsafe capability", "settings_developer")
     val About = SettingEntry(Icons.Filled.Info, "About", "Version, architecture, license", "settings_about")
 
-    val list = listOf(General, Security, Provider, Modules, Daemon, Diagnostics, Developer, About)
+    val list = listOf(General, Security, Provider, Modules, Daemon, Diagnostics, Updates, Developer, About)
 }
 
 @Composable

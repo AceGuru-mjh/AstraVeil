@@ -51,6 +51,7 @@ import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.RootManagerScreen
 import com.astraveil.app.ui.settings.SettingsScreen
+import com.astraveil.app.ui.screens.update.UpdateCenterScreen
 import com.astraveil.app.viewmodel.StatusViewModel
 
 /**
@@ -119,6 +120,9 @@ fun AstraVeilApp() {
             }
             composable("settings_diagnostics") {
                 DiagnosticsScreen(viewModel = viewModel)
+            }
+            composable("settings_updates") {
+                UpdateCenterScreen()
             }
         }
     }
