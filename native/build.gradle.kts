@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.astraveil.native"
+    namespace = "com.astraveil.nativelib"
     compileSdk = 35
 
     defaultConfig {

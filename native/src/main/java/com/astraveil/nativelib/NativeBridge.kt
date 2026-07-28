@@ -1,4 +1,4 @@
-package com.astraveil.native
+package com.astraveil.nativelib
 
 /**
  * JNI bridge to the C++ native library (libastra_native.so).

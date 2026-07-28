@@ -21,7 +21,7 @@
 }
 
 # Keep JNI native methods
--keepclasseswithmembernames class com.astraveil.native.** {
+-keepclasseswithmembernames class com.astraveil.nativelib.** {
     native <methods>;
 }
 

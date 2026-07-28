@@ -59,7 +59,7 @@ extern "C" {
  * JNI: Probe kernel version from /proc/version.
  */
 JNIEXPORT jstring JNICALL
-Java_com_astraveil_native_NativeBridge_nativeGetKernelVersion(JNIEnv* env, jobject) {
+Java_com_astraveil_nativelib_NativeBridge_nativeGetKernelVersion(JNIEnv* env, jobject) {
     std::string content = read_sysfs("/proc/version");
     // Extract "Linux version X.Y.Z"
     auto pos = content.find("Linux version ");
@@ -76,7 +76,7 @@ Java_com_astraveil_native_NativeBridge_nativeGetKernelVersion(JNIEnv* env, jobje
  * Returns: 1=enforcing, 0=permissive, -1=disabled/unknown
  */
 JNIEXPORT jint JNICALL
-Java_com_astraveil_native_NativeBridge_nativeGetSelinuxStatus(JNIEnv*, jobject) {
+Java_com_astraveil_nativelib_NativeBridge_nativeGetSelinuxStatus(JNIEnv*, jobject) {
     std::string val = read_sysfs("/sys/fs/selinux/enforce");
     if (val.empty()) return -1;
     return (val == "1") ? 1 : 0;
@@ -86,7 +86,7 @@ Java_com_astraveil_native_NativeBridge_nativeGetSelinuxStatus(JNIEnv*, jobject) 
  * JNI: Check if overlayfs is available in /proc/filesystems.
  */
 JNIEXPORT jboolean JNICALL
-Java_com_astraveil_native_NativeBridge_nativeHasOverlayFs(JNIEnv*, jobject) {
+Java_com_astraveil_nativelib_NativeBridge_nativeHasOverlayFs(JNIEnv*, jobject) {
     std::ifstream f("/proc/filesystems");
     if (!f.is_open()) return JNI_FALSE;
     std::string line;
@@ -102,7 +102,7 @@ Java_com_astraveil_native_NativeBridge_nativeHasOverlayFs(JNIEnv*, jobject) {
  * JNI: Scan for su binaries and return found paths as a string array.
  */
 JNIEXPORT jobjectArray JNICALL
-Java_com_astraveil_native_NativeBridge_nativeScanSuPaths(JNIEnv* env, jobject) {
+Java_com_astraveil_nativelib_NativeBridge_nativeScanSuPaths(JNIEnv* env, jobject) {
     auto paths = scan_su_paths();
     jclass stringClass = env->FindClass("java/lang/String");
     jobjectArray result = env->NewObjectArray(
@@ -118,7 +118,7 @@ Java_com_astraveil_native_NativeBridge_nativeScanSuPaths(JNIEnv* env, jobject) {
  * JNI: Check namespace support by reading /proc/self/ns/.
  */
 JNIEXPORT jboolean JNICALL
-Java_com_astraveil_native_NativeBridge_nativeHasNamespace(JNIEnv* env, jobject,
+Java_com_astraveil_nativelib_NativeBridge_nativeHasNamespace(JNIEnv* env, jobject,
                                                           jstring nsType) {
     const char* ns = env->GetStringUTFChars(nsType, nullptr);
     std::string path = std::string("/proc/self/ns/") + ns;
@@ -131,7 +131,7 @@ Java_com_astraveil_native_NativeBridge_nativeHasNamespace(JNIEnv* env, jobject,
  * Returns true if the file exists (actual parsing done in Kotlin).
  */
 JNIEXPORT jboolean JNICALL
-Java_com_astraveil_native_NativeBridge_nativeHasKernelConfig(JNIEnv*, jobject) {
+Java_com_astraveil_nativelib_NativeBridge_nativeHasKernelConfig(JNIEnv*, jobject) {
     return std::filesystem::exists("/proc/config.gz") ? JNI_TRUE : JNI_FALSE;
 }
 
