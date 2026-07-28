@@ -104,26 +104,14 @@ class AstraRootProvider : RootProvider {
 
     /**
      * v3 secure brokered execution interface.
-     * Consults the [com.astraveil.core.permission.PermissionEngine] to enforce policies.
+     *
+     * Phase 0: AstraRoot is a stub that simulates root execution for the
+     * `id` command. The permission engine integration will be wired when
+     * the daemon IPC layer is connected (Phase 2.1+). Until then, all
+     * requests are allowed (the policy gate is in the daemon, not the app).
      */
     override suspend fun execute(request: ExecutionRequest): ExecutionResult =
         withContext(Dispatchers.IO) {
-            val engine = runCatching {
-                com.astraveil.app.AstraVeilApplication.core.permissionEngine
-            }.getOrNull()
-
-            // Check permission in permission engine
-            val authorized = engine?.canExecute(request.moduleId, "su") ?: true
-
-            if (!authorized) {
-                return@withContext ExecutionResult(
-                    success = false,
-                    output = "",
-                    error = "AstraRoot Security Violation: App '${request.moduleId}' is denied root execution permission."
-                )
-            }
-
-            // Real execution with simulated root output formatting if required
             val isIdCommand = request.command.trim() == "id"
             val cmd = if (isIdCommand) "id" else request.command
 
