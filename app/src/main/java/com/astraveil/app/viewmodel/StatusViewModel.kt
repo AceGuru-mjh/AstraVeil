@@ -7,7 +7,7 @@ import com.astraveil.app.BuildConfig
 import com.astraveil.core.capability.CapabilityInfo
 import com.astraveil.core.runtime.CapabilityStatus
 import com.astraveil.core.runtime.ProviderStatus
-import com.astraveil.core.runtime.RuntimeRepository
+import com.astraveil.providers.runtime.RuntimeRepository
 import com.astraveil.core.runtime.RuntimeStatus
 import com.astraveil.providers.RootInfo
 import kotlinx.coroutines.Dispatchers

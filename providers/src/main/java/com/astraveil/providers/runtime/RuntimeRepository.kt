@@ -1,10 +1,10 @@
-package com.astraveil.core.runtime
+package com.astraveil.providers.runtime
 
 import com.astraveil.core.device.DeviceInspector
 import com.astraveil.core.device.DeviceProfile
-import com.astraveil.providers.ProviderCapability
-import com.astraveil.providers.ProviderRegistry
-import com.astraveil.providers.RootInfo
+
+
+
 
 /**
  * Fetches real runtime data for the Dashboard.
