@@ -46,7 +46,7 @@ import com.astraveil.app.BuildConfig
 import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
-import com.astraveil.app.ui.screens.ModulesScreen
+import com.astraveil.app.ui.screens.modules.ModulesScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.RootManagerScreen
@@ -110,7 +110,7 @@ fun AstraVeilApp() {
                 RootManagerScreen(viewModel = viewModel)
             }
             composable(Destinations.Modules.route) {
-                ModulesScreen(viewModel = viewModel)
+                ModulesScreen()
             }
             composable(Destinations.About.route) {
                 AboutScreen()
