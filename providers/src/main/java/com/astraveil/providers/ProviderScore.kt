@@ -1,8 +1,7 @@
 package com.astraveil.providers
 
 /**
- * v3 provider selection score — the [ProviderRegistry] picks the
- * highest-scoring provider for a capability rather than the first match.
+ * v3 provider selection score with strengths and limitations.
  *
  * Score components:
  *   capability match   +20  (provider advertises the requested capability)
@@ -13,4 +12,6 @@ package com.astraveil.providers
 data class ProviderScore(
     val providerId: String,
     val score: Int,
+    val strengths: List<String> = emptyList(),
+    val limitations: List<String> = emptyList(),
 )
