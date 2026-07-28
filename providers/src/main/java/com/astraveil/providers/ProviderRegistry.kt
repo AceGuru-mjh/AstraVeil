@@ -1,9 +1,12 @@
 package com.astraveil.providers
 
+import com.astraveil.core.device.DeviceProfile
 import com.astraveil.core.event.AstraEvent
 import com.astraveil.core.event.EventBus
 import com.astraveil.providers.apatch.APatchProvider
 import com.astraveil.providers.astraroot.AstraRootProvider
+import com.astraveil.providers.intelligence.DefaultProviderAnalyzer
+import com.astraveil.providers.intelligence.ProviderAnalyzer
 import com.astraveil.providers.kernelsu.KernelSUProvider
 import com.astraveil.providers.magisk.MagiskProvider
 import kotlinx.coroutines.async
@@ -132,12 +135,6 @@ object ProviderRegistry {
         }.also { cachedAll = it }
     }
 
-    /** Drop any cached detection results; the next call re-probes the device. */
-    fun invalidate() {
-        cachedActive = null
-        cachedAll = null
-    }
-
     /**
      * v3: resolve [capability] to the first available provider that
      * advertises it. Returns `null` if no provider is available or no
@@ -153,5 +150,81 @@ object ProviderRegistry {
             }
         }
         return null
+    }
+
+    // ---- Provider Intelligence (Phase 6.2) ----
+
+    private val analyzer: ProviderAnalyzer = DefaultProviderAnalyzer()
+
+    @Volatile private var cachedReports: List<ProviderReport>? = null
+
+    /**
+     * Analyze every registered provider against [device] and return a list
+     * of [ProviderReport]s with per-capability confidence scores.
+     *
+     * Results are cached; call [invalidate] to force re-analysis.
+     */
+    suspend fun analyzeAll(device: DeviceProfile): List<ProviderReport> {
+        cachedReports?.let { return it }
+        val reports = coroutineScope {
+            providers.map { provider ->
+                async { analyzer.analyze(provider, device) }
+            }.awaitAll()
+        }
+        cachedReports = reports
+        return reports
+    }
+
+    /**
+     * Find the best provider for [capability] based on the intelligence
+     * analysis against [device]. Returns the provider with the highest
+     * relevant capability score among detected providers.
+     */
+    suspend fun bestProvider(
+        capability: ProviderCapability,
+        device: DeviceProfile,
+    ): RootProvider? {
+        val reports = analyzeAll(device)
+        val detected = reports.filter { it.detected }
+        if (detected.isEmpty()) return null
+
+        val scored = detected.mapNotNull { report ->
+            val provider = byId(report.providerId) ?: return@mapNotNull null
+            val caps = provider.capabilities()
+            if (capability !in caps) return@mapNotNull null
+            val score = when (capability) {
+                ProviderCapability.ROOT_EXECUTION -> report.executeScore
+                ProviderCapability.MOUNT_NAMESPACE -> report.mountScore
+                ProviderCapability.OVERLAY_FS -> report.overlayFsScore
+                ProviderCapability.SYSTEM_PROPERTY -> report.propertyScore
+                ProviderCapability.BOOT_PATCH -> report.bootScore
+                ProviderCapability.SELINUX_CONTROL -> report.overallScore
+            }
+            Triple(provider, score, report)
+        }
+
+        return scored.maxByOrNull { it.second }?.first
+    }
+
+    /**
+     * Get a [ProviderScore] summary for every detected provider.
+     */
+    suspend fun scoreAll(device: DeviceProfile): List<ProviderScore> {
+        val reports = analyzeAll(device)
+        return reports.filter { it.detected }.map { report ->
+            ProviderScore(
+                providerId = report.providerId,
+                score = report.overallScore,
+                strengths = report.strengths,
+                limitations = report.limitations,
+            )
+        }.sortedByDescending { it.score }
+    }
+
+    /** Drop cached detection + analysis results. */
+    fun invalidate() {
+        cachedActive = null
+        cachedAll = null
+        cachedReports = null
     }
 }
