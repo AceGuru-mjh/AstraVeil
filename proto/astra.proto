@@ -2,10 +2,20 @@ syntax = "proto3";
 
 package astra.v1;
 
+// STATUS: SCHEMA ONLY — NOT YET INTEGRATED INTO THE BUILD.
+//
+// Phase 0 IPC uses JSON over length-prefixed frames (see
+// core/.../ipc/AstraDaemonClient.kt and daemon/src/main.cpp). This file
+// defines the target schema for the Phase 1 migration to Protobuf. No
+// Gradle module applies the protobuf plugin, no code is generated, and
+// no production code references these message types yet.
+//
 // AstraVeil IPC protocol — spoken between AstraUI (app) and the AstraDaemon
 // (`astrad`) over a Unix Domain Socket at /dev/astra/astrad.sock.
 //
-// Framing on the wire:
+// Framing on the wire (Phase 0, JSON):
+//   [4-byte big-endian length][1-byte request type][N-byte JSON payload]
+// Framing on the wire (Phase 1, planned, Protobuf):
 //   [4-byte big-endian length][N-byte AstraRequest  OR  AstraResponse payload]
 //
 // Phase 0: the daemon accepts the request types below and returns JSON-encoded
