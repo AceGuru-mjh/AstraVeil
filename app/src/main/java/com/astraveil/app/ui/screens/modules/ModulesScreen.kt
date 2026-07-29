@@ -62,7 +62,15 @@ fun ModulesScreen(
     val previewState by modulesViewModel.previewState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // ---- File picker (PR18.3: restricted MIME types — no images/video) ----
+    // ---- File picker ----
+    // Use */* so ANY file manager / provider lets the user pick a .avm file.
+    // The Trust Pipeline (AvmManifestParser) validates the archive on
+    // selection — if the user picks a non-.avm file, the scan fails
+    // gracefully with a PreviewError and the UI shows a snackbar.
+    //
+    // The previous restriction to ["application/zip","application/octet-stream"]
+    // broke on many devices: file managers don't recognise the .avm
+    // extension and refuse to show any files, making the + button look dead.
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -72,11 +80,8 @@ fun ModulesScreen(
         }
     }
 
-    // Helper: launch the picker with .avm-friendly MIME types.
     val launchPicker = {
-        // application/zip covers most .avm packages; octet-stream is the
-        // catch-all for providers that don't recognise the .avm extension.
-        filePickerLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+        filePickerLauncher.launch(arrayOf("*/*"))
     }
 
     // ---- Snackbar for install operation state (Patch 18.2.3) ----

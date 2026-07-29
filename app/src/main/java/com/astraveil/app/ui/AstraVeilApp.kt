@@ -50,6 +50,7 @@ import com.astraveil.app.ui.screens.modules.ModulesScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.RootManagerScreen
+import com.astraveil.app.ui.settings.ComingSoonScreen
 import com.astraveil.app.ui.settings.SettingsScreen
 import com.astraveil.app.ui.screens.update.UpdateCenterScreen
 import com.astraveil.app.viewmodel.StatusViewModel
@@ -123,6 +124,33 @@ fun AstraVeilApp() {
             }
             composable("settings_updates") {
                 UpdateCenterScreen()
+            }
+            // --- Placeholder targets for the remaining settings entries.
+            //
+            // These routes are referenced by SettingsScreen but were
+            // previously NOT registered, which caused
+            // navController.navigate() to throw IllegalArgumentException
+            // and crash the app on tap. ComingSoonScreen is a safe target.
+            composable("settings_general") {
+                ComingSoonScreen(title = "General")
+            }
+            composable("settings_security") {
+                ComingSoonScreen(title = "Security")
+            }
+            composable("settings_provider") {
+                ComingSoonScreen(title = "Provider")
+            }
+            composable("settings_modules") {
+                ComingSoonScreen(title = "Modules")
+            }
+            composable("settings_daemon") {
+                ComingSoonScreen(title = "Daemon")
+            }
+            composable("settings_developer") {
+                ComingSoonScreen(title = "Developer")
+            }
+            composable("settings_about") {
+                AboutScreen()
             }
         }
     }
