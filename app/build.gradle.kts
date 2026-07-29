@@ -92,9 +92,10 @@ android {
 }
 
 dependencies {
-    // AstraVeil core engine + provider abstraction layer
+    // AstraVeil core engine + provider abstraction layer + module runtime
     implementation(project(":core"))
     implementation(project(":providers"))
+    implementation(project(":modules"))
 
     // AndroidX core
     implementation(libs.androidx.core.ktx)

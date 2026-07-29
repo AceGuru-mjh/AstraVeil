@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.StatusPill
 import com.astraveil.app.ui.design.GlassCard
 import com.astraveil.app.ui.theme.AstraAccent
@@ -99,13 +100,13 @@ fun ProviderScreen(viewModel: StatusViewModel) {
 private fun ScreenHeader() {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Provider",
+            text = AstraStrings.provTitle,
             color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "AstraVeil abstracts over Magisk, KernelSU, APatch and its own AstraRoot backend.",
+            text = AstraStrings.provSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -147,13 +148,13 @@ private fun NoProviderHint() {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "No root backend detected",
+                    text = AstraStrings.provNoBackend,
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "This is expected during Phase 0. AstraVeil runs in capability-probe mode without an active provider.",
+                    text = AstraStrings.provNoBackendHint,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -214,7 +215,7 @@ private fun ProviderCard(
                 )
                 if (active && version != null) {
                     Text(
-                        text = "Version $version",
+                        text = AstraStrings.versionLabel(version),
                         color = AstraSuccess,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
@@ -265,10 +266,10 @@ private fun RootTestCard(
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
-                    Text("  Testing…")
+                    Text(AstraStrings.provTesting)
                 } else {
                     Icon(Icons.Filled.PlayArrow, null, modifier = Modifier.size(18.dp))
-                    Text("  Test Root")
+                    Text(AstraStrings.provTestRoot)
                 }
             }
 

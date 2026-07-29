@@ -29,4 +29,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(project(":core"))
     implementation(project(":providers"))
+    // AstraSdkConstants (MODULE_API_LEVEL, SUPPORTED_PERMISSIONS) lives in :sdk
+    // and is referenced by ModuleValidator at compile time.
+    implementation(project(":sdk"))
 }

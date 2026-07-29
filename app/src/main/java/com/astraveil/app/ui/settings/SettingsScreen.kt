@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.design.GlassCard
 import com.astraveil.app.ui.theme.AstraAccent
 
@@ -63,9 +64,9 @@ fun SettingsScreen(
     ) {
         item {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
+                Text(AstraStrings.settingsTitle, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground)
-                Text("Astra Control Center", style = MaterialTheme.typography.bodyMedium,
+                Text(AstraStrings.settingsSubtitle, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
