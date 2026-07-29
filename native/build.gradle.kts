@@ -16,6 +16,16 @@ android {
                     "-DANDROID_STL=c++_shared",
                     "-DANDROID_ARM_NEON=ON",
                 )
+                // Point CMake at the Rust cross-compile output root.
+                // CMakeLists.txt resolves the per-ABI staticlib from
+                // ANDROID_ABI under this root (e.g. arm64-v8a →
+                // aarch64-linux-android/release/libastra_rust.a). When the
+                // artifact is absent, CMake falls back to ASTRA_HAVE_RUST=0
+                // (FFI stubbed) so builds without the Rust toolchain still
+                // succeed. To produce a build with the Rust policy engine:
+                //   cargo build --release --target aarch64-linux-android
+                //   cargo build --release --target armv7-linux-androideabi
+                arguments += "-DASTRA_RUST_ROOT=${rootDir}/rust/target"
             }
         }
         ndk {

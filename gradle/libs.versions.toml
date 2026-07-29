@@ -9,8 +9,11 @@ composeBom = "2024.11.00"
 navigationCompose = "2.8.4"
 kotlinxSerialization = "1.7.3"
 kotlinxCoroutines = "1.9.0"
-protobuf = "3.25.5"
-protobufGradle = "0.9.4"
+# NOTE: protobuf was declared (3.25.5 + gradle plugin 0.9.4) but never
+# integrated — no module applied the plugin, no code was generated.
+# Phase 0 IPC is JSON over length-prefixed frames (AstraDaemonClient +
+# daemon nlohmann::json). protobuf migration is a Phase 1 task; the
+# declarations were removed to stop claiming a capability we don't ship.
 junit = "4.13.2"
 junitExt = "1.2.1"
 espresso = "3.6.1"
@@ -36,9 +39,6 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 # Kotlin
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
-
-# Protobuf
-protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

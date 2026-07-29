@@ -5,11 +5,17 @@ import java.util.Locale
 /**
  * Centralised locale-aware string table for the AstraUI Compose layer.
  *
- * Follows the system locale at first access: Chinese (zh) → Chinese
- * strings, everything else → English. A configuration change (e.g.
- * the user switches language in system settings) is picked up on the
- * next process restart, which is the standard Android behaviour for
- * a non-resource-based string table.
+ * Follows the system locale: Chinese (zh) → Chinese strings, everything
+ * else → English.
+ *
+ * Compose-awareness: the top-level Composable ([com.astraveil.app.ui.AstraVeilApp])
+ * calls [setLocaleOverride] whenever the device configuration changes
+ * (via `LocalConfiguration`). This makes the whole string table react
+ * to in-flight language switches — every `@Composable` that reads an
+ * [AstraStrings] property recomposes because the Composable that set
+ * the override recomposed first. Non-Composable callers (ViewModel,
+ * data classes) read the same override, falling back to
+ * `Locale.getDefault()` when no override has been set yet.
  *
  * Usage:
  * ```
@@ -26,11 +32,8 @@ import java.util.Locale
  *  - Works in non-`@Composable` contexts (ViewModel, data classes).
  *
  * TODO: migrate to standard res/values-zh/strings.xml + stringResource()
- *   before v0.2.0. The current object is a pragmatic compromise for the
- *   no-compile sandbox; the standard resource approach supports plurals,
- *   formatted strings, RTL, and triggers Compose recomposition on
- *   locale change (this object does not — it reads Locale.getDefault()
- *   once per property access but is not a State).
+ *   before v0.2.0. The standard resource approach supports plurals,
+ *   formatted strings, and RTL natively.
  *
  * Brand names ("AstraVeil", "AstraRoot", "Magisk", "KernelSU",
  * "APatch", "AstraVM", "AstraDaemon") and file/format names
@@ -39,8 +42,26 @@ import java.util.Locale
  */
 object AstraStrings {
 
+    /**
+     * Locale override set by the top-level Composable from
+     * `LocalConfiguration`. `null` means "use Locale.getDefault()".
+     * Stored as a `@Volatile` so non-Composable callers see updates
+     * without explicit synchronization.
+     */
+    @Volatile
+    private var localeOverride: Locale? = null
+
+    /**
+     * Called by [AstraVeilApp] on every configuration change so that
+     * all subsequent string reads reflect the new locale. Idempotent
+     * and thread-safe.
+     */
+    fun setLocaleOverride(locale: Locale?) {
+        localeOverride = locale
+    }
+
     private val isZh: Boolean
-        get() = Locale.getDefault().language == "zh"
+        get() = (localeOverride ?: Locale.getDefault()).language == "zh"
 
     /** Pick the English or Chinese variant. */
     private fun s(en: String, zh: String): String = if (isZh) zh else en

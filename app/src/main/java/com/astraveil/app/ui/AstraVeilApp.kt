@@ -67,6 +67,17 @@ fun AstraVeilApp() {
     val navController = rememberNavController()
     val viewModel: StatusViewModel = viewModel()
 
+    // Compose-aware locale: feed the current configuration locale into
+    // AstraStrings so every string read reacts to in-flight language
+    // switches (configuration change → this Composable recomposes →
+    // setLocaleOverride → all children that read AstraStrings recompose).
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    androidx.compose.runtime.SideEffect {
+        AstraStrings.setLocaleOverride(
+            configuration.locales.takeIf { !it.isEmpty }?.get(0)
+        )
+    }
+
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Destinations.Dashboard.route
 
