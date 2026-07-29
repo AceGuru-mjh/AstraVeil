@@ -60,14 +60,21 @@ fun ModulesScreen(
     val previewState by modulesViewModel.previewState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // ---- File picker ----
+    // ---- File picker (PR18.3: restricted MIME types — no images/video) ----
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            // Pre-parse BEFORE showing any dialog (Patch 18.2.2)
+            // Run the Trust Pipeline BEFORE showing any dialog (PR18.3)
             modulesViewModel.previewUri(uri)
         }
+    }
+
+    // Helper: launch the picker with .avm-friendly MIME types.
+    val launchPicker = {
+        // application/zip covers most .avm packages; octet-stream is the
+        // catch-all for providers that don't recognise the .avm extension.
+        filePickerLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
     }
 
     // ---- Snackbar for install operation state (Patch 18.2.3) ----
@@ -85,11 +92,11 @@ fun ModulesScreen(
         }
     }
 
-    // ---- Snackbar for preview failures ----
+    // ---- Snackbar for scan failures ----
     LaunchedEffect(previewState) {
         if (previewState is PreviewState.Failed) {
             val reason = (previewState as PreviewState.Failed).reason
-            snackbarHostState.showSnackbar("Cannot preview module: $reason")
+            snackbarHostState.showSnackbar("Cannot scan module: $reason")
             modulesViewModel.cancelPreview()
         }
     }
@@ -142,14 +149,14 @@ fun ModulesScreen(
 
             item {
                 InstallCtaCard(
-                    onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                    onClick = launchPicker,
                 )
             }
         }
 
         // ---- FAB ----
         FloatingActionButton(
-            onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+            onClick = launchPicker,
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
             containerColor = AstraGlass.Glow,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -157,7 +164,7 @@ fun ModulesScreen(
             Icon(Icons.Filled.Add, contentDescription = "Install AVM Module")
         }
 
-        // ---- Previewing indicator (overlay) ----
+        // ---- Scanning indicator (overlay) ----
         if (previewState is PreviewState.Previewing) {
             Box(
                 modifier = Modifier
@@ -165,10 +172,18 @@ fun ModulesScreen(
                     .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f)),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(
-                    color = AstraGlass.Glow,
-                    strokeWidth = 3.dp,
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        color = AstraGlass.Glow,
+                        strokeWidth = 3.dp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Scanning package…",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = AstraOnSurfaceMuted,
+                    )
+                }
             }
         }
 
@@ -179,12 +194,12 @@ fun ModulesScreen(
         )
     }
 
-    // ---- Install confirmation dialog (uses real preview data) ----
+    // ---- Security review dialog (uses real TrustReport) ----
     if (previewState is PreviewState.Ready) {
         val ready = previewState as PreviewState.Ready
-        InstallModuleDialog(
-            modulePreview = ready.preview,           // ← REAL DATA
-            installState = state.installState,       // ← Patch 18.2.3 feedback
+        SecurityReviewDialog(
+            report = ready.report,                  // ← full trust report
+            installState = state.installState,
             onConfirm = { modulesViewModel.confirmInstall() },
             onDismiss = { modulesViewModel.cancelPreview() },
         )

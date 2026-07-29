@@ -20,13 +20,13 @@ interface ModuleRepository {
     suspend fun listModules(): List<ModuleInfo>
 
     /**
-     * Pre-parse an `.avm` package from a content [uri] WITHOUT installing.
+     * Pre-scan a `.avm` package from a content [uri] WITHOUT installing.
      *
-     * Delegates to [ModuleInspector]. Reads only the `module.json` entry
-     * from the ZIP archive; does not copy the file, does not touch the
-     * filesystem, does not invoke [ModuleManager].
+     * Delegates to [ModuleInspector]. Computes SHA-256, parses
+     * `module.json`, and returns a [ScanResult] containing a
+     * [com.astraveil.core.modules.security.TrustReport] on success.
      */
-    suspend fun preview(uri: Uri): InspectionResult
+    suspend fun preview(uri: Uri): ScanResult
 
     /**
      * Install a `.avm` package from a content [uri].
@@ -63,7 +63,7 @@ class ModuleRepositoryImpl(
         manager.list().map { it.toModuleInfo() }
     }
 
-    override suspend fun preview(uri: Uri): InspectionResult =
+    override suspend fun preview(uri: Uri): ScanResult =
         withContext(Dispatchers.IO) {
             ModuleInspector.inspect(context, uri)
         }
@@ -98,11 +98,10 @@ class ModuleRepositoryImpl(
 
 // ---- Adapter: AstraModule → ModuleInfo ----
 //
-// Patch 18.2.1: the adapter no longer estimates risk. Installed modules
-// come from Phase-0 manifests (string-only permissions), so risk is
-// honestly `null` — the UI renders "Unknown". When v3 manifest support
-// lands in ModuleManager, this adapter will forward the declared
-// riskLevel instead.
+// The :app adapter is the ONLY place that produces the UI-facing
+// ModuleInfo. Patch 18.2.1: risk is honestly `null` for Phase-0
+// installed modules (no heuristic). When ModuleManager gains v3
+// manifest support, this adapter will forward the declared riskLevel.
 
 internal fun AstraModule.toModuleInfo(): ModuleInfo {
     return ModuleInfo(

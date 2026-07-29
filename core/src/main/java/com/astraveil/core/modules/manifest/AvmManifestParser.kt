@@ -1,8 +1,7 @@
 package com.astraveil.core.modules.manifest
 
-import com.astraveil.core.modules.model.ModuleInfo
-import com.astraveil.core.modules.model.ModulePermissionInfo
-import com.astraveil.core.modules.model.ModuleUiState
+import com.astraveil.core.modules.model.ModuleManifestPreview
+import com.astraveil.core.modules.model.PermissionDeclaration
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.InputStream
@@ -19,16 +18,21 @@ import java.util.zip.ZipInputStream
  *
  * Supports two manifest formats:
  * - **Phase 0**: `{ "name", "version", "api", "permissions": ["str"] }`
- *   → permissions carry NO risk data; [ModulePermissionInfo.risk] is `null`
- *     (rendered as "Unknown" by the UI).
+ *   → permissions carry NO risk data; [PermissionDeclaration.risk] is
+ *     `null` (rendered as "Unknown" by the UI).
  * - **v3**:      `{ "id", "name", "version", "apiVersion",
  *                  "permissions": [{capability, reason, riskLevel}] }`
  *   → risk comes straight from the manifest's `riskLevel` field.
  *
- * Patch 18.2.1: the parser no longer runs heuristics to fabricate a risk
- * score for Phase-0 manifests. Undeclared risk = `null` = "Unknown".
+ * PR18.3 change: the parser now returns a core-level
+ * [ModuleManifestPreview] — NOT the UI-facing `ModuleInfo`. This keeps
+ * `:core` free of any UI coupling; the `:app` repository adapter is
+ * the single place that converts `ModuleManifestPreview` → `ModuleInfo`.
  *
- * This class is stateless and thread-safe.
+ * Patch 18.2.1 (carried): the parser runs NO heuristics to fabricate a
+ * risk score for Phase-0 manifests. Undeclared risk = `null` = "Unknown".
+ *
+ * This class is stateless and thread-safe. Pure JVM — no Android deps.
  */
 object AvmManifestParser {
 
@@ -41,7 +45,7 @@ object AvmManifestParser {
      * Result of a preview parse.
      */
     sealed class PreviewResult {
-        data class Success(val module: ModuleInfo) : PreviewResult()
+        data class Success(val preview: ModuleManifestPreview) : PreviewResult()
         data class Failure(val reason: PreviewError) : PreviewResult()
     }
 
@@ -60,8 +64,9 @@ object AvmManifestParser {
      * `module.json` entry is extracted. The rest of the archive
      * (including potentially large `.so` binaries) is skipped.
      *
-     * @return [PreviewResult.Success] with a fully populated [ModuleInfo],
-     *         or [PreviewResult.Failure] with a specific reason.
+     * @return [PreviewResult.Success] with a fully populated
+     *         [ModuleManifestPreview], or [PreviewResult.Failure] with
+     *         a specific reason.
      */
     fun parse(inputStream: InputStream): PreviewResult {
         val manifestJson: String?
@@ -114,7 +119,7 @@ object AvmManifestParser {
         try {
             val v3 = json.decodeFromString<V3Manifest>(raw)
             if (v3.id.isNotBlank()) {
-                return PreviewResult.Success(v3.toModuleInfo())
+                return PreviewResult.Success(v3.toPreview())
             }
         } catch (_: Exception) {
             // fall through to Phase 0
@@ -124,7 +129,7 @@ object AvmManifestParser {
         try {
             val p0 = json.decodeFromString<Phase0Manifest>(raw)
             if (p0.name.isNotBlank()) {
-                return PreviewResult.Success(p0.toModuleInfo())
+                return PreviewResult.Success(p0.toPreview())
             }
         } catch (_: Exception) {
             // fall through to error
@@ -152,14 +157,13 @@ object AvmManifestParser {
         val riskLevel: Int = 0,
     )
 
-    private fun V3Manifest.toModuleInfo(): ModuleInfo = ModuleInfo(
+    private fun V3Manifest.toPreview(): ModuleManifestPreview = ModuleManifestPreview(
         id = id,
         name = name.ifBlank { id },
         version = version,
         description = description,
-        state = ModuleUiState.INSTALLED, // preview: not yet installed
         permissions = permissions.map { p ->
-            ModulePermissionInfo(
+            PermissionDeclaration(
                 capability = p.capability,
                 risk = p.riskLevel,           // ← declared by manifest
                 reason = p.reason,
@@ -182,14 +186,13 @@ object AvmManifestParser {
         val permissions: List<String> = emptyList(),
     )
 
-    private fun Phase0Manifest.toModuleInfo(): ModuleInfo = ModuleInfo(
+    private fun Phase0Manifest.toPreview(): ModuleManifestPreview = ModuleManifestPreview(
         id = name,
         name = name,
         version = version,
         description = description,
-        state = ModuleUiState.INSTALLED,
         permissions = permissions.map { perm ->
-            ModulePermissionInfo(
+            PermissionDeclaration(
                 capability = perm,
                 risk = null,                 // ← undeclared → UI shows "Unknown"
                 reason = "",

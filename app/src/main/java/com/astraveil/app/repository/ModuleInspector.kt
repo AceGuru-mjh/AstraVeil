@@ -2,98 +2,65 @@ package com.astraveil.app.repository
 
 import android.content.Context
 import android.net.Uri
-import com.astraveil.core.modules.manifest.AvmManifestParser
+import com.astraveil.core.modules.security.ModuleScanner
+import com.astraveil.core.modules.security.TrustReport
 
 /**
- * High-level facade over [AvmManifestParser] for the install-preview flow
- * (Patch 18.2.2).
+ * High-level `:app` facade over the `:core` Module Trust Pipeline (PR18.3).
  *
- * Where [AvmManifestParser] is a low-level, JVM-only ZIP+JSON engine living
- * in `:core`, [ModuleInspector] is the `:app`-side component the ViewModel
- * actually calls. It owns the Android `ContentResolver` interaction and
- * projects the parsed manifest into the UI-friendly [ModulePreview] shape.
+ * Owns the Android `ContentResolver` interaction: opens TWO independent
+ * streams over the picked `.avm` URI (one for SHA-256, one for manifest
+ * parsing — a stream cannot be rewound) and delegates to
+ * [ModuleScanner.scan], which produces a [TrustReport].
  *
  * Contract:
  * ```
  * ViewModel.previewUri(uri)
  *   → ModuleRepository.preview(uri)
  *     → ModuleInspector.inspect(context, uri)
- *       → ContentResolver.openInputStream(uri)
- *       → AvmManifestParser.parse(stream)      // :core engine
- *       → map → ModulePreview
+ *       → ContentResolver.openInputStream(uri) × 2
+ *       → ModuleScanner.scan(hashStream, manifestStream)
+ *         → HashCalculator.sha256(...)
+ *         → AvmManifestParser.parse(...)
+ *         → RiskAnalyzer.analyze(...)
+ *       → TrustReport
  * ```
  *
- * Risk data flows straight from the manifest. No heuristics, no defaults.
+ * The `:core` scanner is pure JVM; this class is the only Android-aware
+ * boundary. Replacing the source (e.g. with a `File` for CLI) only
+ * requires re-implementing `inspect`.
  */
 object ModuleInspector {
 
     /**
-     * Inspect a `.avm` package referenced by a content [uri] WITHOUT
-     * installing it. Only `module.json` is read from the ZIP.
+     * Scan a `.avm` package referenced by a content [uri] WITHOUT
+     * installing it. Computes SHA-256, parses `module.json`, and
+     * produces a [TrustReport].
      */
-    suspend fun inspect(context: Context, uri: Uri): InspectionResult {
-        val parserResult: AvmManifestParser.PreviewResult = try {
-            val stream = context.contentResolver.openInputStream(uri)
-                ?: return InspectionResult.Failure(
-                    AvmManifestParser.PreviewError.IO_ERROR.message
-                )
-            stream.use { AvmManifestParser.parse(it) }
+    suspend fun inspect(context: Context, uri: Uri): ScanResult {
+        return try {
+            val hashStream = context.contentResolver.openInputStream(uri)
+            val manifestStream = context.contentResolver.openInputStream(uri)
+            if (hashStream == null || manifestStream == null) {
+                return ScanResult.Failure("Cannot open file at $uri")
+            }
+            val report = ModuleScanner.scan(hashStream, manifestStream)
+            ScanResult.Success(report)
         } catch (e: Exception) {
-            return InspectionResult.Failure(
-                AvmManifestParser.PreviewError.IO_ERROR.message
-            )
-        }
-
-        return when (parserResult) {
-            is AvmManifestParser.PreviewResult.Success ->
-                InspectionResult.Success(parserResult.module.toPreview())
-            is AvmManifestParser.PreviewResult.Failure ->
-                InspectionResult.Failure(parserResult.reason.message)
+            ScanResult.Failure(e.message ?: "Scan failed")
         }
     }
 }
 
 /**
  * Outcome of [ModuleInspector.inspect].
- */
-sealed class InspectionResult {
-    data class Success(val preview: ModulePreview) : InspectionResult()
-    data class Failure(val reason: String) : InspectionResult()
-}
-
-/**
- * Pre-install preview of a `.avm` package — the data the confirmation
- * dialog renders. Mirrors [com.astraveil.core.modules.model.ModuleInfo]
- * but is the dedicated preview type so the install flow never confuses
- * "what we are about to install" with "what is already installed".
- */
-data class ModulePreview(
-    val id: String,
-    val name: String,
-    val version: String,
-    val description: String,
-    val permissions: List<PermissionPreview>,
-)
-
-/**
- * A single requested permission in a [ModulePreview].
  *
- * [risk] is `null` when the manifest did not declare a risk level
- * (Phase-0 string-only permissions). The UI renders this as "Unknown".
+ * Repository-level abstraction — the UI never sees the parser's own
+ * `PreviewResult` type, so swapping the parser implementation (e.g.
+ * AVM v4, remote manifest, signed manifest) does not ripple into
+ * Compose.
  */
-data class PermissionPreview(
-    val capability: String,
-    val risk: Int?,
-    val reason: String,
-)
-
-/** Map the :core [com.astraveil.core.modules.model.ModuleInfo] to the preview type. */
-private fun com.astraveil.core.modules.model.ModuleInfo.toPreview(): ModulePreview = ModulePreview(
-    id = id,
-    name = name,
-    version = version,
-    description = description,
-    permissions = permissions.map { p ->
-        PermissionPreview(capability = p.capability, risk = p.risk, reason = p.reason)
-    },
-)
+sealed class ScanResult {
+    data class Success(val report: TrustReport) : ScanResult()
+    data class Failure(val reason: String) : ScanResult()
+}

@@ -4,10 +4,10 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.astraveil.app.repository.InspectionResult
-import com.astraveil.app.repository.ModulePreview
 import com.astraveil.app.repository.ModuleRepositoryProvider
+import com.astraveil.app.repository.ScanResult
 import com.astraveil.core.modules.model.ModuleInfo
+import com.astraveil.core.modules.security.TrustReport
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,30 +17,16 @@ import kotlinx.coroutines.launch
 /**
  * Unified operation feedback state for any module action
  * (install / start / stop / uninstall). Patch 18.2.3.
- *
- * Replaces the old `installing: Boolean` + scattered `error`/`success`
- * strings with a single sealed type the UI can render exhaustively.
  */
 sealed class ModuleOperationState {
-    /** No operation in flight. */
     data object Idle : ModuleOperationState()
-
-    /** Operation running — UI shows a spinner / "Installing…" label. */
     data object Loading : ModuleOperationState()
-
-    /** Operation succeeded — UI shows a transient success message. */
     data class Success(val message: String) : ModuleOperationState()
-
-    /** Operation failed — UI shows the error message. */
     data class Error(val message: String) : ModuleOperationState()
 }
 
 /**
  * UI state for the Module Center screen.
- *
- * @property installState  State of the install flow (preview → confirm).
- * @property moduleOperations Per-module state for start / stop / uninstall,
- *                            keyed by module id.
  */
 data class ModulesUiState(
     val modules: List<ModuleInfo> = emptyList(),
@@ -50,10 +36,11 @@ data class ModulesUiState(
 )
 
 /**
- * State machine for the install-preview flow.
+ * State machine for the install-preview flow (PR18.3: now carries a
+ * [TrustReport], not just a manifest preview).
  *
  * ```
- * IDLE → PREVIEWING → READY (dialog shown)
+ * IDLE → PREVIEWING → READY (security review dialog shown)
  *                    → FAILED (error snackbar)
  * READY → (confirmInstall) → installState.Loading → IDLE (success/error)
  * ```
@@ -62,26 +49,27 @@ sealed class PreviewState {
     /** No file selected, no dialog. */
     data object Idle : PreviewState()
 
-    /** Reading + parsing the .avm manifest. */
+    /** Scanning the .avm: hashing + manifest parse + risk analysis. */
     data object Previewing : PreviewState()
 
-    /** Manifest parsed successfully. Dialog should show [preview]. */
+    /** Trust report ready. Security review dialog should show [report]. */
     data class Ready(
-        val preview: ModulePreview,
+        val report: TrustReport,
         val uri: Uri,
     ) : PreviewState()
 
-    /** Manifest parse failed. Show [reason] to the user. */
+    /** Scan failed. Show [reason] to the user. */
     data class Failed(val reason: String) : PreviewState()
 }
 
 /**
  * ViewModel for the AVM Module Center.
  *
- * Data flow:
+ * Data flow (PR18.3):
  * ```
- * ModulesScreen → ModulesViewModel → ModuleRepository → ModuleManager
- *                                       └─ ModuleInspector → AvmManifestParser
+ * ModulesScreen → ModulesViewModel → ModuleRepository → ModuleScanner
+ *                                       └─ HashCalculator + AvmManifestParser
+ *                                          + RiskAnalyzer → TrustReport
  * ```
  */
 class ModulesViewModel(app: Application) : AndroidViewModel(app) {
@@ -119,22 +107,22 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Step 1 of install flow: pre-parse the .avm manifest.
+     * Step 1 of install flow: run the Trust Pipeline on the .avm.
      *
-     * Called when the file picker returns a URI.
-     * Does NOT install anything. Only reads module.json from the ZIP.
+     * Computes SHA-256, parses the manifest, and produces a [TrustReport].
+     * Does NOT install anything.
      */
     fun previewUri(uri: Uri) {
         viewModelScope.launch {
             _previewState.value = PreviewState.Previewing
             when (val result = repository.preview(uri)) {
-                is InspectionResult.Success -> {
+                is ScanResult.Success -> {
                     _previewState.value = PreviewState.Ready(
-                        preview = result.preview,
+                        report = result.report,
                         uri = uri,
                     )
                 }
-                is InspectionResult.Failure -> {
+                is ScanResult.Failure -> {
                     _previewState.value = PreviewState.Failed(
                         reason = result.reason,
                     )
@@ -144,7 +132,7 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Step 2 of install flow: user confirmed in the dialog.
+     * Step 2 of install flow: user confirmed in the security review dialog.
      * Actually installs the .avm via ModuleManager.
      */
     fun confirmInstall() {
@@ -177,7 +165,7 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Dismiss the install dialog without installing. */
+    /** Dismiss the security review dialog without installing. */
     fun cancelPreview() {
         _previewState.value = PreviewState.Idle
     }
@@ -240,18 +228,12 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Clear the install operation state (after the UI has shown it). */
     fun clearInstallState() {
-        _uiState.update {
-            it.copy(installState = ModuleOperationState.Idle)
-        }
+        _uiState.update { it.copy(installState = ModuleOperationState.Idle) }
     }
 
-    /** Clear a per-module operation state. */
     fun clearModuleOp(moduleId: String) {
-        _uiState.update {
-            it.copy(moduleOperations = it.moduleOperations - moduleId)
-        }
+        _uiState.update { it.copy(moduleOperations = it.moduleOperations - moduleId) }
     }
 
     private fun setModuleOp(moduleId: String, state: ModuleOperationState) {

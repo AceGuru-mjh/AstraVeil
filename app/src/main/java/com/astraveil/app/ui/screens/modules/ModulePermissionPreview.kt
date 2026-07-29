@@ -28,8 +28,7 @@ import com.astraveil.core.modules.model.ModulePermissionInfo
 /**
  * Renders the list of permissions declared by a module manifest.
  *
- * Used inside [InstallModuleDialog] (pre-install confirmation) and the
- * module detail card. Each permission is rendered by [PermissionRow],
+ * Used inside the installed-module card. Each permission is rendered by [PermissionRow],
  * which shows:
  *  - a coloured risk dot
  *  - the capability name + human-readable reason
