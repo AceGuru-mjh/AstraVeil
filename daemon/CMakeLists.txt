@@ -98,6 +98,25 @@ target_include_directories(astrad PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 find_package(Threads REQUIRED)
 target_link_libraries(astrad PRIVATE Threads::Threads)
 
+# ---- Dynamic loader (dlopen / dlsym for module_runner) ----------------------
+# module_runner.cpp uses dlopen() to load .avm native runtimes in the
+# sandboxed child process. On glibc this is part of libdl (or libc on
+# newer glibc); on Bionic (Android) it is always in libc.
+target_link_libraries(astrad PRIVATE ${CMAKE_DL_LIBS})
+
+# ---- Optional: libseccomp ---------------------------------------------------
+# SeccompManager::apply() compiles with or without libseccomp. When the
+# library is present we define ASTRA_HAVE_LIBSECCOMP so the real filter
+# is applied; otherwise the method logs a warning and continues.
+find_library(SECCOMP_LIB seccomp)
+if(SECCOMP_LIB)
+    target_link_libraries(astrad PRIVATE ${SECCOMP_LIB})
+    target_compile_definitions(astrad PRIVATE ASTRA_HAVE_LIBSECCOMP=1)
+    message(STATUS "Linked libseccomp: ${SECCOMP_LIB}")
+else()
+    message(STATUS "libseccomp not found — seccomp filter will be skipped")
+endif()
+
 # ---- Protobuf migration note -----------------------------------------------
 # Today the daemon uses a simple length+type-byte framing with JSON payloads
 # (see `src/ipc/socket_server.cpp` and `src/main.cpp`). The schema for the
