@@ -7,6 +7,14 @@ package com.astraveil.core.modules.model
  * [com.astraveil.modules.AstraModule]. It is a projection that the
  * Compose layer consumes. The adapter lives in the :app repository
  * layer so :core never depends on :modules.
+ *
+ * Risk data model (Patch 18.2.1):
+ *  - [ModulePermissionInfo.risk] is **nullable**. A non-null value is
+ *    ALWAYS sourced from the module manifest (v3 `riskLevel` field).
+ *    A null value means the risk was not declared — the UI MUST render
+ *    this as "Unknown", never as a guessed number.
+ *  - The UI layer no longer runs heuristics (`defaultRisk` /
+ *    `estimateRisk`) to fabricate a score. "显示真实能力，而不是模拟".
  */
 data class ModuleInfo(
     val id: String,
@@ -31,30 +39,16 @@ enum class ModuleUiState {
 /**
  * A single permission entry shown in the install-confirmation dialog
  * and the module detail card.
+ *
+ * @property risk Risk score declared in the module manifest (v3
+ *                `riskLevel`), or `null` when the manifest did not
+ *                declare one. `null` MUST be rendered as "Unknown" —
+ *                the UI never invents a value.
+ * @property reason Human-readable rationale declared in the manifest,
+ *                  or empty string when absent.
  */
 data class ModulePermissionInfo(
     val capability: String,
-    val risk: Int,
-    val reason: String,
-    /**
-     * Where the [risk] value came from.
-     *
-     * - [RiskSource.MANIFEST]: the module author declared this risk level
-     *   in `module.json` (v3 format). Trustworthy.
-     * - [RiskSource.ESTIMATED]: the risk was inferred by heuristic because
-     *   the manifest uses the Phase-0 string-only permission format.
-     *   The UI must display this as an estimate, not a guarantee.
-     */
-    val riskSource: RiskSource = RiskSource.ESTIMATED,
+    val risk: Int?,
+    val reason: String = "",
 )
-
-/**
- * Provenance of a permission's risk score.
- */
-enum class RiskSource {
-    /** Risk level declared in the module's manifest (v3 format). */
-    MANIFEST,
-
-    /** Risk level inferred by heuristic (Phase-0 string permissions). */
-    ESTIMATED,
-}

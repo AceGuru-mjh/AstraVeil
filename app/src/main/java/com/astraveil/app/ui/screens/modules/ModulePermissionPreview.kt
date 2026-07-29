@@ -21,11 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
-import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraTeal
 import com.astraveil.app.ui.theme.AstraWarning
 import com.astraveil.core.modules.model.ModulePermissionInfo
-import com.astraveil.core.modules.model.RiskSource
 
 /**
  * Renders the list of permissions declared by a module manifest.
@@ -35,10 +33,11 @@ import com.astraveil.core.modules.model.RiskSource
  * which shows:
  *  - a coloured risk dot
  *  - the capability name + human-readable reason
- *  - a risk badge ("High · 90", "Medium · 50", "Low · 20")
- *  - a provenance tag ("manifest" vs "est.") so the user can tell
- *    whether the risk level was declared by the module author or
- *    inferred by heuristic.
+ *  - a risk badge ("High · 90", "Medium · 50", "Low · 20", or "Unknown")
+ *
+ * Patch 18.2.1: when [ModulePermissionInfo.risk] is `null` (manifest did
+ * not declare a risk level), the row renders an explicit "Unknown" badge
+ * with a muted dot — never a fabricated number.
  */
 @Composable
 fun ModulePermissionPreview(
@@ -96,7 +95,7 @@ private fun PermissionRow(perm: ModulePermissionInfo) {
 
         Spacer(Modifier.width(6.dp))
 
-        // Risk badge
+        // Risk badge — "High · 90" / "Medium · 50" / "Low · 20" / "Unknown"
         Box(
             modifier = Modifier
                 .background(
@@ -106,45 +105,41 @@ private fun PermissionRow(perm: ModulePermissionInfo) {
                 .padding(horizontal = 8.dp, vertical = 3.dp),
         ) {
             Text(
-                text = "$riskLabel · ${perm.risk}",
+                text = when (val r = perm.risk) {
+                    null -> "Unknown"
+                    else -> "$riskLabel · $r"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = riskColor,
             )
         }
-
-        // ---- NEW: risk source tag ----
-        Spacer(Modifier.width(4.dp))
-        Text(
-            text = when (perm.riskSource) {
-                RiskSource.MANIFEST -> "manifest"
-                RiskSource.ESTIMATED -> "est."
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = when (perm.riskSource) {
-                RiskSource.MANIFEST -> AstraSuccess.copy(alpha = 0.7f)
-                RiskSource.ESTIMATED -> AstraOnSurfaceMuted.copy(alpha = 0.5f)
-            },
-        )
     }
 }
 
 /**
- * Maps a numeric risk score to a colour token.
+ * Maps a risk score to a colour token.
  *
- * Thresholds aligned with Rust policy + AvmManifestParser.estimateRisk:
- *  - 0..30  → Low    (teal)
- *  - 31..70 → Medium (warning amber)
- *  - 71+    → High   (error red)
+ * Thresholds aligned with Rust policy:
+ *  - null     → Unknown  (muted gray)
+ *  - 0..30    → Low      (teal)
+ *  - 31..70   → Medium   (warning amber)
+ *  - 71+      → High     (error red)
  */
-private fun riskColor(risk: Int): Color = when {
-    risk <= 30 -> AstraTeal
-    risk <= 70 -> AstraWarning
-    else -> AstraError
+private fun riskColor(risk: Int?): Color = when (risk) {
+    null -> AstraOnSurfaceMuted
+    else -> when {
+        risk <= 30 -> AstraTeal
+        risk <= 70 -> AstraWarning
+        else -> AstraError
+    }
 }
 
-private fun riskLabel(risk: Int): String = when {
-    risk <= 30 -> "Low"
-    risk <= 70 -> "Medium"
-    else -> "High"
+private fun riskLabel(risk: Int?): String = when (risk) {
+    null -> "Unknown"
+    else -> when {
+        risk <= 30 -> "Low"
+        risk <= 70 -> "Medium"
+        else -> "High"
+    }
 }

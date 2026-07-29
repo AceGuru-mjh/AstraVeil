@@ -3,6 +3,7 @@ package com.astraveil.app.ui.screens.modules
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,20 +65,23 @@ fun ModulesScreen(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            // NEW: pre-parse BEFORE showing any dialog
+            // Pre-parse BEFORE showing any dialog (Patch 18.2.2)
             modulesViewModel.previewUri(uri)
         }
     }
 
-    // ---- Snackbar for errors / success ----
-    LaunchedEffect(state.error, state.successMessage) {
-        state.error?.let {
-            snackbarHostState.showSnackbar(it)
-            modulesViewModel.clearMessages()
-        }
-        state.successMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            modulesViewModel.clearMessages()
+    // ---- Snackbar for install operation state (Patch 18.2.3) ----
+    LaunchedEffect(state.installState) {
+        when (val s = state.installState) {
+            is ModuleOperationState.Success -> {
+                snackbarHostState.showSnackbar(s.message)
+                modulesViewModel.clearInstallState()
+            }
+            is ModuleOperationState.Error -> {
+                snackbarHostState.showSnackbar(s.message)
+                modulesViewModel.clearInstallState()
+            }
+            ModuleOperationState.Idle, ModuleOperationState.Loading -> Unit
         }
     }
 
@@ -118,11 +122,14 @@ fun ModulesScreen(
             if (state.modules.isNotEmpty()) {
                 item { SectionTitle("Installed Modules", state.modules.size) }
                 items(items = state.modules, key = { it.id }) { module ->
+                    val op = state.moduleOperations[module.id]
                     ModuleCard(
                         module = module,
+                        operation = op,
                         onStart = { modulesViewModel.start(module.id) },
                         onStop = { modulesViewModel.stop(module.id) },
                         onUninstall = { modulesViewModel.uninstall(module.id) },
+                        onClearOp = { modulesViewModel.clearModuleOp(module.id) },
                     )
                 }
             }
@@ -172,12 +179,12 @@ fun ModulesScreen(
         )
     }
 
-    // ---- Install confirmation dialog (FIXED: uses real preview data) ----
+    // ---- Install confirmation dialog (uses real preview data) ----
     if (previewState is PreviewState.Ready) {
         val ready = previewState as PreviewState.Ready
         InstallModuleDialog(
-            modulePreview = ready.module,   // ← REAL DATA, not null
-            installing = state.installing,
+            modulePreview = ready.preview,           // ← REAL DATA
+            installState = state.installState,       // ← Patch 18.2.3 feedback
             onConfirm = { modulesViewModel.confirmInstall() },
             onDismiss = { modulesViewModel.cancelPreview() },
         )
@@ -296,9 +303,11 @@ private fun InstallCtaCard(onClick: () -> Unit) {
 @Composable
 private fun ModuleCard(
     module: ModuleInfo,
+    operation: ModuleOperationState?,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onUninstall: () -> Unit,
+    onClearOp: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -353,27 +362,49 @@ private fun ModuleCard(
             )
         }
 
-        // Permission preview (reuse the same renderer as the install dialog)
+        // Permission preview — risk is nullable; "Unknown" when undeclared.
         ModulePermissionPreview(permissions = module.permissions)
+
+        // ---- Operation feedback (Patch 18.2.3) ----
+        OperationFeedbackRow(operation, onClearOp)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val busy = operation is ModuleOperationState.Loading
             when (module.state) {
                 ModuleUiState.RUNNING -> {
-                    OutlinedButton(onClick = onStop) {
-                        Icon(Icons.Filled.Stop, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
+                    OutlinedButton(onClick = onStop, enabled = !busy) {
+                        if (busy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = AstraGlass.Glow,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        } else {
+                            Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
                         Text("Stop")
                     }
                 }
                 ModuleUiState.INSTALLED,
                 ModuleUiState.STOPPED -> {
-                    OutlinedButton(onClick = onStart) {
-                        Icon(Icons.Filled.PlayArrow, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
+                    OutlinedButton(onClick = onStart, enabled = !busy) {
+                        if (busy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = AstraGlass.Glow,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        } else {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
                         Text("Start")
                     }
                 }
@@ -386,9 +417,85 @@ private fun ModuleCard(
                 }
             }
             Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = onUninstall) {
+            OutlinedButton(onClick = onUninstall, enabled = !busy) {
                 Text("Uninstall")
             }
+        }
+    }
+}
+
+/**
+ * Inline feedback line for the last start/stop/uninstall operation on
+ * a module. Patch 18.2.3: turns silent Boolean flags into explicit
+ * Loading / Success / Error text the user can read.
+ */
+@Composable
+private fun OperationFeedbackRow(
+    operation: ModuleOperationState?,
+    onClear: () -> Unit,
+) {
+    when (operation) {
+        null, ModuleOperationState.Idle -> Unit
+        ModuleOperationState.Loading -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(12.dp),
+                strokeWidth = 2.dp,
+                color = AstraGlass.Glow,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "Working…",
+                style = MaterialTheme.typography.labelSmall,
+                color = AstraOnSurfaceMuted,
+            )
+        }
+        is ModuleOperationState.Success -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .background(
+                    color = AstraTeal.copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .clickable { onClear() }
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            Text(
+                text = operation.message,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = AstraTeal,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Dismiss",
+                style = MaterialTheme.typography.labelSmall,
+                color = AstraOnSurfaceMuted,
+            )
+        }
+        is ModuleOperationState.Error -> Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .background(
+                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .clickable { onClear() }
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            Text(
+                text = operation.message,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Dismiss",
+                style = MaterialTheme.typography.labelSmall,
+                color = AstraOnSurfaceMuted,
+            )
         }
     }
 }

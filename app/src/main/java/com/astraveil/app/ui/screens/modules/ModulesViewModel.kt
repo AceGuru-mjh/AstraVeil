@@ -4,8 +4,9 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.astraveil.app.repository.InspectionResult
+import com.astraveil.app.repository.ModulePreview
 import com.astraveil.app.repository.ModuleRepositoryProvider
-import com.astraveil.core.modules.manifest.AvmManifestParser
 import com.astraveil.core.modules.model.ModuleInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,23 +15,47 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
+ * Unified operation feedback state for any module action
+ * (install / start / stop / uninstall). Patch 18.2.3.
+ *
+ * Replaces the old `installing: Boolean` + scattered `error`/`success`
+ * strings with a single sealed type the UI can render exhaustively.
+ */
+sealed class ModuleOperationState {
+    /** No operation in flight. */
+    data object Idle : ModuleOperationState()
+
+    /** Operation running — UI shows a spinner / "Installing…" label. */
+    data object Loading : ModuleOperationState()
+
+    /** Operation succeeded — UI shows a transient success message. */
+    data class Success(val message: String) : ModuleOperationState()
+
+    /** Operation failed — UI shows the error message. */
+    data class Error(val message: String) : ModuleOperationState()
+}
+
+/**
  * UI state for the Module Center screen.
+ *
+ * @property installState  State of the install flow (preview → confirm).
+ * @property moduleOperations Per-module state for start / stop / uninstall,
+ *                            keyed by module id.
  */
 data class ModulesUiState(
     val modules: List<ModuleInfo> = emptyList(),
     val loading: Boolean = false,
-    val installing: Boolean = false,
-    val error: String? = null,
-    val successMessage: String? = null,
+    val installState: ModuleOperationState = ModuleOperationState.Idle,
+    val moduleOperations: Map<String, ModuleOperationState> = emptyMap(),
 )
 
 /**
  * State machine for the install-preview flow.
  *
  * ```
- * IDLE → PREVIEWING → PREVIEW_READY (dialog shown)
- *                    → PREVIEW_FAILED (error snackbar)
- * PREVIEW_READY → INSTALLING → IDLE (success) / PREVIEW_FAILED (error)
+ * IDLE → PREVIEWING → READY (dialog shown)
+ *                    → FAILED (error snackbar)
+ * READY → (confirmInstall) → installState.Loading → IDLE (success/error)
  * ```
  */
 sealed class PreviewState {
@@ -40,9 +65,9 @@ sealed class PreviewState {
     /** Reading + parsing the .avm manifest. */
     data object Previewing : PreviewState()
 
-    /** Manifest parsed successfully. Dialog should show [module]. */
+    /** Manifest parsed successfully. Dialog should show [preview]. */
     data class Ready(
-        val module: ModuleInfo,
+        val preview: ModulePreview,
         val uri: Uri,
     ) : PreviewState()
 
@@ -56,6 +81,7 @@ sealed class PreviewState {
  * Data flow:
  * ```
  * ModulesScreen → ModulesViewModel → ModuleRepository → ModuleManager
+ *                                       └─ ModuleInspector → AvmManifestParser
  * ```
  */
 class ModulesViewModel(app: Application) : AndroidViewModel(app) {
@@ -75,12 +101,19 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
     /** Reload the module list from the repository. */
     fun refresh() {
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            _uiState.update { it.copy(loading = true) }
             try {
                 val modules = repository.listModules()
                 _uiState.update { it.copy(loading = false, modules = modules) }
             } catch (t: Throwable) {
-                _uiState.update { it.copy(loading = false, error = t.message) }
+                _uiState.update {
+                    it.copy(
+                        loading = false,
+                        installState = ModuleOperationState.Error(
+                            "Failed to load modules: ${t.message ?: "unknown error"}"
+                        ),
+                    )
+                }
             }
         }
     }
@@ -95,15 +128,15 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _previewState.value = PreviewState.Previewing
             when (val result = repository.preview(uri)) {
-                is AvmManifestParser.PreviewResult.Success -> {
+                is InspectionResult.Success -> {
                     _previewState.value = PreviewState.Ready(
-                        module = result.module,
+                        preview = result.preview,
                         uri = uri,
                     )
                 }
-                is AvmManifestParser.PreviewResult.Failure -> {
+                is InspectionResult.Failure -> {
                     _previewState.value = PreviewState.Failed(
-                        reason = result.reason.message,
+                        reason = result.reason,
                     )
                 }
             }
@@ -119,20 +152,25 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
         if (state !is PreviewState.Ready) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(installing = true, error = null, successMessage = null) }
+            _uiState.update { it.copy(installState = ModuleOperationState.Loading) }
             try {
                 val installed = repository.install(state.uri)
                 _uiState.update {
                     it.copy(
-                        installing = false,
+                        installState = ModuleOperationState.Success(
+                            "'${installed.name}' installed."
+                        ),
                         modules = it.modules + installed,
-                        successMessage = "'${installed.name}' installed successfully.",
                     )
                 }
                 _previewState.value = PreviewState.Idle
             } catch (t: Throwable) {
                 _uiState.update {
-                    it.copy(installing = false, error = "Install failed: ${t.message}")
+                    it.copy(
+                        installState = ModuleOperationState.Error(
+                            "Install failed: ${t.message ?: "unknown error"}"
+                        ),
+                    )
                 }
                 _previewState.value = PreviewState.Idle
             }
@@ -147,16 +185,23 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
     /** Uninstall a module by id. */
     fun uninstall(moduleId: String) {
         viewModelScope.launch {
+            setModuleOp(moduleId, ModuleOperationState.Loading)
             try {
                 repository.uninstall(moduleId)
                 _uiState.update {
                     it.copy(
                         modules = it.modules.filter { m -> m.id != moduleId },
-                        successMessage = "Module uninstalled.",
+                        moduleOperations = it.moduleOperations - moduleId,
                     )
                 }
+                _uiState.update {
+                    it.copy(installState = ModuleOperationState.Success("Module uninstalled."))
+                }
             } catch (t: Throwable) {
-                _uiState.update { it.copy(error = "Uninstall failed: ${t.message}") }
+                setModuleOp(
+                    moduleId,
+                    ModuleOperationState.Error("Uninstall failed: ${t.message ?: "unknown error"}"),
+                )
             }
         }
     }
@@ -164,11 +209,16 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
     /** Start a module. */
     fun start(moduleId: String) {
         viewModelScope.launch {
+            setModuleOp(moduleId, ModuleOperationState.Loading)
             try {
                 repository.start(moduleId)
+                setModuleOp(moduleId, ModuleOperationState.Success("Started."))
                 refresh()
             } catch (t: Throwable) {
-                _uiState.update { it.copy(error = "Start failed: ${t.message}") }
+                setModuleOp(
+                    moduleId,
+                    ModuleOperationState.Error("Start failed: ${t.message ?: "unknown error"}"),
+                )
             }
         }
     }
@@ -176,17 +226,37 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
     /** Stop a module. */
     fun stop(moduleId: String) {
         viewModelScope.launch {
+            setModuleOp(moduleId, ModuleOperationState.Loading)
             try {
                 repository.stop(moduleId)
+                setModuleOp(moduleId, ModuleOperationState.Success("Stopped."))
                 refresh()
             } catch (t: Throwable) {
-                _uiState.update { it.copy(error = "Stop failed: ${t.message}") }
+                setModuleOp(
+                    moduleId,
+                    ModuleOperationState.Error("Stop failed: ${t.message ?: "unknown error"}"),
+                )
             }
         }
     }
 
-    /** Clear the transient error / success message. */
-    fun clearMessages() {
-        _uiState.update { it.copy(error = null, successMessage = null) }
+    /** Clear the install operation state (after the UI has shown it). */
+    fun clearInstallState() {
+        _uiState.update {
+            it.copy(installState = ModuleOperationState.Idle)
+        }
+    }
+
+    /** Clear a per-module operation state. */
+    fun clearModuleOp(moduleId: String) {
+        _uiState.update {
+            it.copy(moduleOperations = it.moduleOperations - moduleId)
+        }
+    }
+
+    private fun setModuleOp(moduleId: String, state: ModuleOperationState) {
+        _uiState.update {
+            it.copy(moduleOperations = it.moduleOperations + (moduleId to state))
+        }
     }
 }

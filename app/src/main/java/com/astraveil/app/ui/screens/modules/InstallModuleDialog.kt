@@ -1,19 +1,23 @@
 package com.astraveil.app.ui.screens.modules
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.InstallMobile
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,24 +25,26 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.astraveil.app.repository.ModulePreview
+import com.astraveil.app.repository.PermissionPreview
 import com.astraveil.app.ui.design.AstraGlass
 import com.astraveil.app.ui.design.GlassSurface
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
-import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraTeal
 import com.astraveil.app.ui.theme.AstraWarning
-import com.astraveil.core.modules.model.ModuleInfo
-import com.astraveil.core.modules.model.RiskSource
 
 /**
- * Pre-install confirmation dialog.
+ * Pre-install confirmation dialog (Patch 18.2.1 + 18.2.3).
  *
- * ALWAYS receives a real [ModuleInfo] from the pre-parse step.
- * Never shows placeholder / generic text.
+ * ALWAYS receives a real [ModulePreview] from the [ModuleInspector]
+ * pre-parse step — never placeholder text. Risk badges reflect the
+ * manifest truthfully: declared levels are shown, undeclared ones are
+ * rendered as "Unknown".
  *
  * Layout:
  * ```
@@ -50,20 +56,23 @@ import com.astraveil.core.modules.model.RiskSource
  * │  Description text...                    │
  * │                                         │
  * │  🛡 Requested Permissions               │
- * │  ● root_execution    High · 90  [manifest] │
- * │  ● filesystem        Low · 30   [estimated]│
+ * │  ● root_execution    High · 90          │
+ * │  ● filesystem        Unknown            │
  * │                                         │
- * │  Overall risk: High                     │
- * │  Risk data: 1 from manifest, 1 estimated│
+ * │  Overall risk: High / Unknown           │
  * │                                         │
- * │              [Cancel]  [Install]        │
+ * │              [Cancel]  [Install…]       │
  * └─────────────────────────────────────────┘
  * ```
+ *
+ * @param installState Drives the confirm button label & enabled state
+ *                     (Idle → "Install", Loading → "Installing…" + spinner,
+ *                      Error → "Install" + error shown).
  */
 @Composable
 fun InstallModuleDialog(
-    modulePreview: ModuleInfo,
-    installing: Boolean,
+    modulePreview: ModulePreview,
+    installState: ModuleOperationState,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -119,7 +128,7 @@ fun InstallModuleDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Filled.Shield,
-                            null,
+                            contentDescription = null,
                             tint = AstraTeal,
                             modifier = Modifier.padding(end = 6.dp),
                         )
@@ -131,53 +140,25 @@ fun InstallModuleDialog(
                         )
                     }
 
-                    ModulePermissionPreview(
-                        permissions = modulePreview.permissions,
-                    )
+                    PreviewPermissionList(modulePreview.permissions)
 
-                    // ---- Risk summary ----
-                    val maxRisk = modulePreview.permissions
-                        .maxOfOrNull { it.risk } ?: 0
-                    val riskSummary = when {
-                        maxRisk <= 30 -> "Overall risk: Low"
-                        maxRisk <= 70 -> "Overall risk: Medium"
-                        else -> "Overall risk: High"
-                    }
+                    // ---- Overall risk summary ----
+                    val overall = overallRisk(modulePreview.permissions)
                     Text(
-                        text = riskSummary,
+                        text = overall.label,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = when {
-                            maxRisk <= 30 -> AstraTeal
-                            maxRisk <= 70 -> AstraWarning
-                            else -> AstraError
-                        },
+                        color = overall.color,
                     )
+                }
 
-                    // ---- Risk provenance (NEW) ----
-                    val fromManifest = modulePreview.permissions
-                        .count { it.riskSource == RiskSource.MANIFEST }
-                    val estimated = modulePreview.permissions
-                        .count { it.riskSource == RiskSource.ESTIMATED }
-                    if (modulePreview.permissions.isNotEmpty()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Filled.Verified,
-                                null,
-                                tint = if (fromManifest > 0) AstraSuccess else AstraOnSurfaceMuted,
-                                modifier = Modifier.padding(end = 4.dp),
-                            )
-                            Text(
-                                text = buildString {
-                                    if (fromManifest > 0) append("$fromManifest from manifest")
-                                    if (fromManifest > 0 && estimated > 0) append(", ")
-                                    if (estimated > 0) append("$estimated estimated")
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AstraOnSurfaceMuted,
-                            )
-                        }
-                    }
+                // ---- Install error (if any) ----
+                if (installState is ModuleOperationState.Error) {
+                    Text(
+                        text = installState.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AstraError,
+                    )
                 }
 
                 Spacer(Modifier.height(4.dp))
@@ -190,7 +171,7 @@ fun InstallModuleDialog(
                 ) {
                     TextButton(
                         onClick = onDismiss,
-                        enabled = !installing,
+                        enabled = installState !is ModuleOperationState.Loading,
                     ) {
                         Text("Cancel")
                     }
@@ -199,12 +180,127 @@ fun InstallModuleDialog(
 
                     TextButton(
                         onClick = onConfirm,
-                        enabled = !installing,
+                        enabled = installState !is ModuleOperationState.Loading,
                     ) {
-                        Text(if (installing) "Installing…" else "Install")
+                        if (installState is ModuleOperationState.Loading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = AstraGlass.Glow,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("Installing…")
+                        } else {
+                            Text("Install")
+                        }
                     }
                 }
             }
         }
     }
 }
+
+// ---- Helpers ----
+
+@Composable
+private fun PreviewPermissionList(permissions: List<PermissionPreview>) {
+    if (permissions.isEmpty()) {
+        Text(
+            text = "No permissions requested.",
+            style = MaterialTheme.typography.bodySmall,
+            color = AstraOnSurfaceMuted,
+        )
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        permissions.forEach { perm -> PreviewPermissionRow(perm) }
+    }
+}
+
+@Composable
+private fun PreviewPermissionRow(perm: PermissionPreview) {
+    val riskColor = previewRiskColor(perm.risk)
+    val riskLabel = previewRiskLabel(perm.risk)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(
+                    color = riskColor,
+                    shape = RoundedCornerShape(4.dp),
+                ),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = perm.capability,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (perm.reason.isNotBlank()) {
+                Text(
+                    text = perm.reason,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.width(6.dp))
+        Box(
+            modifier = Modifier
+                .background(
+                    color = riskColor.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+        ) {
+            Text(
+                text = when (val r = perm.risk) {
+                    null -> "Unknown"
+                    else -> "$riskLabel · $r"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = riskColor,
+            )
+        }
+    }
+}
+
+private data class OverallRisk(val label: String, val color: Color)
+
+private fun overallRisk(permissions: List<PermissionPreview>): OverallRisk {
+    val declared = permissions.mapNotNull { it.risk }
+    if (declared.isEmpty()) return OverallRisk("Overall risk: Unknown", AstraOnSurfaceMuted)
+    val maxRisk = declared.max()
+    return when {
+        maxRisk <= 30 -> OverallRisk("Overall risk: Low", AstraTeal)
+        maxRisk <= 70 -> OverallRisk("Overall risk: Medium", AstraWarning)
+        else -> OverallRisk("Overall risk: High", AstraError)
+    }
+}
+
+private fun previewRiskColor(risk: Int?): Color = when (risk) {
+    null -> AstraOnSurfaceMuted
+    else -> when {
+        risk <= 30 -> AstraTeal
+        risk <= 70 -> AstraWarning
+        else -> AstraError
+    }
+}
+
+private fun previewRiskLabel(risk: Int?): String = when (risk) {
+    null -> "Unknown"
+    else -> when {
+        risk <= 30 -> "Low"
+        risk <= 70 -> "Medium"
+        else -> "High"
+    }
+}
+
+// ---- end of file ----

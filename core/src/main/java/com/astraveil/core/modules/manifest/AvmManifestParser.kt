@@ -3,7 +3,6 @@ package com.astraveil.core.modules.manifest
 import com.astraveil.core.modules.model.ModuleInfo
 import com.astraveil.core.modules.model.ModulePermissionInfo
 import com.astraveil.core.modules.model.ModuleUiState
-import com.astraveil.core.modules.model.RiskSource
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.InputStream
@@ -20,7 +19,14 @@ import java.util.zip.ZipInputStream
  *
  * Supports two manifest formats:
  * - **Phase 0**: `{ "name", "version", "api", "permissions": ["str"] }`
- * - **v3**:      `{ "id", "name", "version", "apiVersion", "permissions": [{capability, reason, riskLevel}] }`
+ *   → permissions carry NO risk data; [ModulePermissionInfo.risk] is `null`
+ *     (rendered as "Unknown" by the UI).
+ * - **v3**:      `{ "id", "name", "version", "apiVersion",
+ *                  "permissions": [{capability, reason, riskLevel}] }`
+ *   → risk comes straight from the manifest's `riskLevel` field.
+ *
+ * Patch 18.2.1: the parser no longer runs heuristics to fabricate a risk
+ * score for Phase-0 manifests. Undeclared risk = `null` = "Unknown".
  *
  * This class is stateless and thread-safe.
  */
@@ -155,14 +161,17 @@ object AvmManifestParser {
         permissions = permissions.map { p ->
             ModulePermissionInfo(
                 capability = p.capability,
-                risk = p.riskLevel,
+                risk = p.riskLevel,           // ← declared by manifest
                 reason = p.reason,
-                riskSource = RiskSource.MANIFEST,
             )
         },
     )
 
     // ---- Phase 0 format ----
+    //
+    // Phase-0 manifests carry ONLY a flat list of permission string tokens.
+    // There is NO risk information. Per Patch 18.2.1 we surface this
+    // honestly as `risk = null` rather than inventing a heuristic score.
 
     @Serializable
     private data class Phase0Manifest(
@@ -182,47 +191,9 @@ object AvmManifestParser {
         permissions = permissions.map { perm ->
             ModulePermissionInfo(
                 capability = perm,
-                risk = estimateRisk(perm),
-                reason = estimateReason(perm),
-                riskSource = RiskSource.ESTIMATED,
+                risk = null,                 // ← undeclared → UI shows "Unknown"
+                reason = "",
             )
         },
     )
-
-    /**
-     * Heuristic risk for Phase-0 string permissions.
-     * Aligned with Rust policy thresholds: 0-30 Low · 31-70 Medium · 70+ High.
-     *
-     * These values are ESTIMATES. The UI must display them as such
-     * via [RiskSource.ESTIMATED].
-     */
-    private fun estimateRisk(capability: String): Int = when (capability) {
-        "su", "root_execution" -> 90
-        "kernel_hook" -> 95
-        "boot_patch" -> 85
-        "selinux_control" -> 80
-        "system_write" -> 75
-        "mount", "mount_namespace" -> 70
-        "overlayfs" -> 65
-        "namespace" -> 60
-        "network" -> 40
-        "filesystem" -> 30
-        "property" -> 20
-        else -> 10
-    }
-
-    private fun estimateReason(capability: String): String = when (capability) {
-        "su", "root_execution" -> "Execute commands as root"
-        "kernel_hook" -> "Hook kernel functions"
-        "boot_patch" -> "Modify boot image"
-        "selinux_control" -> "Modify SELinux policy"
-        "system_write" -> "Write to /system partition"
-        "mount", "mount_namespace" -> "Mount filesystem overlays"
-        "overlayfs" -> "OverlayFS mount operations"
-        "namespace" -> "Create isolated namespaces"
-        "network" -> "Open network sockets"
-        "filesystem" -> "Read/write filesystem paths"
-        "property" -> "Read/write system properties"
-        else -> "Capability: $capability"
-    }
 }

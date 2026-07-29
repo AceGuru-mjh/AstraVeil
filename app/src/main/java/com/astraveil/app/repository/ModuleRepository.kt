@@ -4,11 +4,9 @@ import android.content.Context
 import android.net.Uri
 import com.astraveil.app.AstraVeilApplication
 import com.astraveil.app.di.AstraContainer
-import com.astraveil.core.modules.manifest.AvmManifestParser
 import com.astraveil.core.modules.model.ModuleInfo
 import com.astraveil.core.modules.model.ModulePermissionInfo
 import com.astraveil.core.modules.model.ModuleUiState
-import com.astraveil.core.modules.model.RiskSource
 import com.astraveil.modules.AstraModule
 import com.astraveil.modules.ModuleManager
 import com.astraveil.modules.ModuleState
@@ -24,14 +22,11 @@ interface ModuleRepository {
     /**
      * Pre-parse an `.avm` package from a content [uri] WITHOUT installing.
      *
-     * Reads only the `module.json` entry from the ZIP archive.
-     * Does not copy the file, does not touch the filesystem,
-     * does not invoke [ModuleManager].
-     *
-     * @return parsed [ModuleInfo] for display in the install dialog,
-     *         or null if the archive is invalid.
+     * Delegates to [ModuleInspector]. Reads only the `module.json` entry
+     * from the ZIP archive; does not copy the file, does not touch the
+     * filesystem, does not invoke [ModuleManager].
      */
-    suspend fun preview(uri: Uri): AvmManifestParser.PreviewResult
+    suspend fun preview(uri: Uri): InspectionResult
 
     /**
      * Install a `.avm` package from a content [uri].
@@ -68,21 +63,9 @@ class ModuleRepositoryImpl(
         manager.list().map { it.toModuleInfo() }
     }
 
-    override suspend fun preview(uri: Uri): AvmManifestParser.PreviewResult =
+    override suspend fun preview(uri: Uri): InspectionResult =
         withContext(Dispatchers.IO) {
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                    ?: return@withContext AvmManifestParser.PreviewResult.Failure(
-                        AvmManifestParser.PreviewError.IO_ERROR
-                    )
-                inputStream.use { stream ->
-                    AvmManifestParser.parse(stream)
-                }
-            } catch (e: Exception) {
-                AvmManifestParser.PreviewResult.Failure(
-                    AvmManifestParser.PreviewError.IO_ERROR
-                )
-            }
+            ModuleInspector.inspect(context, uri)
         }
 
     override suspend fun install(uri: Uri): ModuleInfo = withContext(Dispatchers.IO) {
@@ -114,6 +97,12 @@ class ModuleRepositoryImpl(
 }
 
 // ---- Adapter: AstraModule → ModuleInfo ----
+//
+// Patch 18.2.1: the adapter no longer estimates risk. Installed modules
+// come from Phase-0 manifests (string-only permissions), so risk is
+// honestly `null` — the UI renders "Unknown". When v3 manifest support
+// lands in ModuleManager, this adapter will forward the declared
+// riskLevel instead.
 
 internal fun AstraModule.toModuleInfo(): ModuleInfo {
     return ModuleInfo(
@@ -125,9 +114,8 @@ internal fun AstraModule.toModuleInfo(): ModuleInfo {
         permissions = manifest.permissions.map { perm ->
             ModulePermissionInfo(
                 capability = perm,
-                risk = estimateRisk(perm),
-                reason = estimateReason(perm),
-                riskSource = RiskSource.ESTIMATED, // Phase-0 manifest: no real risk data
+                risk = null,        // Phase-0 manifest: undeclared → Unknown
+                reason = "",
             )
         },
     )
@@ -139,37 +127,6 @@ private fun ModuleState.toUiState(): ModuleUiState = when (this) {
     ModuleState.INSTALLED -> ModuleUiState.INSTALLED
     ModuleState.ENABLED -> ModuleUiState.STOPPED
     ModuleState.DISABLED -> ModuleUiState.STOPPED
-}
-
-// Renamed from defaultRisk → estimateRisk to make provenance explicit
-private fun estimateRisk(capability: String): Int = when (capability) {
-    "su", "root_execution" -> 90
-    "kernel_hook" -> 95
-    "boot_patch" -> 85
-    "selinux_control" -> 80
-    "system_write" -> 75
-    "mount", "mount_namespace" -> 70
-    "overlayfs" -> 65
-    "namespace" -> 60
-    "network" -> 40
-    "filesystem" -> 30
-    "property" -> 20
-    else -> 10
-}
-
-private fun estimateReason(capability: String): String = when (capability) {
-    "su", "root_execution" -> "Execute commands as root"
-    "kernel_hook" -> "Hook kernel functions"
-    "boot_patch" -> "Modify boot image"
-    "selinux_control" -> "Modify SELinux policy"
-    "system_write" -> "Write to /system partition"
-    "mount", "mount_namespace" -> "Mount filesystem overlays"
-    "overlayfs" -> "OverlayFS mount operations"
-    "namespace" -> "Create isolated namespaces"
-    "network" -> "Open network sockets"
-    "filesystem" -> "Read/write filesystem paths"
-    "property" -> "Read/write system properties"
-    else -> "Capability: $capability"
 }
 
 object ModuleRepositoryProvider {
