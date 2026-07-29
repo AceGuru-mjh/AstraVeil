@@ -35,11 +35,23 @@ android {
     val keystoreFile = file("astraveil.jks")
     signingConfigs {
         create("release") {
+            // Credentials are sourced from gradle properties or environment
+            // variables — NEVER hardcoded. The previous build committed
+            // plaintext passwords to a public repo; rotate the keystore
+            // before the next signed release.
+            //
+            // Supply via:
+            //   ~/.gradle/gradle.properties  (ASTRAVEIL_KEYSTORE_PASSWORD=...)
+            //   or env: ASTRAVEIL_KEYSTORE_PASSWORD / ASTRAVEIL_KEY_ALIAS /
+            //           ASTRAVEIL_KEY_PASSWORD
             if (keystoreFile.exists()) {
                 storeFile = keystoreFile
-                storePassword = "meng411722"
-                keyAlias = "root8888"
-                keyPassword = "meng411722"
+                storePassword = providers.gradleProperty("ASTRAVEIL_KEYSTORE_PASSWORD").orNull
+                    ?: System.getenv("ASTRAVEIL_KEYSTORE_PASSWORD") ?: ""
+                keyAlias = providers.gradleProperty("ASTRAVEIL_KEY_ALIAS").orNull
+                    ?: System.getenv("ASTRAVEIL_KEY_ALIAS") ?: ""
+                keyPassword = providers.gradleProperty("ASTRAVEIL_KEY_PASSWORD").orNull
+                    ?: System.getenv("ASTRAVEIL_KEY_PASSWORD") ?: ""
             }
         }
     }
