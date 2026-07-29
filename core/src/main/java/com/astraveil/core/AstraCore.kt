@@ -103,6 +103,9 @@ class AstraCore(context: Context) {
 
     /**
      * Update the permission status of a package/module and persist the changes.
+     *
+     * Uses [PermissionEngine.grant] (unconditional — caller has already
+     * verified intent, e.g. the UI after prompting the user).
      */
     suspend fun updatePermission(moduleId: String, permission: String, granted: Boolean) {
         if (granted) {
@@ -113,6 +116,28 @@ class AstraCore(context: Context) {
         config.update { cfg ->
             cfg.authorizedPackages = permissionEngine.dumpPermissions()
         }
+    }
+
+    /**
+     * Request a permission for [moduleId] through the policy gate
+     * (dangerous-permission approval check) AND persist the result.
+     *
+     * This is the correct entry point for module install: it respects the
+     * dangerous-permission policy (unlike [updatePermission] which grants
+     * unconditionally) and persists to `astra_config.json` (unlike calling
+     * [PermissionEngine.request] directly, which mutates only the in-memory
+     * map and loses grants on restart).
+     *
+     * @return `true` if the permission was granted, `false` if policy refused.
+     */
+    suspend fun requestAndPersistPermission(moduleId: String, permission: String): Boolean {
+        val ok = permissionEngine.request(moduleId, permission)
+        if (ok) {
+            config.update { cfg ->
+                cfg.authorizedPackages = permissionEngine.dumpPermissions()
+            }
+        }
+        return ok
     }
 
     /**

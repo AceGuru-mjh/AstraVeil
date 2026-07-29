@@ -114,10 +114,15 @@ class ModuleManager(
                     throw e
                 }
 
-                // 5. Request permissions
+                // 5. Request permissions (policy-gated + persisted)
                 val granted = mutableSetOf<String>()
                 for (perm in manifest.permissions) {
-                    if (core.permissionEngine.request(moduleId, perm)) granted += perm
+                    // requestAndPersistPermission: respects the dangerous-permission
+                    // policy gate AND persists to astra_config.json. Calling
+                    // permissionEngine.request() directly would lose grants on
+                    // restart; calling updatePermission() would skip the policy
+                    // gate.
+                    if (core.requestAndPersistPermission(moduleId, perm)) granted += perm
                 }
 
                 // 6. Register
@@ -138,11 +143,18 @@ class ModuleManager(
     }
 
     /** Remove the module from disk and from the registry. Returns `true` if the
-     *  module was installed and has now been removed. */
+     *  module was installed and has now been removed. Also revokes and
+     *  persists the removal of all permissions the module held. */
     suspend fun uninstall(moduleId: String): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
             val module = modules.remove(moduleId) ?: return@withLock false
             File(module.installPath).deleteRecursively()
+            // Revoke all permissions and persist the change so they don't
+            // silently re-appear on restart.
+            core.permissionEngine.revokeAll(moduleId)
+            core.config.update { cfg ->
+                cfg.authorizedPackages = core.permissionEngine.dumpPermissions()
+            }
             core.eventBus.emit(ModuleUninstalledEvent(moduleId))
             true
         }
