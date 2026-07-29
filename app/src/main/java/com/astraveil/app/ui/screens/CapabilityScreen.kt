@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.StatusPill
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
@@ -99,7 +100,7 @@ fun CapabilityScreen(viewModel: StatusViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Mode",
+                        text = AstraStrings.capMode,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
@@ -120,7 +121,7 @@ fun CapabilityScreen(viewModel: StatusViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Detected",
+                        text = AstraStrings.capDetected,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
@@ -157,13 +158,13 @@ fun CapabilityScreen(viewModel: StatusViewModel) {
 private fun ScreenHeader() {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Capability",
+            text = AstraStrings.capTitle,
             color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Detailed device + runtime capability probe results.",
+            text = AstraStrings.capSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )

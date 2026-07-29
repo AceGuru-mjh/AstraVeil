@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.StatusPill
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -76,13 +77,13 @@ fun RootManagerScreen(viewModel: StatusViewModel) {
 private fun ScreenHeader() {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Superuser",
+            text = AstraStrings.suTitle,
             color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "AstraVeil acts as an identity-agnostic brokered control plane, managing root capabilities for third-party apps and modules.",
+            text = AstraStrings.suSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -133,13 +134,13 @@ private fun SuperuserSummaryCard(state: StatusViewModel.UiState) {
             Spacer(Modifier.width(14.dp))
             Column {
                 Text(
-                    text = "Astra Secure Broker",
+                    text = AstraStrings.suSecureBroker,
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Authorized Apps: $authorized of $total active profiles",
+                    text = AstraStrings.authorizedApps(authorized, total),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )

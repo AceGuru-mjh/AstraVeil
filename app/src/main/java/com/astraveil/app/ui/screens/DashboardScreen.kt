@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.QuickActionCard
 import com.astraveil.app.ui.components.StatusCard
 import com.astraveil.app.ui.components.StatusPill
@@ -111,7 +112,7 @@ private fun HeaderCard(state: StatusViewModel.UiState) {
 @Composable
 private fun SystemStatusCard(state: StatusViewModel.UiState) {
     StatusCard(
-        title = "System Status",
+        title = AstraStrings.dashSystemStatus,
         icon = Icons.Filled.Dns,
         status = "OK",
         accent = AstraTeal
@@ -144,7 +145,7 @@ private fun SystemStatusCard(state: StatusViewModel.UiState) {
 private fun DeviceIntelligenceCard(state: StatusViewModel.UiState) {
     val dev = state.deviceProfile
     StatusCard(
-        title = "Device Intelligence",
+        title = AstraStrings.dashDeviceIntelligence,
         icon = Icons.Filled.Devices,
         status = dev.model.ifBlank { "Scanning" },
         accent = AstraAccent
@@ -180,7 +181,7 @@ private fun CompatibilityAssessmentCard(state: StatusViewModel.UiState) {
     }
 
     StatusCard(
-        title = "Compatibility Assessment",
+        title = AstraStrings.dashCompatibilityAssessment,
         icon = Icons.Filled.Equalizer,
         status = "${res.score}/100",
         accent = accentColor
@@ -190,7 +191,7 @@ private fun CompatibilityAssessmentCard(state: StatusViewModel.UiState) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Environment Level: ",
+                text = AstraStrings.dashEnvLevel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -223,7 +224,7 @@ private fun CompatibilityAssessmentCard(state: StatusViewModel.UiState) {
         if (res.warnings.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "System Warnings / Recommendations:",
+                text = AstraStrings.dashSystemWarnings,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -256,7 +257,7 @@ private fun PrivilegeBackendCard(state: StatusViewModel.UiState, onNavigate: (St
     val detected = state.providerName != "None"
     val accent = if (detected) AstraSuccess else AstraWarning
     StatusCard(
-        title = "Privilege Backend",
+        title = AstraStrings.dashPrivilegeBackend,
         icon = Icons.Filled.AdminPanelSettings,
         status = if (detected) "Detected" else "None",
         accent = accent
@@ -285,7 +286,7 @@ private fun PrivilegeBackendCard(state: StatusViewModel.UiState, onNavigate: (St
         }
         if (detected) {
             QuickActionCard(
-                title = "Test Root Capability",
+                title = AstraStrings.dashTestRootCap,
                 icon = Icons.Filled.Terminal,
                 onClick = { onNavigate("provider") },
                 modifier = Modifier.fillMaxWidth(),
@@ -305,7 +306,7 @@ private fun CapabilitiesCard(state: StatusViewModel.UiState) {
         CapabilityRow("OverlayFS", cap.overlayFsSupported, if (dev.kernelOverlayFs) 95 else 15)
     )
     StatusCard(
-        title = "Capabilities",
+        title = AstraStrings.dashCapabilities,
         icon = Icons.Filled.VerifiedUser,
         status = "${items.count { it.supported }}/${items.size}",
         accent = AstraTeal
@@ -319,7 +320,7 @@ private fun CapabilitiesCard(state: StatusViewModel.UiState) {
 @Composable
 private fun ModulesCard(state: StatusViewModel.UiState, onNavigate: (String) -> Unit) {
     StatusCard(
-        title = "Modules",
+        title = AstraStrings.dashModulesTitle,
         icon = Icons.Filled.Apps,
         status = if (state.modulesActive > 0) "Active" else "Empty",
         accent = AstraAccent
@@ -334,20 +335,20 @@ private fun ModulesCard(state: StatusViewModel.UiState, onNavigate: (String) -> 
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${state.modulesActive} Active",
+                    text = AstraStrings.activeCount(state.modulesActive),
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Astra Modules (.avm)",
+                    text = AstraStrings.dashAstraModules,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
         }
         QuickActionCard(
-            title = "Install Module",
+            title = AstraStrings.dashInstallModule,
             icon = Icons.Filled.Download,
             onClick = { onNavigate("modules") },
             modifier = Modifier.fillMaxWidth(),
@@ -360,7 +361,7 @@ private fun SecurityCard(state: StatusViewModel.UiState) {
     val protectedOk = state.securityProtected
     val accent = if (protectedOk) AstraSuccess else AstraError
     StatusCard(
-        title = "Security",
+        title = AstraStrings.dashSecurity,
         icon = Icons.Filled.Security,
         status = if (protectedOk) "Protected" else "At Risk",
         accent = accent
@@ -389,25 +390,25 @@ private fun SecurityCard(state: StatusViewModel.UiState) {
 private fun QuickActionsSection(onNavigate: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = "QUICK ACTIONS",
+            text = AstraStrings.dashQuickActions,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = AstraAccent,
         )
         QuickActionCard(
-            title = "Install Module",
+            title = AstraStrings.dashInstallModule,
             icon = Icons.Filled.Download,
             onClick = { onNavigate("modules") },
             modifier = Modifier.fillMaxWidth(),
         )
         QuickActionCard(
-            title = "Root Test",
+            title = AstraStrings.dashRootTest,
             icon = Icons.Filled.PlayArrow,
             onClick = { onNavigate("provider") },
             modifier = Modifier.fillMaxWidth(),
         )
         QuickActionCard(
-            title = "Security",
+            title = AstraStrings.dashSecurity,
             icon = Icons.Filled.Security,
             onClick = { onNavigate("provider") },
             modifier = Modifier.fillMaxWidth(),

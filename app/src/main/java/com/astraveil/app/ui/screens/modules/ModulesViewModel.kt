@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.astraveil.app.repository.ModuleRepositoryProvider
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.repository.ScanResult
 import com.astraveil.core.modules.model.ModuleInfo
 import com.astraveil.core.modules.security.TrustReport
@@ -98,7 +99,7 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
                     it.copy(
                         loading = false,
                         installState = ModuleOperationState.Error(
-                            "Failed to load modules: ${t.message ?: "unknown error"}"
+                            AstraStrings.loadModulesFailed(t.message)
                         ),
                     )
                 }
@@ -146,7 +147,7 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
                 _uiState.update {
                     it.copy(
                         installState = ModuleOperationState.Success(
-                            "'${installed.name}' installed."
+                            AstraStrings.installSuccess(installed.name)
                         ),
                         modules = it.modules + installed,
                     )
@@ -156,7 +157,7 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
                 _uiState.update {
                     it.copy(
                         installState = ModuleOperationState.Error(
-                            "Install failed: ${t.message ?: "unknown error"}"
+                            AstraStrings.installFailed(t.message)
                         ),
                     )
                 }
@@ -183,12 +184,12 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
                     )
                 }
                 _uiState.update {
-                    it.copy(installState = ModuleOperationState.Success("Module uninstalled."))
+                    it.copy(installState = ModuleOperationState.Success(AstraStrings.modUninstalled))
                 }
             } catch (t: Throwable) {
                 setModuleOp(
                     moduleId,
-                    ModuleOperationState.Error("Uninstall failed: ${t.message ?: "unknown error"}"),
+                    ModuleOperationState.Error(AstraStrings.uninstallFailed(t.message)),
                 )
             }
         }
@@ -200,12 +201,12 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
             setModuleOp(moduleId, ModuleOperationState.Loading)
             try {
                 repository.start(moduleId)
-                setModuleOp(moduleId, ModuleOperationState.Success("Started."))
+                setModuleOp(moduleId, ModuleOperationState.Success(AstraStrings.modStarted))
                 refresh()
             } catch (t: Throwable) {
                 setModuleOp(
                     moduleId,
-                    ModuleOperationState.Error("Start failed: ${t.message ?: "unknown error"}"),
+                    ModuleOperationState.Error(AstraStrings.startFailed(t.message)),
                 )
             }
         }
@@ -217,12 +218,12 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
             setModuleOp(moduleId, ModuleOperationState.Loading)
             try {
                 repository.stop(moduleId)
-                setModuleOp(moduleId, ModuleOperationState.Success("Stopped."))
+                setModuleOp(moduleId, ModuleOperationState.Success(AstraStrings.modStopped))
                 refresh()
             } catch (t: Throwable) {
                 setModuleOp(
                     moduleId,
-                    ModuleOperationState.Error("Stop failed: ${t.message ?: "unknown error"}"),
+                    ModuleOperationState.Error(AstraStrings.stopFailed(t.message)),
                 )
             }
         }

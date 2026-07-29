@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraTeal
@@ -44,7 +45,7 @@ fun ModulePermissionPreview(
 ) {
     if (permissions.isEmpty()) {
         Text(
-            text = "No permissions requested.",
+            text = AstraStrings.secNoPermissions,
             style = MaterialTheme.typography.bodySmall,
             color = AstraOnSurfaceMuted,
         )
@@ -105,7 +106,7 @@ private fun PermissionRow(perm: ModulePermissionInfo) {
         ) {
             Text(
                 text = when (val r = perm.risk) {
-                    null -> "Unknown"
+                    null -> AstraStrings.riskUnknown
                     else -> "$riskLabel · $r"
                 },
                 style = MaterialTheme.typography.labelSmall,
@@ -135,10 +136,10 @@ private fun riskColor(risk: Int?): Color = when (risk) {
 }
 
 private fun riskLabel(risk: Int?): String = when (risk) {
-    null -> "Unknown"
+    null -> AstraStrings.riskUnknown
     else -> when {
-        risk <= 30 -> "Low"
-        risk <= 70 -> "Medium"
-        else -> "High"
+        risk <= 30 -> AstraStrings.riskLow
+        risk <= 70 -> AstraStrings.riskMedium
+        else -> AstraStrings.riskHigh
     }
 }

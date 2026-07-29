@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.design.AstraGlass
 import com.astraveil.app.ui.design.GlassSurface
 import com.astraveil.app.ui.theme.AstraError
@@ -107,7 +108,7 @@ fun SecurityReviewDialog(
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = "Astra Security Scan",
+                        text = AstraStrings.secDialogTitle,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -139,7 +140,7 @@ fun SecurityReviewDialog(
                     }
                 } else {
                     Text(
-                        text = "Manifest could not be read (${report.manifestStatus.name}).",
+                        text = AstraStrings.manifestCouldNotBeRead(report.manifestStatus.name),
                         style = MaterialTheme.typography.bodyMedium,
                         color = AstraError,
                     )
@@ -159,7 +160,7 @@ fun SecurityReviewDialog(
                                 modifier = Modifier.padding(end = 6.dp),
                             )
                             Text(
-                                text = "Permissions (${preview.permissions.size})",
+                                text = AstraStrings.permissionsCount(preview.permissions.size),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -193,7 +194,7 @@ fun SecurityReviewDialog(
                         onClick = onDismiss,
                         enabled = installState !is ModuleOperationState.Loading,
                     ) {
-                        Text("Cancel")
+                        Text(AstraStrings.secCancel)
                     }
                     Spacer(Modifier.width(8.dp))
                     TextButton(
@@ -207,9 +208,9 @@ fun SecurityReviewDialog(
                                 color = AstraGlass.Glow,
                             )
                             Spacer(Modifier.width(6.dp))
-                            Text("Installing…")
+                            Text(AstraStrings.secInstalling)
                         } else {
-                            Text("Install")
+                            Text(AstraStrings.secInstall)
                         }
                     }
                 }
@@ -232,14 +233,14 @@ private fun FingerprintRow(hash: String) {
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = "Package fingerprint (SHA-256)",
+                text = AstraStrings.secFingerprint,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
         Text(
-            text = if (hash.isBlank()) "—" else hash,
+            text = if (hash.isBlank()) AstraStrings.dash else hash,
             style = MaterialTheme.typography.bodySmall,
             color = AstraOnSurfaceMuted,
             modifier = Modifier
@@ -257,7 +258,7 @@ private fun FingerprintRow(hash: String) {
 private fun PermissionDeclarationList(permissions: List<PermissionDeclaration>) {
     if (permissions.isEmpty()) {
         Text(
-            text = "No permissions requested.",
+            text = AstraStrings.secNoPermissions,
             style = MaterialTheme.typography.bodySmall,
             color = AstraOnSurfaceMuted,
         )
@@ -309,7 +310,7 @@ private fun PermissionDeclarationRow(perm: PermissionDeclaration) {
         ) {
             Text(
                 text = when (val r = perm.risk) {
-                    null -> "Unknown"
+                    null -> AstraStrings.riskUnknown
                     else -> "$riskLabel · $r"
                 },
                 style = MaterialTheme.typography.labelSmall,
@@ -327,7 +328,7 @@ private fun TrustSummary(report: TrustReport) {
         val (riskText, riskColor) = riskSummary(report.overallRiskLevel)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Overall risk:",
+                text = AstraStrings.secOverallRisk,
                 style = MaterialTheme.typography.labelMedium,
                 color = AstraOnSurfaceMuted,
             )
@@ -342,21 +343,21 @@ private fun TrustSummary(report: TrustReport) {
 
         // Risk source
         SummaryLine(
-            label = "Risk source",
+            label = AstraStrings.secRiskSourceLabel,
             value = when (report.riskSource) {
-                RiskSource.MANIFEST -> "manifest-declared"
-                RiskSource.UNDECLARED -> "undeclared (Phase-0)"
-                RiskSource.NONE -> "none"
+                RiskSource.MANIFEST -> AstraStrings.srcManifestDeclared
+                RiskSource.UNDECLARED -> AstraStrings.srcUndeclared
+                RiskSource.NONE -> AstraStrings.srcNone
             },
         )
 
         // Manifest status
         SummaryLine(
-            label = "Manifest",
+            label = AstraStrings.secManifestLabel,
             value = when (report.manifestStatus) {
-                ManifestStatus.OK -> "OK"
-                ManifestStatus.MISSING -> "missing"
-                ManifestStatus.MALFORMED -> "malformed"
+                ManifestStatus.OK -> AstraStrings.manifestOk
+                ManifestStatus.MISSING -> AstraStrings.manifestMissing
+                ManifestStatus.MALFORMED -> AstraStrings.manifestMalformed
             },
         )
 
@@ -370,7 +371,7 @@ private fun TrustSummary(report: TrustReport) {
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = "Signature: ${signatureLabel(report.signatureStatus)}",
+                text = "${AstraStrings.secSignatureLabel}: ${signatureLabel(report.signatureStatus)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = AstraOnSurfaceMuted,
             )
@@ -408,20 +409,20 @@ private fun riskColor(risk: Int?): Color = when (risk) {
 }
 
 private fun riskLabel(risk: Int?): String = when (risk) {
-    null -> "Unknown"
+    null -> AstraStrings.riskUnknown
     else -> when {
-        risk <= 30 -> "Low"
-        risk <= 70 -> "Medium"
-        else -> "High"
+        risk <= 30 -> AstraStrings.riskLow
+        risk <= 70 -> AstraStrings.riskMedium
+        else -> AstraStrings.riskHigh
     }
 }
 
 private fun riskSummary(level: RiskLevel): Pair<String, Color> = when (level) {
-    RiskLevel.LOW -> "LOW" to AstraTeal
-    RiskLevel.MEDIUM -> "MEDIUM" to AstraWarning
-    RiskLevel.HIGH -> "HIGH" to AstraError
-    RiskLevel.CRITICAL -> "CRITICAL" to AstraError
-    RiskLevel.UNKNOWN -> "UNKNOWN" to AstraOnSurfaceMuted
+    RiskLevel.LOW -> AstraStrings.riskLevelLow to AstraTeal
+    RiskLevel.MEDIUM -> AstraStrings.riskLevelMedium to AstraWarning
+    RiskLevel.HIGH -> AstraStrings.riskLevelHigh to AstraError
+    RiskLevel.CRITICAL -> AstraStrings.riskLevelCritical to AstraError
+    RiskLevel.UNKNOWN -> AstraStrings.riskLevelUnknown to AstraOnSurfaceMuted
 }
 
 private fun signatureColor(status: SignatureStatus): Color = when (status) {
@@ -432,9 +433,9 @@ private fun signatureColor(status: SignatureStatus): Color = when (status) {
 }
 
 private fun signatureLabel(status: SignatureStatus): String = when (status) {
-    SignatureStatus.UNKNOWN -> "Unknown"
-    SignatureStatus.UNSIGNED -> "Unsigned"
-    SignatureStatus.UNVERIFIED -> "Unverified"
-    SignatureStatus.VERIFIED -> "Verified"
-    SignatureStatus.REJECTED -> "Rejected"
+    SignatureStatus.UNKNOWN -> AstraStrings.sigUnknown
+    SignatureStatus.UNSIGNED -> AstraStrings.sigUnsigned
+    SignatureStatus.UNVERIFIED -> AstraStrings.sigUnverified
+    SignatureStatus.VERIFIED -> AstraStrings.sigVerified
+    SignatureStatus.REJECTED -> AstraStrings.sigRejected
 }

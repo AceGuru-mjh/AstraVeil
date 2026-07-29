@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.design.GlassCard
 import com.astraveil.core.version.Version
 
@@ -76,7 +77,7 @@ private fun AboutHeader() {
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = "Android Root Capability Operating Layer",
+            text = AstraStrings.aboutTagline,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -105,18 +106,18 @@ private fun VersionCard() {
 private fun TechStackCard() {
     GlassCard {
         Text(
-            text = "TECHNOLOGY STACK",
+            text = AstraStrings.aboutTechStack,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.height(10.dp))
         val tech = listOf(
-            "Kotlin + Jetpack Compose" to "AstraUI",
-            "Rust" to "Security Policy Engine",
-            "C++20" to "AstraDaemon + Native Bridge",
-            "Protobuf" to "IPC Protocol",
-            "Linux Namespace + Seccomp + Landlock" to "Sandbox",
+            "Kotlin + Jetpack Compose" to AstraStrings.aboutRoleAstraUI,
+            "Rust" to AstraStrings.aboutRoleSecurityEngine,
+            "C++20" to AstraStrings.aboutRoleDaemon,
+            "Protobuf" to AstraStrings.aboutRoleIpc,
+            "Linux Namespace + Seccomp + Landlock" to AstraStrings.aboutRoleSandbox,
         )
         tech.forEach { (name, role) ->
             Text(

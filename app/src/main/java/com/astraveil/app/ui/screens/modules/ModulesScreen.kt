@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.design.AstraGlass
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
@@ -96,7 +97,7 @@ fun ModulesScreen(
     LaunchedEffect(previewState) {
         if (previewState is PreviewState.Failed) {
             val reason = (previewState as PreviewState.Failed).reason
-            snackbarHostState.showSnackbar("Cannot scan module: $reason")
+            snackbarHostState.showSnackbar(AstraStrings.cannotScanModule(reason))
             modulesViewModel.cancelPreview()
         }
     }
@@ -127,7 +128,7 @@ fun ModulesScreen(
             }
 
             if (state.modules.isNotEmpty()) {
-                item { SectionTitle("Installed Modules", state.modules.size) }
+                item { SectionTitle(AstraStrings.modInstalled, state.modules.size) }
                 items(items = state.modules, key = { it.id }) { module ->
                     val op = state.moduleOperations[module.id]
                     ModuleCard(
@@ -179,7 +180,7 @@ fun ModulesScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Scanning package…",
+                        text = AstraStrings.modScanningPackage,
                         style = MaterialTheme.typography.labelMedium,
                         color = AstraOnSurfaceMuted,
                     )
@@ -212,13 +213,13 @@ fun ModulesScreen(
 private fun ModulesHeader() {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Modules",
+            text = AstraStrings.modTitle,
             color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Astra Modules extend AstraVeil with isolated, permissioned packages.",
+            text = AstraStrings.modSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -271,13 +272,13 @@ private fun EmptyModulesCard() {
             )
         }
         Text(
-            text = "No Astra Modules installed yet",
+            text = AstraStrings.modEmptyTitle,
             color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
-            text = "Tap + or \"Install a .avm file\" to get started.",
+            text = AstraStrings.modEmptyHint,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -297,20 +298,20 @@ private fun InstallCtaCard(onClick: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "Install an Astra Module",
+            text = AstraStrings.modInstallCtaTitle,
             color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
-            text = "Pick a .avm file. AstraVeil will pre-parse its manifest and show you the real module name, version, and requested permissions before installing.",
+            text = AstraStrings.modInstallCtaDesc,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
         )
         OutlinedButton(onClick = onClick) {
             Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Install a .avm file")
+            Text(AstraStrings.modInstallFileBtn)
         }
     }
 }
@@ -403,7 +404,7 @@ private fun ModuleCard(
                             Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                         }
-                        Text("Stop")
+                        Text(AstraStrings.actionStop)
                     }
                 }
                 ModuleUiState.INSTALLED,
@@ -420,12 +421,12 @@ private fun ModuleCard(
                             Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                         }
-                        Text("Start")
+                        Text(AstraStrings.actionStart)
                     }
                 }
                 ModuleUiState.FAILED -> {
                     Text(
-                        text = "Module failed — reinstall required",
+                        text = AstraStrings.modFailedReinstall,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.labelSmall,
                     )
@@ -433,7 +434,7 @@ private fun ModuleCard(
             }
             Spacer(Modifier.width(8.dp))
             OutlinedButton(onClick = onUninstall, enabled = !busy) {
-                Text("Uninstall")
+                Text(AstraStrings.actionUninstall)
             }
         }
     }
@@ -461,7 +462,7 @@ private fun OperationFeedbackRow(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = "Working…",
+                text = AstraStrings.modWorking,
                 style = MaterialTheme.typography.labelSmall,
                 color = AstraOnSurfaceMuted,
             )
@@ -484,7 +485,7 @@ private fun OperationFeedbackRow(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "Dismiss",
+                text = AstraStrings.modDismiss,
                 style = MaterialTheme.typography.labelSmall,
                 color = AstraOnSurfaceMuted,
             )
@@ -507,7 +508,7 @@ private fun OperationFeedbackRow(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "Dismiss",
+                text = AstraStrings.modDismiss,
                 style = MaterialTheme.typography.labelSmall,
                 color = AstraOnSurfaceMuted,
             )
@@ -518,10 +519,10 @@ private fun OperationFeedbackRow(
 @Composable
 private fun StatePill(state: ModuleUiState) {
     val (label, color) = when (state) {
-        ModuleUiState.RUNNING -> "Running" to AstraTeal
-        ModuleUiState.INSTALLED -> "Installed" to AstraAccent
-        ModuleUiState.STOPPED -> "Stopped" to AstraOnSurfaceMuted
-        ModuleUiState.FAILED -> "Failed" to MaterialTheme.colorScheme.error
+        ModuleUiState.RUNNING -> AstraStrings.stateRunning to AstraTeal
+        ModuleUiState.INSTALLED -> AstraStrings.stateInstalled to AstraAccent
+        ModuleUiState.STOPPED -> AstraStrings.stateStopped to AstraOnSurfaceMuted
+        ModuleUiState.FAILED -> AstraStrings.stateFailed to MaterialTheme.colorScheme.error
     }
     Box(
         modifier = Modifier
@@ -553,21 +554,21 @@ private fun AvmFormatCard() {
             Icon(Icons.Filled.FolderZip, contentDescription = null, tint = AstraAccent, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "The .avm format",
+                text = AstraStrings.modFormatTitle,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
         }
         Text(
-            text = "An Astra Module is a signed .avm bundle that contains everything AstraVeil needs to safely install and run an extension:",
+            text = AstraStrings.modFormatDesc,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
         )
-        FormatEntry(Icons.Filled.Code, "module.json", "Manifest: id, version, entrypoint, dependencies.")
-        FormatEntry(Icons.Filled.Extension, "runtime/", "Kotlin/Native or DEX code, executed inside the AstraVM sandbox.")
-        FormatEntry(Icons.Filled.Inventory2, "assets/", "Static resources shipped with the module.")
-        FormatEntry(Icons.Filled.Security, "permission.json", "Capability grants requested by the module (Mount, Hook, Namespace, …).")
+        FormatEntry(Icons.Filled.Code, "module.json", AstraStrings.modFormatManifestDesc)
+        FormatEntry(Icons.Filled.Extension, "runtime/", AstraStrings.modFormatRuntimeDesc)
+        FormatEntry(Icons.Filled.Inventory2, "assets/", AstraStrings.modFormatAssetsDesc)
+        FormatEntry(Icons.Filled.Security, "permission.json", AstraStrings.modFormatPermissionDesc)
     }
 }
 
