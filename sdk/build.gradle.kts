@@ -28,4 +28,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(project(":core"))
+    // AstraClient references ProviderRegistry + ProviderExecResult from :providers.
+    implementation(project(":providers"))
 }
