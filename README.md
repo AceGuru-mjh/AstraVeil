@@ -101,7 +101,7 @@ monolithic binary with `su = all permissions`. AstraVeil inverts that:
 | Root backend       | Hard-coded          | Pluggable `RootProvider` interface |
 | Module permissions | `su` (everything)   | Declared + brokered + sandboxed    |
 | Backend detection  | `if Magisk`         | Registry + capability probing      |
-| IPC                | libsu / sockets     | Protobuf over Unix Domain Socket   |
+| IPC                | libsu / sockets     | JSON frames over Unix Domain Socket (Phase 0); Protobuf planned for Phase 1 |
 | Kernel story       | Boot patches        | Dedicated `AstraKernel` layer      |
 
 ## Module layout
@@ -115,8 +115,8 @@ AstraVeil/
 ├── modules/     # Astra Module runtime (.avm install / sandbox / lifecycle)
 ├── native/      # C++20 JNI bridge (capability probing, su-path scan)
 ├── rust/        # Rust security crate (policy engine / sandbox / attestation)
-├── daemon/      # `astrad` — standalone C++ system service (Unix socket + protobuf)
-├── proto/       # IPC schema
+├── daemon/      # `astrad` — standalone C++ system service (Unix socket + JSON frames)
+├── proto/       # IPC schema (Phase 1 target — not yet wired into the build)
 ├── docs/        # Architecture & roadmap
 └── build.gradle.kts
 ```
@@ -130,7 +130,7 @@ AstraVeil/
 | Native bridge| C++20 + CMake + JNI                    |
 | Security     | Rust (serde, sha2)                     |
 | Daemon       | C++20 standalone executable            |
-| IPC          | Protobuf over Unix Domain Socket       |
+| IPC          | JSON frames over Unix Domain Socket (Phase 0); Protobuf planned for Phase 1 |
 
 ## Current status — Phase 0 (v0.1.0)
 
@@ -174,4 +174,4 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the v0.1 → v1.0 plan and
 
 ## License
 
-Proprietary — AstraVeil Project. See `LICENSE` (to be added).
+Proprietary — AstraVeil Project. See [LICENSE](LICENSE).
