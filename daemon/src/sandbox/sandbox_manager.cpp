@@ -8,6 +8,9 @@
 
 #include "astra/logger/logger.hpp"
 
+#include <vector>
+#include <string>
+
 namespace astra {
 
 bool SandboxManager::create(const std::string& moduleId) {
@@ -15,24 +18,25 @@ bool SandboxManager::create(const std::string& moduleId) {
      * Phase 3.2: real native isolation.
      *
      * Chain:
-     *   NamespaceManager  → unshare(CLONE_NEWNS|NEWPID|NEWNET)
+     *   NamespaceManager  → unshare(CLONE_NEWNS|NEWPID|NEWNET) + /proc remount
      *   MountIsolation    → mark / MS_REC|MS_PRIVATE
-     *   SeccompManager    → syscall allowlist
-     *   LandlockManager   → filesystem path restrictions
+     *   SeccompManager    → syscall allowlist (40+ syscalls, default EPERM)
+     *   LandlockManager   → filesystem path restrictions (read + write paths)
      */
     ALOGI("SandboxManager: create(%s) — native isolation", moduleId.c_str());
 
-    // Default Phase 3.2 policy: mount ns always; pid+net+seccomp+landlock
-    // for high-risk modules. Per-module policy derivation lands with the
+    // Default Phase 3.2 policy: mount ns always; pid+net for isolation.
+    // Per-module policy derivation from SandboxProfile lands with the
     // Kotlin SandboxPolicyResolver bridge.
     SandboxPolicy policy;
     policy.moduleId = moduleId;
     policy.mountNamespace = true;
-    policy.pidNamespace = false;
-    policy.networkNamespace = false;
+    policy.pidNamespace = true;   // enable PID namespace + /proc remount
+    policy.networkNamespace = false;  // off until per-module net policy
     policy.seccomp = true;
     policy.landlock = true;
 
+    // ---- 1. Namespace isolation ----
     NamespaceManager ns;
     if (!ns.create(policy.mountNamespace, policy.pidNamespace,
                    policy.networkNamespace)) {
@@ -40,12 +44,15 @@ bool SandboxManager::create(const std::string& moduleId) {
         return false;
     }
 
+    // ---- 2. Mount propagation ----
+    // (NamespaceManager.create already marks / as MS_REC|MS_PRIVATE,
+    //  but MountIsolation is kept as a redundant safety net.)
     MountIsolation mount;
     if (!mount.isolate()) {
         ALOGW("SandboxManager: mount isolation skipped for %s", moduleId.c_str());
-        // non-fatal — namespace is still created
     }
 
+    // ---- 3. Seccomp syscall filter ----
     if (policy.seccomp) {
         SeccompManager seccomp;
         if (!seccomp.apply()) {
@@ -53,8 +60,21 @@ bool SandboxManager::create(const std::string& moduleId) {
         }
     }
 
+    // ---- 4. Landlock filesystem restrictions ----
     if (policy.landlock) {
-        LandlockManager landlock;
+        // Read paths: system + module's own install path.
+        std::vector<std::string> readPaths = {
+            "/system",
+            "/vendor",
+            "/product",
+            "/data/astra/modules/" + moduleId,
+        };
+        // Write paths: module's own data dir + tmp only.
+        std::vector<std::string> writePaths = {
+            "/data/astra/modules/" + moduleId,
+            "/data/local/tmp",
+        };
+        LandlockManager landlock(std::move(readPaths), std::move(writePaths));
         if (!landlock.apply()) {
             ALOGW("SandboxManager: landlock skipped for %s", moduleId.c_str());
         }
