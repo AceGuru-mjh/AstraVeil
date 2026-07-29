@@ -46,7 +46,7 @@ import com.astraveil.app.BuildConfig
 import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
-import com.astraveil.app.ui.screens.ModulesScreen
+import com.astraveil.app.ui.screens.modules.ModulesScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.RootManagerScreen
@@ -110,7 +110,7 @@ fun AstraVeilApp() {
                 RootManagerScreen(viewModel = viewModel)
             }
             composable(Destinations.Modules.route) {
-                ModulesScreen(viewModel = viewModel)
+                ModulesScreen()
             }
             composable(Destinations.About.route) {
                 AboutScreen()
@@ -221,43 +221,43 @@ data class Destination(
 object Destinations {
     val Dashboard = Destination(
         route = "dashboard",
-        label = "Dashboard",
+        label = AstraStrings.navDashboard,
         icon = Icons.Outlined.Dashboard,
         iconSelected = Icons.Filled.Dashboard,
     )
     val Capability = Destination(
         route = "capability",
-        label = "Capability",
+        label = AstraStrings.navCapability,
         icon = Icons.Outlined.SettingsInputComponent,
         iconSelected = Icons.Filled.SettingsInputComponent,
     )
     val Provider = Destination(
         route = "provider",
-        label = "Provider",
+        label = AstraStrings.navProvider,
         icon = Icons.Outlined.Security,
         iconSelected = Icons.Filled.Security,
     )
     val Modules = Destination(
         route = "modules",
-        label = "Modules",
+        label = AstraStrings.navModules,
         icon = Icons.Outlined.Apps,
         iconSelected = Icons.Filled.Apps,
     )
     val Superuser = Destination(
         route = "superuser",
-        label = "Superuser",
+        label = AstraStrings.navSuperuser,
         icon = Icons.Outlined.Security,
         iconSelected = Icons.Filled.Security,
     )
     val About = Destination(
         route = "about",
-        label = "About",
+        label = AstraStrings.navAbout,
         icon = Icons.Outlined.Info,
         iconSelected = Icons.Filled.Info,
     )
     val Settings = Destination(
         route = "settings",
-        label = "Settings",
+        label = AstraStrings.navSettings,
         icon = Icons.Outlined.Settings,
         iconSelected = Icons.Filled.Settings,
     )

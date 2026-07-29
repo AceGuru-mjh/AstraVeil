@@ -29,6 +29,7 @@ import com.astraveil.app.ui.design.GlassCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraWarning
+import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.viewmodel.StatusViewModel
 
 @Composable
@@ -65,13 +66,13 @@ fun DiagnosticsScreen(viewModel: StatusViewModel) {
 private fun ScreenHeader() {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Diagnostics",
+            text = AstraStrings.diagTitle,
             color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Analyze device capability integrity, trace warnings, and export professional reports for bug tracking.",
+            text = AstraStrings.diagSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -97,13 +98,13 @@ private fun DiagnosticActions(
     GlassCard {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                text = "System Health Scanner",
+                text = AstraStrings.diagHealthScanner,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Generate a diagnostic report capturing kernel, SELinux, and provider states. The report is exported locally as 'diagnostics.astra-report'.",
+                text = AstraStrings.diagScanDescription,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -123,10 +124,10 @@ private fun DiagnosticActions(
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.onPrimary
                         )
-                        Text("  Scanning…")
+                        Text(AstraStrings.diagScanning)
                     } else {
                         Icon(Icons.Filled.BugReport, null, modifier = Modifier.size(18.dp))
-                        Text("  Run Full Scan")
+                        Text(AstraStrings.diagRunScan)
                     }
                 }
             }
