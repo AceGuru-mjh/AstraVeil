@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
@@ -72,6 +74,7 @@ fun SuperuserScreen() {
     var dbAvailable by remember { mutableStateOf(false) }
     var policies by remember { mutableStateOf<List<MagiskSuRepository.SuPolicyEntry>>(emptyList()) }
     var logs by remember { mutableStateOf<List<MagiskSuRepository.SuLogEntry>>(emptyList()) }
+    var hasRoot by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Resolve the active provider (detectActive → byId) then build the repo.
@@ -82,11 +85,12 @@ fun SuperuserScreen() {
         val provider = info?.let { ProviderRegistry.byId(it.providerName) }
         val providerAvailable = provider?.let { runCatching { it.available() }.getOrDefault(false) } ?: false
         if (provider == null || !providerAvailable) {
+            // No root — this is NOT an error, just a precondition not met
+            hasRoot = false
             loading = false
-            errorMessage = "No root backend detected. " +
-                "Install Magisk, KernelSU, or APatch first."
             return@LaunchedEffect
         }
+        hasRoot = true
         val r = MagiskSuRepository(provider)
         repo.value = r
 
@@ -97,8 +101,10 @@ fun SuperuserScreen() {
             policies = r.listPolicies()
             logs = r.listLogs(30)
         } else {
-            errorMessage = "su database not found. " +
-                "Root backend detected but Magisk DB is not accessible."
+            // Root detected but DB not accessible — THIS is a real error
+            errorMessage = "Root backend detected but the su policy " +
+                "database is not accessible. Try rebooting or " +
+                "reinstalling your root solution."
         }
         loading = false
     }
@@ -144,7 +150,12 @@ fun SuperuserScreen() {
             }
         }
 
-        // ---- Error / no root ----
+        // ---- State 1: No root — amber info card, NOT red error ----
+        if (!loading && !hasRoot) {
+            item { NoRootInfoCard() }
+        }
+
+        // ---- State 3: Root error (root detected but DB inaccessible) ----
         if (errorMessage != null) {
             item {
                 LiquidGlassCard(accent = LiquidGlass.AccentError) {
@@ -249,6 +260,115 @@ fun SuperuserScreen() {
                 key = { "${it.fromUid}-${it.time}" },
             ) { log ->
                 SuLogCard(log)
+            }
+        }
+    }
+}
+
+// ================================================================
+// State 1: No root — informative, NOT alarming
+// ================================================================
+
+@Composable
+private fun NoRootInfoCard() {
+    LiquidGlassCard(accent = LiquidGlass.AccentAmber) {
+        // Title row
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Lock,
+                contentDescription = null,
+                tint = AstraWarning,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "Root Backend Required",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = "This page manages su access policies for apps on your " +
+                "device. It reads and writes your root backend's policy " +
+                "database directly — changes take effect immediately.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            text = "Once a root backend is installed, you can:",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        val features = listOf(
+            "View all apps that have requested su access",
+            "Grant, deny, or set \"ask\" per app",
+            "See recent su request history with timestamps",
+            "Changes apply instantly — no reboot needed",
+        )
+        features.forEach { feature ->
+            Row(
+                modifier = Modifier.padding(vertical = 3.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text(
+                    text = "•",
+                    color = AstraWarning,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(
+                    text = feature,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            text = "Supported root backends:",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        val backends = listOf(
+            "Magisk" to "Most common. Patches boot image.",
+            "KernelSU" to "Kernel-level. GKI compatible.",
+            "APatch" to "Kernel patch. No boot image modification.",
+            "AstraRoot" to "AstraVeil's own backend (coming soon).",
+        )
+        backends.forEach { (name, desc) ->
+            Row(
+                modifier = Modifier.padding(vertical = 2.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AstraGlass.Glow,
+                    modifier = Modifier.width(80.dp),
+                )
+                Text(
+                    text = desc,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AstraOnSurfaceMuted,
+                )
             }
         }
     }

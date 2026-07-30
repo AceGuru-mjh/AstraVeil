@@ -29,20 +29,11 @@ jobs:
           ASTRAVEIL_KEY_PASSWORD: ${{ secrets.ASTRAVEIL_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
-      - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
-
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: astraveil-release-apk
           path: app/build/outputs/apk/release/*.apk
-
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: astraveil-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -51,5 +42,4 @@ jobs:
           body_path: release/release_notes.md
           files: |
             app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/debug/*.apk
           prerelease: false
