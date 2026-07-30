@@ -1,5 +1,7 @@
 package com.astraveil.core.security
 
+import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.os.Build
 import com.astraveil.core.logger.AstraLogger
 import java.security.KeyFactory
@@ -26,8 +28,15 @@ private val HEX = "0123456789abcdef".toCharArray()
  *
  * Audit #5 V1: verifySignature was a stub returning false. Now it
  * performs real Ed25519 verification using java.security.Signature.
+ *
+ * @param appContext Optional application [Context] used by [isDebugBuild]
+ *        to read the host app's `FLAG_DEBUGGABLE` bit. When `null`
+ *        (e.g. in unit tests or before wiring), [isDebugBuild] returns
+ *        `false`.
  */
-class SecurityManager {
+class SecurityManager(
+    private val appContext: Context? = null,
+) {
 
     /**
      * Pinned Ed25519 public key (X.509 DER, base64). Generated
@@ -93,15 +102,19 @@ class SecurityManager {
     /**
      * Return `true` when the current build is a debug build.
      *
-     * Uses `android.os.Build.VERSION.SDK_INT` + a try/catch on the
-     * application's `BuildConfig.DEBUG` flag. Since `:core` is a library
-     * module without its own `BuildConfig`, we probe the host app's
-     * `BuildConfig` reflectively; on failure we return `false`.
+     * Reads the host application's `ApplicationInfo.FLAG_DEBUGGABLE` bit
+     * via the [Context] supplied at construction time. When no context is
+     * available (e.g. unit tests, or before [AstraCore] is wired up),
+     * returns `false`.
+     *
+     * This intentionally avoids `BuildConfig.DEBUG` (the `:core` library
+     * module has no `BuildConfig` of its own) and avoids `android.app.AppGlobals`
+     * (a hidden framework API not exposed via the public SDK).
      */
     fun isDebugBuild(): Boolean = try {
-        val appInfo = android.app.AppGlobals.getInitialApplication()?.packageManager
-            ?.getApplicationInfo(android.app.AppGlobals.getInitialPackage(), 0)
-        (appInfo?.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val ctx = appContext ?: return false
+        val ai = ctx.packageManager.getApplicationInfo(ctx.packageName, 0)
+        (ai.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     } catch (e: Exception) {
         false
     }

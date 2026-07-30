@@ -63,7 +63,7 @@ class AstraCore(context: Context) {
     val permissionEngine: PermissionEngine = PermissionEngine(eventBus)
 
     /** Security primitives surface. */
-    val security: SecurityManager = SecurityManager()
+    val security: SecurityManager = SecurityManager(context.applicationContext)
 
     /**
      * Initialize the engine: configure the logger, load persisted config,
