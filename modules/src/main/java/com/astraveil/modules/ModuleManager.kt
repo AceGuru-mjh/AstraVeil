@@ -40,7 +40,8 @@ import java.util.zip.ZipFile
 class ModuleManager(
     private val context: android.content.Context,
     private val core: AstraCore,
-    private val providerRegistry: ProviderRegistry
+    private val providerRegistry: ProviderRegistry,
+    private val runtime: ModuleRuntime? = null,
 ) {
 
     private val validator = ModuleValidator()
@@ -166,11 +167,44 @@ class ModuleManager(
     /** Move a module back to [ModuleState.DISABLED]. */
     suspend fun disable(moduleId: String) = transition(moduleId, ModuleState.DISABLED)
 
-    /** Ask the runtime to load the module's native .so and call its entry. */
-    suspend fun start(moduleId: String) = transition(moduleId, ModuleState.RUNNING)
+    /**
+     * Load the module's native runtime and transition to RUNNING.
+     *
+     * If a [ModuleRuntime] was supplied at construction, the module's .so
+     * is loaded (System.load → JNI_OnLoad → best-effort entry symbol
+     * invocation via NativeBridge.nativeInvokeModuleEntry) BEFORE the
+     * state transition. If loading fails, the state is NOT changed and
+     * the module remains in its previous state.
+     *
+     * If no runtime was supplied (Phase 0 backward compat), only the
+     * state transition occurs.
+     */
+    suspend fun start(moduleId: String) {
+        if (runtime != null) {
+            val module = mutex.withLock {
+                modules[moduleId] ?: error("module '$moduleId' not installed")
+            }
+            val loaded = runtime.load(module)
+            if (!loaded) {
+                android.util.Log.e(
+                    "ModuleManager",
+                    "Runtime load failed for '$moduleId'; state unchanged.",
+                )
+                return
+            }
+        }
+        transition(moduleId, ModuleState.RUNNING)
+    }
 
-    /** Ask the runtime to unload the module. */
-    suspend fun stop(moduleId: String) = transition(moduleId, ModuleState.ENABLED)
+    /**
+     * Unload the module's native runtime and transition to ENABLED.
+     */
+    suspend fun stop(moduleId: String) {
+        if (runtime != null) {
+            runtime.unload(moduleId)
+        }
+        transition(moduleId, ModuleState.ENABLED)
+    }
 
     /** Snapshot of every registered module. */
     fun list(): List<AstraModule> = modules.values.toList()
