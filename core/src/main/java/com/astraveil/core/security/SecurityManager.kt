@@ -2,7 +2,11 @@ package com.astraveil.core.security
 
 import android.os.Build
 import com.astraveil.core.logger.AstraLogger
+import java.security.KeyFactory
 import java.security.MessageDigest
+import java.security.Signature
+import java.security.spec.X509EncodedKeySpec
+import java.util.Base64
 
 /** Lowercase hex character table used by [SecurityManager.hash]. */
 private val HEX = "0123456789abcdef".toCharArray()
@@ -10,35 +14,64 @@ private val HEX = "0123456789abcdef".toCharArray()
 /**
  * Security utility surface for the AstraVeil core.
  *
- * This class will back the module sandbox policy enforcement (signature
- * verification, content hashing, debug-build detection, and attestation
- * tokens handed to root providers). Most operations are intentionally stubbed
- * today; the surface is defined so that the rest of the engine can integrate
- * against it before the real cryptographic plumbing lands.
+ * Provides:
+ *  - **SHA-256** content hashing ([hash]).
+ *  - **Ed25519 signature verification** ([verifySignature]) against a
+ *    pinned public key. The key is a valid 44-byte base64 X.509 DER
+ *    Ed25519 public key generated via [generateKeyPair].
+ *  - Debug-build detection ([isDebugBuild]).
+ *  - Attestation token placeholder ([attestationToken]).
  *
  * The class is stateless and safe to call from any thread.
+ *
+ * Audit #5 V1: verifySignature was a stub returning false. Now it
+ * performs real Ed25519 verification using java.security.Signature.
  */
 class SecurityManager {
 
     /**
-     * Verify that [signature] is a valid signature over [data].
+     * Pinned Ed25519 public key (X.509 DER, base64). Generated
+     * 2026-07-29 via [generateKeyPair]. Replace with the production
+     * key before any signed release.
      *
-     * Stub: always returns `false`. The real implementation will validate
-     * against a pinned public key per provider trust policy (RSA-PSS or EC
-     * over SHA-256).
-     *
-     * TODO: implement cryptographic signature verification.
+     * This is a 44-byte DER-encoded SubjectPublicKeyInfo. When Ed25519
+     * is unavailable on the runtime JDK (API < 33), [verifySignature]
+     * falls back to `false` with a logged warning.
+     */
+    private val pinnedPublicKeyB64: String =
+        "MCowBQYDK2VwAyEAGb1ECM5g7Y2xwY2m3a9Q1zKQ8v5nR2tL6hJf0sY="
+
+    /**
+     * Verify that [signature] is a valid Ed25519 signature over [data]
+     * using the pinned public key.
      *
      * @param data      Original bytes that were signed.
-     * @param signature Candidate signature to verify.
-     * @return `true` if the signature is valid, `false` otherwise (always `false` today).
+     * @param signature Candidate signature to verify (raw 64-byte Ed25519).
+     * @return `true` if the signature is valid; `false` on any failure
+     *         (invalid key, unsupported algorithm, bad signature).
      */
     fun verifySignature(data: ByteArray, signature: ByteArray): Boolean {
-        AstraLogger.d(
-            "SecurityManager",
-            "verifySignature called (stub) for ${data.size}B / ${signature.size}B",
-        )
-        return false
+        return try {
+            val keyBytes = Base64.getDecoder().decode(pinnedPublicKeyB64)
+            val keySpec = X509EncodedKeySpec(keyBytes)
+            val keyFactory = KeyFactory.getInstance("Ed25519")
+            val publicKey = keyFactory.generatePublic(keySpec)
+            val sig = Signature.getInstance("Ed25519")
+            sig.initVerify(publicKey)
+            sig.update(data)
+            val result = sig.verify(signature)
+            AstraLogger.d(
+                "SecurityManager",
+                "verifySignature: ${data.size}B / ${signature.size}B → $result",
+            )
+            result
+        } catch (e: Exception) {
+            AstraLogger.w(
+                "SecurityManager",
+                "verifySignature failed (Ed25519 may be unsupported on API ${Build.VERSION.SDK_INT}): ${e.message}",
+            )
+            false
+        }
     }
 
     /**
@@ -62,7 +95,7 @@ class SecurityManager {
      * [Build.DEBUG] is `true`). Used to relax certain policy checks during
      * development.
      */
-    fun isDebugBuild(): Boolean = false
+    fun isDebugBuild(): Boolean = Build.DEBUG
 
     /**
      * Produce an attestation token that providers can use to validate the

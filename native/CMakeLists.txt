@@ -41,6 +41,9 @@ target_include_directories(astra_native PRIVATE
 find_library(log-lib log)
 target_link_libraries(astra_native ${log-lib})
 
+# Link dynamic loader (dlopen / dlsym for nativeInvokeModuleEntry)
+target_link_libraries(astra_native ${CMAKE_DL_LIBS})
+
 # Link Rust staticlib if provided
 if(ASTRA_RUST_LIB AND EXISTS "${ASTRA_RUST_LIB}")
     message(STATUS "Linking Rust staticlib: ${ASTRA_RUST_LIB}")

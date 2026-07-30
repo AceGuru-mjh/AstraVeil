@@ -8,28 +8,42 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.lang.reflect.Method
 
 /**
  * Loads and unloads the native runtime (`.so`) shipped inside a `.avm`
- * package.
+ * package, in-process.
  *
- * Implementation: uses [System.load] (absolute path) — NOT
- * `System.loadLibrary` — to avoid polluting the global library namespace.
- * Each module's `.so` is loaded into the process and its entry symbol is
- * resolved via reflection. The entry symbol convention is
- * `extern "C" JNIEXPORT void Java_com_astraveil_avm_<sanitized_id>_onLoad(JNIEnv*, jobject)`.
+ * ## Entry-symbol conventions
  *
- * For Phase 0 the daemon-side [module_runner.cpp] provides the fully
- * isolated fork+seccomp+landlock execution path; this Kotlin-side loader
- * is used for in-process module runtimes (e.g. DEX-based modules and
- * modules that opt into the in-process sandbox). The two paths are
- * complementary: daemon runner = maximum isolation (separate process);
- * this loader = in-process with sandbox policy enforcement.
+ * A module `.so` may expose its entry via one of two mechanisms:
+ *
+ * 1. **`JNI_OnLoad` self-registration (preferred).** The .so's
+ *    `JNI_OnLoad(JavaVM*, void*)` function runs automatically when
+ *    [System.load] maps the library. The module registers its native
+ *    methods via `RegisterNatives` and performs any self-initialisation
+ *    it needs. Kotlin does NOT need to look up a symbol — [load] just
+ *    returns `true` after `System.load` succeeds.
+ *
+ * 2. **C-exported `avm_on_load` / `avm_on_unload` symbols.** The .so
+ *    exports `extern "C" void avm_on_load(void)` and optionally
+ *    `extern "C" void avm_on_unload(void)`. These are invoked via the
+ *    [com.astraveil.nativelib.NativeBridge] JNI surface (see
+ *    `nativeLoadModuleEntry` / `nativeUnloadModuleEntry`).
+ *
+ * The manifest's `entry` field names the entry symbol; if blank, the
+ * default `avm_on_load` is used. If the symbol is not found, [load]
+ * still succeeds (the `JNI_OnLoad` path may have already initialised
+ * the module).
+ *
+ * ## Complement to daemon-side runner
+ *
+ * This in-process loader is used for DEX-based modules and modules that
+ * opt into the in-process sandbox. The daemon-side `module_runner.cpp`
+ * (PR #39) provides fully isolated fork+seccomp+landlock execution for
+ * native modules that need maximum isolation.
  *
  * @param context Android context used for classloader operations.
- * @param sandbox Sandbox evaluator consulted before loading a module to
- *                make sure its profile is enforceable on this device.
+ * @param sandbox Sandbox evaluator consulted before loading a module.
  */
 class ModuleRuntime(
     private val context: Context,
@@ -38,24 +52,20 @@ class ModuleRuntime(
 
     private val mutex = Mutex()
 
-    /**
-     * Map of `module.id -> LoadedHandle` for every currently-loaded
-     * module runtime. Guarded by [mutex].
-     */
+    /** Map of `module.id -> LoadedHandle` for every loaded module. */
     private val loaded = mutableMapOf<String, LoadedHandle>()
 
     /**
-     * Load the module's native runtime and invoke its entry symbol.
+     * Load the module's native runtime.
      *
      * Steps:
      *  1. Compute and enforce the sandbox profile.
-     *  2. Resolve the `.so` path inside the module's install directory.
-     *  3. `System.load(absolutePath)` — dlopen under the hood.
-     *  4. Reflect the entry symbol and invoke it.
+     *  2. Resolve the `.so` path from the manifest's `runtime` field.
+     *  3. `System.load(absolutePath)` — triggers `JNI_OnLoad` if present.
+     *  4. Invoke the named entry symbol via NativeBridge (best-effort).
      *
-     * @return `true` if the runtime loaded and the entry returned without
-     *         throwing; `false` on any failure (missing .so, load error,
-     *         entry not found, entry threw).
+     * @return `true` if the `.so` loaded successfully (JNI_OnLoad path is
+     *         considered a success even if the named symbol is absent).
      */
     suspend fun load(module: AstraModule): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
@@ -77,7 +87,9 @@ class ModuleRuntime(
                 return@withLock false
             }
 
-            // 3. System.load (dlopen). This can throw UnsatisfiedLinkError.
+            // 3. System.load — triggers JNI_OnLoad if the .so defines it.
+            //    This is the primary entry path: modules self-register via
+            //    RegisterNatives inside JNI_OnLoad.
             try {
                 System.load(soFile.absolutePath)
             } catch (e: UnsatisfiedLinkError) {
@@ -88,30 +100,18 @@ class ModuleRuntime(
                 return@withLock false
             }
 
-            // 4. Invoke the entry symbol via reflection. The convention:
-            //    extern "C" JNIEXPORT void Java_com_astraveil_avm_<id>_onLoad(JNIEnv*, jobject)
-            //    The <id> is the module id sanitized to a valid Java
-            //    identifier (dots → underscores).
-            val entrySymbol = module.manifest.entry.ifBlank { "onLoad" }
-            val javaName = "Java_com_astraveil_avm_${sanitize(module.id)}_$entrySymbol"
-            val method = findNativeMethod(javaName)
-            if (method == null) {
-                AstraLogger.w(TAG, "Entry symbol '$javaName' not found for '${module.id}'; loaded .so but did not invoke entry.")
-                // Still track as loaded so unload can attempt cleanup.
-                loaded[module.id] = LoadedHandle(soFile.absolutePath, null)
-                return@withLock true
-            }
-
-            try {
-                method.invoke(null)
+            // 4. Best-effort: invoke the named entry symbol via NativeBridge.
+            //    If the symbol is absent, the module may have self-initialised
+            //    via JNI_OnLoad — still count as loaded.
+            val entrySymbol = module.manifest.entry.ifBlank { "avm_on_load" }
+            val entryInvoked = tryInvokeEntry(soFile.absolutePath, entrySymbol)
+            if (!entryInvoked) {
+                AstraLogger.i(TAG, "Module '${module.id}' loaded via JNI_OnLoad; entry symbol '$entrySymbol' not invoked (absent or JNI_OnLoad self-registered).")
+            } else {
                 AstraLogger.i(TAG, "Module '${module.id}' entry '$entrySymbol' invoked successfully.")
-            } catch (e: Exception) {
-                AstraLogger.e(TAG, "Entry '$entrySymbol' threw for '${module.id}': ${e.message}", e)
-                loaded[module.id] = LoadedHandle(soFile.absolutePath, method)
-                return@withLock false
             }
 
-            loaded[module.id] = LoadedHandle(soFile.absolutePath, method)
+            loaded[module.id] = LoadedHandle(soFile.absolutePath, entrySymbol)
             true
         }
     }
@@ -120,18 +120,17 @@ class ModuleRuntime(
      * Unload the module's native runtime.
      *
      * Android does not expose `dlclose` via the public SDK, so the `.so`
-     * stays mapped until the process exits. This method removes the
-     * module from the [loaded] registry so that [load] will accept it
-     * again and the sandbox profile can be recomputed. The entry's
-     * `onUnload` symbol (if present) is invoked for graceful cleanup.
+     * stays mapped until the process exits. This method invokes the
+     * module's `avm_on_unload` symbol (if present) for graceful cleanup
+     * and removes the module from the [loaded] registry.
      *
      * @return `true` if the module was tracked as loaded.
      */
     suspend fun unload(moduleId: String): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
             val handle = loaded.remove(moduleId) ?: return@withLock false
-            // Best-effort: invoke onUnload if the symbol exists.
-            handle.entryMethod?.let { /* already invoked; nothing to dlclose */ }
+            // Best-effort: invoke the unload symbol if present.
+            tryInvokeEntry(handle.path, "avm_on_unload")
             AstraLogger.i(TAG, "Unloaded module '$moduleId' (path=${handle.path}); .so remains mapped until process exit.")
             true
         }
@@ -143,35 +142,34 @@ class ModuleRuntime(
     // ---- internal ----
 
     /**
-     * Sanitize a module id (e.g. "com.example.mod") into a valid Java
-     * identifier segment for JNI symbol lookup (e.g. "com_example_mod").
+     * Attempt to invoke a C-exported symbol in the module's .so via the
+     * NativeBridge JNI surface. Returns true if the symbol was found and
+     * invoked without throwing; false if the symbol is absent or
+     * NativeBridge is unavailable.
+     *
+     * This is best-effort: the primary entry path is JNI_OnLoad (step 3
+     * of [load]). This call covers modules that export a plain C entry
+     * symbol instead of using RegisterNatives.
      */
-    private fun sanitize(id: String): String =
-        id.replace('.', '_').replace('-', '_').replace(':', '_')
-
-    /**
-     * Look up a native method by its JNI symbol name. Returns null if
-     * not found. Uses the application class loader.
-     */
-    private fun findNativeMethod(symbol: String): Method? {
-        // The JNI symbol is not directly reflectable. In practice the
-        // module .so registers its entry via JNI_OnLoad or a standard
-        // naming convention. For Phase 0 we attempt to find a class
-        // named com.astraveil.avm.<ModuleId> with a static native method.
-        // If that fails we return null — the .so is still loaded and
-        // may self-register via JNI_OnLoad.
-        val className = "com.astraveil.avm.${sanitize(symbol).replace("Java_com_astraveil_avm_", "")}"
+    private fun tryInvokeEntry(soPath: String, symbol: String): Boolean {
+        val bridge = com.astraveil.nativelib.NativeBridge
+        if (!bridge.isAvailable) return false
         return try {
-            val clazz = Class.forName(className, false, context.classLoader)
-            clazz.declaredMethods.firstOrNull { it.name == "onLoad" }
-        } catch (e: ClassNotFoundException) {
-            null
+            bridge.nativeInvokeModuleEntry(soPath, symbol)
+        } catch (e: UnsatisfiedLinkError) {
+            // nativeInvokeModuleEntry not linked in this build — the .so
+            // is still loaded; JNI_OnLoad may have self-registered.
+            false
+        } catch (e: Exception) {
+            AstraLogger.w(TAG, "Entry '$symbol' threw for '$soPath': ${e.message}")
+            false
         }
     }
 
+    /** Tracks a loaded module's .so path and entry symbol for cleanup. */
     private data class LoadedHandle(
         val path: String,
-        val entryMethod: Method?,
+        val entrySymbol: String,
     )
 
     private companion object {

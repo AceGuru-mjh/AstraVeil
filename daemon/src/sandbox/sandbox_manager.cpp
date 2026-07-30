@@ -54,7 +54,7 @@ bool SandboxManager::create(const std::string& moduleId) {
 
     // ---- 3. Seccomp syscall filter ----
     if (policy.seccomp) {
-        SeccompManager seccomp;
+        SeccompManager seccomp(policy.allowNetwork);
         if (!seccomp.apply()) {
             ALOGW("SandboxManager: seccomp skipped for %s", moduleId.c_str());
         }

@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <filesystem>
+#include <dlfcn.h>
 
 #define LOG_TAG "AstraNative"
 #define ALOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -136,3 +137,53 @@ Java_com_astraveil_nativelib_NativeBridge_nativeHasKernelConfig(JNIEnv*, jobject
 }
 
 } // extern "C"
+
+/**
+ * JNI: Invoke a C-exported symbol in a module's .so.
+ *
+ * Uses dlopen() with RTLD_NOLOAD | RTLD_LAZY to get a handle to an
+ * already-loaded library (System.load maps it first), then dlsym() to
+ * resolve the symbol. If the symbol is found, it is invoked as a
+ * `void(*)()` function.
+ *
+ * Returns JNI_TRUE if the symbol was found and invoked; JNI_FALSE on
+ * any failure (dlopen null, dlsym null, exception in the entry).
+ */
+JNIEXPORT jboolean JNICALL
+Java_com_astraveil_nativelib_NativeBridge_nativeInvokeModuleEntry(
+        JNIEnv* env, jobject, jstring soPathJ, jstring symbolJ) {
+#ifdef __linux__
+    const char* soPath = env->GetStringUTFChars(soPathJ, nullptr);
+    const char* symbol = env->GetStringUTFChars(symbolJ, nullptr);
+
+    // RTLD_NOLOAD: return a handle only if the library is already loaded.
+    // This avoids double-loading and matches the System.load contract.
+    void* handle = dlopen(soPath, RTLD_NOLOAD | RTLD_LAZY);
+    if (handle == nullptr) {
+        // Library not loaded yet; try a normal dlopen.
+        handle = dlopen(soPath, RTLD_LAZY | RTLD_LOCAL);
+    }
+    if (handle == nullptr) {
+        ALOGE("nativeInvokeModuleEntry: dlopen failed for %s: %s", soPath, dlerror());
+        env->ReleaseStringUTFChars(soPathJ, soPath);
+        env->ReleaseStringUTFChars(symbolJ, symbol);
+        return JNI_FALSE;
+    }
+
+    using entry_fn = void (*)();
+    auto entry = reinterpret_cast<entry_fn>(dlsym(handle, symbol));
+    if (entry == nullptr) {
+        ALOGW("nativeInvokeModuleEntry: symbol '%s' not found in %s", symbol, soPath);
+        env->ReleaseStringUTFChars(soPathJ, soPath);
+        env->ReleaseStringUTFChars(symbolJ, symbol);
+        return JNI_FALSE;
+    }
+
+    entry();
+    env->ReleaseStringUTFChars(soPathJ, soPath);
+    env->ReleaseStringUTFChars(symbolJ, symbol);
+    return JNI_TRUE;
+#else
+    return JNI_FALSE;
+#endif
+}
