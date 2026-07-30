@@ -4,37 +4,49 @@ import android.os.Build
 import androidx.compose.ui.graphics.Color
 
 /**
- * Liquid Glass design tokens.
+ * Liquid Glass tokens — adapted from liquid-glass-react.
  *
- * Multi-layer optical model (bottom → top):
- *   Layer 0  base tint          6-13% white
- *   Layer 1  vertical gradient   top 13% → bottom 2%  (overhead light)
- *   Layer 2  specular highlight  radial, follows touch
- *   Layer 3  border glow         1.5dp inner stroke
+ * Reference: https://github.com/rdev/liquid-glass-react
  *
- * No Modifier.blur() on the surface itself — that blurs the glass's
- * OWN content, not the background. Real background blur requires
- * window-level FLAG_BLUR_BEHIND (API 31+) which is applied at the
- * Activity level, not per-card.
+ * The web library uses SVG feDisplacementMap to refract the background.
+ * On Android we simulate refraction with edge gradient lenses +
+ * chromatic aberration strokes + specular highlights.
  */
 object LiquidGlass {
 
-    // ---- Layer 0: base ----
-    val BaseTint: Color = Color.White.copy(alpha = 0.07f)
-    val PressedTint: Color = Color.White.copy(alpha = 0.13f)
+    // ---- Surface layers ----
+    /** Base tint. liquid-glass-react uses ~6% white backdrop. */
+    val BaseTint: Color = Color.White.copy(alpha = 0.06f)
+    val PressedTint: Color = Color.White.copy(alpha = 0.12f)
 
-    // ---- Layer 1: gradient ----
-    val GradientTop: Color = Color.White.copy(alpha = 0.13f)
+    /** Vertical gradient: overhead light simulation. */
+    val GradientTop: Color = Color.White.copy(alpha = 0.14f)
     val GradientBottom: Color = Color.White.copy(alpha = 0.02f)
 
-    // ---- Layer 2: specular ----
-    val SpecularCore: Color = Color.White.copy(alpha = 0.22f)
-    val SpecularPressed: Color = Color.White.copy(alpha = 0.38f)
+    // ---- Edge refraction (simulates feDisplacementMap) ----
+    /** Maximum alpha at the very edge of the glass. */
+    const val EdgeRefractionAlpha = 0.28f
+    /** Width of the refraction zone in dp. */
+    const val EdgeRefractionWidthDp = 18f
+    /** Number of concentric strokes for smooth falloff. */
+    const val EdgeRefractionSteps = 12
+
+    // ---- Chromatic aberration (simulates RGB channel split) ----
+    val AberrationRed: Color = Color.Red.copy(alpha = 0.06f)
+    val AberrationBlue: Color = Color.Blue.copy(alpha = 0.06f)
+    /** Pixel offset for RGB split. */
+    const val AberrationOffsetPx = 1.5f
+
+    // ---- Specular highlight ----
+    val SpecularCore: Color = Color.White.copy(alpha = 0.30f)
+    val SpecularPressed: Color = Color.White.copy(alpha = 0.45f)
     val SpecularEdge: Color = Color.White.copy(alpha = 0.0f)
 
-    // ---- Layer 3: border ----
-    val BorderGlow: Color = Color.White.copy(alpha = 0.20f)
-    val BorderOuter: Color = Color.White.copy(alpha = 0.09f)
+    // ---- Border ----
+    val BorderInner: Color = Color.White.copy(alpha = 0.30f)
+    val BorderOuter: Color = Color.White.copy(alpha = 0.12f)
+    /** Second border layer (overlay blend simulation). */
+    val BorderOverlay: Color = Color.White.copy(alpha = 0.08f)
 
     // ---- Accents ----
     val AccentViolet: Color = Color(0xFF8B5CF6).copy(alpha = 0.10f)
@@ -43,14 +55,26 @@ object LiquidGlass {
     val AccentAmber: Color = Color(0xFFF59E0B).copy(alpha = 0.08f)
 
     // ---- Nav bar ----
-    val NavSelected: Color = Color.White.copy(alpha = 0.16f)
+    val NavSelected: Color = Color.White.copy(alpha = 0.20f)
     val NavIconActive: Color = Color(0xFFA78BFA)
-    val NavIconInactive: Color = Color.White.copy(alpha = 0.45f)
+    val NavIconInactive: Color = Color.White.copy(alpha = 0.50f)
+    val NavLabelActive: Color = Color.White.copy(alpha = 0.95f)
+    val NavLabelInactive: Color = Color.White.copy(alpha = 0.38f)
 
-    // ---- Animation ----
-    const val PressScale = 0.965f
-    const val SpringStiffness = 400f
-    const val SpringDamping = 0.72f
+    // ---- Elasticity (matches liquid-glass-react defaults) ----
+    /** Press scale. liquid-glass-react uses 0.96 on click. */
+    const val PressScale = 0.96f
+    /** Spring stiffness for release bounce. */
+    const val SpringStiffness = 300f
+    /**
+     * Damping ratio. < 1.0 gives overshoot (liquid wobble).
+     * liquid-glass-react elasticity=0.15 → similar feel at 0.65.
+     */
+    const val SpringDamping = 0.65f
+
+    // ---- Shadow ----
+    const val ShadowElevationDp = 12f
+    const val ShadowPressedElevationDp = 4f
 
     // ---- Capability ----
     val supportsWindowBlur: Boolean
