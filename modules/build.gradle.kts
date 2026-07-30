@@ -29,6 +29,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(project(":core"))
     implementation(project(":providers"))
+    // NativeBridge (nativeInvokeModuleEntry / JNI entry probing) lives in
+    // :native and is referenced by ModuleRuntime.tryInvokeEntry at compile
+    // time. Without this dependency, com.astraveil.nativelib.NativeBridge is
+    // unresolved from the :modules compilation classpath.
+    implementation(project(":native"))
     // AstraSdkConstants (MODULE_API_LEVEL, SUPPORTED_PERMISSIONS) lives in :sdk
     // and is referenced by ModuleValidator at compile time.
     implementation(project(":sdk"))

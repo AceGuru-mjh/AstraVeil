@@ -37,4 +37,18 @@ object NativeBridge {
 
     /** Whether /proc/config.gz exists (kernel build config available). */
     external fun nativeHasKernelConfig(): Boolean
+
+    /**
+     * Invoke a C-exported symbol in a module's .so.
+     *
+     * Used by [com.astraveil.modules.ModuleRuntime] to call the module
+     * entry point (e.g. `avm_on_load`) after `System.load` has mapped the
+     * library. The [soPath] must be the absolute path of an already-loaded
+     * .so (or a path dlopen can open). The [symbol] must be an
+     * `extern "C"` function taking no arguments and returning void.
+     *
+     * @return `true` if the symbol was found and invoked without throwing;
+     *         `false` if the symbol is absent or dlopen/dlsym failed.
+     */
+    external fun nativeInvokeModuleEntry(soPath: String, symbol: String): Boolean
 }

@@ -16,6 +16,7 @@ struct SandboxPolicy {
     bool networkNamespace = false;
     bool seccomp = false;
     bool landlock = false;
+    bool allowNetwork = false;  // gates socket/connect/bind/etc. in seccomp
     std::string moduleId;
 };
 

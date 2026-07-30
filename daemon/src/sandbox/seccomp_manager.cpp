@@ -104,6 +104,28 @@ bool SeccompManager::apply() {
     ASTRA_ALLOW(ctx, exit);
     ASTRA_ALLOW(ctx, exit_group);
 
+    // ---- Network (conditional: only when the module's sandbox profile
+    //      grants network access) ----
+    if (allowNetwork_) {
+        ASTRA_ALLOW(ctx, socket);
+        ASTRA_ALLOW(ctx, connect);
+        ASTRA_ALLOW(ctx, bind);
+        ASTRA_ALLOW(ctx, listen);
+        ASTRA_ALLOW(ctx, accept);
+        ASTRA_ALLOW(ctx, accept4);
+        ASTRA_ALLOW(ctx, sendto);
+        ASTRA_ALLOW(ctx, recvfrom);
+        ASTRA_ALLOW(ctx, sendmsg);
+        ASTRA_ALLOW(ctx, recvmsg);
+        ASTRA_ALLOW(ctx, shutdown);
+        ASTRA_ALLOW(ctx, getsockname);
+        ASTRA_ALLOW(ctx, getpeername);
+        ASTRA_ALLOW(ctx, setsockopt);
+        ASTRA_ALLOW(ctx, getsockopt);
+        ASTRA_ALLOW(ctx, socketpair);
+        ALOGI("SeccompManager: network syscalls allowed (module has network permission)");
+    }
+
     // ---- Architecture-specific TLS access (ARM 32-bit) ----
 #ifdef __arm__
     ASTRA_ALLOW(ctx, set_tls);
