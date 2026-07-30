@@ -23,6 +23,10 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build Release APK
+        env:
+          ASTRAVEIL_KEYSTORE_PASSWORD: ${{ secrets.ASTRAVEIL_KEYSTORE_PASSWORD }}
+          ASTRAVEIL_KEY_ALIAS: ${{ secrets.ASTRAVEIL_KEY_ALIAS }}
+          ASTRAVEIL_KEY_PASSWORD: ${{ secrets.ASTRAVEIL_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
       - name: Build Debug APK
