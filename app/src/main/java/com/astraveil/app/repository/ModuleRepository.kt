@@ -9,6 +9,8 @@ import com.astraveil.core.modules.model.ModulePermissionInfo
 import com.astraveil.core.modules.model.ModuleUiState
 import com.astraveil.modules.AstraModule
 import com.astraveil.modules.ModuleManager
+import com.astraveil.modules.ModuleRuntime
+import com.astraveil.modules.ModuleSandbox
 import com.astraveil.modules.ModuleState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -52,10 +54,17 @@ class ModuleRepositoryImpl(
 ) : ModuleRepository {
 
     private val manager: ModuleManager by lazy {
+        // Wire the in-process ModuleRuntime so start()/stop() actually
+        // load/unload the module's .so (System.load + JNI_OnLoad +
+        // NativeBridge.nativeInvokeModuleEntry). Without this, ModuleManager
+        // only flips the state flag without executing any module code.
+        val sandbox = ModuleSandbox(AstraVeilApplication.core)
+        val runtime = ModuleRuntime(context, sandbox)
         ModuleManager(
             context = context,
             core = AstraVeilApplication.core,
             providerRegistry = AstraContainer.providerRegistry,
+            runtime = runtime,
         )
     }
 

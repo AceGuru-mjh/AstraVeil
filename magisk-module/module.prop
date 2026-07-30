@@ -1,0 +1,6 @@
+id=astraveil-daemon
+name=AstraVeil Daemon
+version=v0.1.0-alpha
+versionCode=1
+author=AstraVeil Project
+description=AstraDaemon (astrad) — root capability execution service for AstraVeil. Runs as a background service, listens on /dev/astra/astrad.sock.

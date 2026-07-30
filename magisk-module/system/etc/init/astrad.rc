@@ -1,0 +1,15 @@
+# AstraVeil daemon init script.
+# Fallback for non-Magisk environments (e.g. KernelSU with init.rc support).
+
+service astrad /data/astra/bin/astrad
+    class late_start
+    user root
+    group root system
+    seclabel u:r:magisk:s0
+    oneshot
+    disabled
+
+on property:sys.boot_completed=1
+    mkdir /dev/astra 0755 root root
+    mkdir /data/astra/logs 0755 root root
+    start astrad
