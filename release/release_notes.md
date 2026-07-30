@@ -1,52 +1,50 @@
-# AstraVeil v1.0.3 — Release Notes
+# AstraVeil v1.0.0 — Release Notes
 
 ## Overview
 
-Visual overhaul: Liquid Glass rendering ported from liquid-glass-react.
-10-layer optical renderer with edge refraction, chromatic aberration,
-specular highlights, elastic press, and window-level background blur.
+First stable release of AstraVeil — the Android Root Capability
+Operating Layer. Not a root tool; a capability abstraction platform
+above Magisk / KernelSU / APatch / (future) AstraRoot.
 
-## What's new in v1.0.3
+## Features
 
-- **Liquid Glass React Port** — 10-layer renderer adapted from the
-  liquid-glass-react web library:
-  - Edge refraction: 12 concentric strokes with quadratic alpha falloff
-    (simulates SVG feDisplacementMap SDF)
-  - Chromatic aberration: R/B channel split at edges (±1.5px offset)
-  - Specular highlight: radial gradient follows touch, intensifies on press
-  - Multi-layer border: inner glow + outer + overlay (mix-blend simulation)
-  - Elastic press: spring(dampingRatio=0.65) → liquid wobble overshoot
-  - Animated shadow: 12dp → 4dp on press
-- **Window-Level Background Blur** — FLAG_BLUR_BEHIND (API 31+) with
-  radius=48. Real frosted-glass background behind all surfaces.
-- **Nav Bar Fixes**:
-  - windowInsetsPadding(navigationBars) — no longer hidden behind gesture bar
-  - 14dp vertical spacing (was 10dp)
-  - 28dp corner radius (was 26dp)
-  - NavLabelActive/Inactive tokens (not hardcoded alpha)
-- **No Modifier.blur()** — removed the bug that blurred the glass's own
-  content into an amorphous blob. Background blur is now window-level.
-
-## Full feature set (from v1.0.0+)
-
-- Liquid Glass Design System (10-layer renderer + window blur)
-- Real Superuser (Magisk DB read/write + request logs)
-- Multi-Probe Root Test (6 probes)
-- Module Trust Pipeline (SHA-256 + manifest + risk + signature)
-- AVM Module Runtime (install/uninstall/start/stop with System.load + dlopen)
-- AstraDaemon (C++20 Unix socket IPC)
-- Module Runner (fork + sandbox + dlopen)
-- Rust Security (PolicyEngine + SandboxPolicy + SHA-256)
-- Provider Runtime (Magisk/KernelSU/APatch detection + routing)
-- DaemonManager + Magisk Module deployment package
-- 126 Unit Tests + Instrumented Test scaffold
-- Chinese localization (i18n)
+- **Liquid Glass Design System** — 10-layer optical renderer with edge
+  refraction (12 concentric strokes), chromatic aberration (RGB split),
+  specular highlight, elastic press with overshoot wobble, multi-layer
+  border. Window-level FLAG_BLUR_BEHIND (API 31+) for real frosted glass.
+- **Liquid Glass Navigation Bar** — Floating pill-shaped bar with
+  windowInsetsPadding(navigationBars), animated icon/label colors.
+- **Real Superuser Management** — Reads/writes Magisk's /data/adb/magisk.db
+  via su -c sqlite3. Policy changes (Allow/Ask/Deny) take effect
+  immediately. Shows recent su request logs. No-root devices show an
+  informative amber card (not a red error) with supported backend list.
+- **Multi-Probe Root Test** — 6 read-only probes (id, getenforce, uname,
+  ls /data/adb, which su, mounts) with per-probe ✅/❌ display.
+- **AstraUI** — Compose dashboard with Chinese localization (i18n).
+- **AstraCore** — Capability Engine, Permission Engine (persisted),
+  EventBus, ConfigManager (persisted), SecurityManager (Ed25519 + SHA-256).
+- **Module Trust Pipeline** — SHA-256 fingerprint + manifest pre-parse +
+  risk analysis + signature status before install.
+- **AVM Module Runtime** — install/uninstall/start/stop with real
+  System.load + JNI_OnLoad + dlopen/dlsym entry invocation.
+- **AstraDaemon** — C++20 system service with Unix socket IPC (JSON frames).
+- **Module Runner** — fork + sandbox (namespace + seccomp 40+ syscalls +
+  Landlock full ABI v1) + dlopen + waitpid.
+- **Rust Security** — PolicyEngine (Allow/Deny/RequireApproval) +
+  SandboxPolicy + SHA-256 attestation + 42 unit tests.
+- **Provider Runtime** — Magisk / KernelSU / APatch detection +
+  intelligent provider routing.
+- **DaemonManager** — App-side daemon connection with retry + ping.
+- **Magisk Module Package** — service.sh + init.rc for deploying astrad.
+- **126 Unit Tests** — core/providers/modules Kotlin tests + Rust tests.
+- **CI/CD Pipelines** — Android APK, Native daemon, Rust tests, Release.
 
 ## Minimum requirements
 
 - Android 8.0 (API 26) or later
 - ARM64 device
 - Magisk (for su policy management), KernelSU, or APatch for root features
+- Java 17 or later for building
 
 ## Install
 
