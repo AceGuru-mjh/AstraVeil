@@ -8,32 +8,34 @@ above Magisk / KernelSU / APatch / (future) AstraRoot.
 
 ## What's included
 
-- **AstraUI** — Kotlin + Compose dashboard with Glass Design System
-- **AstraCore** — Capability Engine, Permission Engine, EventBus, Device Profile
-- **AstraDaemon** — C++20 system service with Unix socket IPC + protobuf
-- **Rust Security** — PolicyEngine (Allow/Deny/RequireApproval) + Sandbox validator
-- **Provider Runtime** — Magisk / KernelSU / APatch detection + RootCommandExecutor
-- **AVM Module Runtime** — .avm format, ModuleValidator, sandbox lifecycle
-- **Native Sandbox** — unshare + seccomp + landlock isolation
-- **Example Module** — hello-world.avm demonstrating the SDK surface
-- **Gradle Wrapper** — Gradle 8.10.2 for consistent builds
-- **CI/CD Pipelines** — Android APK, Native daemon, and Rust test workflows
+- **Liquid Glass Design System** — Multi-layer optical rendering with specular highlights, press compression, and spring bounce
+- **AstraUI** — Kotlin + Compose dashboard with Glass Design System + Chinese localization (i18n)
+- **AstraCore** — Capability Engine, Permission Engine (persisted), EventBus, ConfigManager (persisted), SecurityManager (Ed25519 + SHA-256)
+- **Module Trust Pipeline** — SHA-256 fingerprint + manifest pre-parse + risk analysis + signature status before install
+- **AVM Module Runtime** — .avm format with install/uninstall/start/stop, ModuleValidator, sandbox lifecycle, ModuleRuntime.load() via System.load + JNI_OnLoad + dlopen/dlsym entry invocation
+- **AstraDaemon** — C++20 system service with Unix socket IPC (JSON frames), capability/provider/module/security services
+- **Module Runner** — fork + sandbox (namespace + seccomp 40+ syscalls + Landlock) + dlopen + waitpid
+- **Rust Security** — PolicyEngine (Allow/Deny/RequireApproval) + SandboxPolicy + SHA-256 attestation + 42 unit tests
+- **Provider Runtime** — Magisk / KernelSU / APatch detection + intelligent provider routing
+- **DaemonManager** — App-side daemon connection with retry + ping verification
+- **Magisk Module Package** — service.sh + init.rc for deploying astrad at boot
+- **126 Unit Tests** — core/providers/modules Kotlin tests + Rust #[cfg(test)] modules
+- **CI/CD Pipelines** — Android APK, Native daemon, Rust tests, Release automation
 
 ## Known limitations
 
-- Provider execute() is placeholder (real `su -c` wiring in 1.1)
-- protobuf not yet linked into CMake build (text frame IPC)
+- Provider execute() is interface-only (real `su -c` wiring in v1.1)
 - AstraRoot backend is a stub (Phase 7)
 - No module store / OTA updates
+- Daemon requires manual deployment via Magisk module
 
 ## Minimum requirements
 
-- Android 10 (SDK 29) or later
+- Android 8.0 (API 26) or later
 - ARM64 device
-- SELinux enforcing (permissive supported with warnings)
-- Java 17 or later
+- Java 17 or later for building
 
-## Next versions
+## Install
 
-- **v1.0.1** — Performance optimizations and bug fixes
-- **v1.0.2** — Additional device compatibility improvements
+1. Install the debug APK: `adb install app-debug.apk`
+2. For daemon support: flash the Magisk module zip from releases

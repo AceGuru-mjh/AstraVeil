@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.design.AstraGlass
-import com.astraveil.app.ui.design.GlassSurface
+import com.astraveil.app.ui.design.LiquidGlassSurface
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -91,7 +91,7 @@ fun SecurityReviewDialog(
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        GlassSurface(cornerRadius = 24) {
+        LiquidGlassSurface(cornerRadius = 24.dp, enablePressEffect = false) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
