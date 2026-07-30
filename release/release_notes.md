@@ -1,40 +1,36 @@
-# AstraVeil v1.0.2 — Release Notes
+# AstraVeil v1.0.3 — Release Notes
 
 ## Overview
 
-Patch release with real Magisk su policy management. The Superuser screen
-now reads and writes Magisk's actual su database — changes take effect
-immediately when any app calls `su`.
+Visual overhaul: Liquid Glass rendering ported from liquid-glass-react.
+10-layer optical renderer with edge refraction, chromatic aberration,
+specular highlights, elastic press, and window-level background blur.
 
-## What's new in v1.0.2
+## What's new in v1.0.3
 
-- **Real Magisk su Policy Management** — Superuser screen now reads/writes
-  `/data/adb/magisk.db` via `su -c sqlite3`. Policy changes (Allow/Ask/Deny)
-  take effect immediately: open Termux → type `su` → Magisk checks the
-  database → uses the policy AstraVeil set.
-- **Su Request Logs** — Reads Magisk's `logs` table and displays the 30
-  most recent su requests with app name, uid, action (allow/deny), and
-  timestamp.
-- **Su Authorization Dialog** — New `SuRequestDialog` component for Phase 1
-  real-time su prompts (Deny / Allow Once / Always).
-- **3-Way Policy Selector** — Each policy entry shows Allow/Ask/Deny
-  selector matching Magisk's policy values (0=deny, 1=ask, 2=allow).
-- **No-Root Handling** — Devices without Magisk/KernelSU/APatch show a
-  clear error message instead of fake switches.
-
-## How it works
-
-```
-User opens Superuser → detect Magisk provider → read policies table
-  → display real entries → user changes Allow/Ask/Deny
-  → write to Magisk DB → open Termux → type su
-  → Magisk checks DB → uses the policy AstraVeil set
-```
+- **Liquid Glass React Port** — 10-layer renderer adapted from the
+  liquid-glass-react web library:
+  - Edge refraction: 12 concentric strokes with quadratic alpha falloff
+    (simulates SVG feDisplacementMap SDF)
+  - Chromatic aberration: R/B channel split at edges (±1.5px offset)
+  - Specular highlight: radial gradient follows touch, intensifies on press
+  - Multi-layer border: inner glow + outer + overlay (mix-blend simulation)
+  - Elastic press: spring(dampingRatio=0.65) → liquid wobble overshoot
+  - Animated shadow: 12dp → 4dp on press
+- **Window-Level Background Blur** — FLAG_BLUR_BEHIND (API 31+) with
+  radius=48. Real frosted-glass background behind all surfaces.
+- **Nav Bar Fixes**:
+  - windowInsetsPadding(navigationBars) — no longer hidden behind gesture bar
+  - 14dp vertical spacing (was 10dp)
+  - 28dp corner radius (was 26dp)
+  - NavLabelActive/Inactive tokens (not hardcoded alpha)
+- **No Modifier.blur()** — removed the bug that blurred the glass's own
+  content into an amorphous blob. Background blur is now window-level.
 
 ## Full feature set (from v1.0.0+)
 
-- Liquid Glass Design System + Navigation Bar
-- Real Superuser (Magisk DB read/write)
+- Liquid Glass Design System (10-layer renderer + window blur)
+- Real Superuser (Magisk DB read/write + request logs)
 - Multi-Probe Root Test (6 probes)
 - Module Trust Pipeline (SHA-256 + manifest + risk + signature)
 - AVM Module Runtime (install/uninstall/start/stop with System.load + dlopen)
