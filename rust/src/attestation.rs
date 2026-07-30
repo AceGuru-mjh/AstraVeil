@@ -91,4 +91,48 @@ mod tests {
         let token = AttestationToken::for_module("m", b"payload");
         assert_eq!(token.hash, sha256_hex(b"payload"));
     }
+
+    #[test]
+    fn sha256_empty_input() {
+        // sha256("") = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        assert_eq!(
+            sha256_hex(b""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+    }
+
+    #[test]
+    fn sha256_deterministic() {
+        // Same input → same digest, across two independent calls.
+        assert_eq!(sha256_hex(b"test"), sha256_hex(b"test"));
+    }
+
+    #[test]
+    fn sha256_different_inputs_differ() {
+        // Different inputs must produce different digests.
+        assert_ne!(sha256_hex(b"aaa"), sha256_hex(b"bbb"));
+    }
+
+    #[test]
+    fn sha256_long_input() {
+        // Hashing a kilobyte of input must not panic and must yield a
+        // 64-character hex string.
+        let payload = vec![0x42u8; 1000];
+        let digest = sha256_hex(&payload);
+        assert_eq!(digest.len(), 64);
+        assert!(digest.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn token_for_module_has_correct_id() {
+        let token = AttestationToken::for_module("mod.a", b"data");
+        assert_eq!(token.module_id, "mod.a");
+    }
+
+    #[test]
+    fn token_for_module_has_non_empty_hash() {
+        let token = AttestationToken::for_module("mod.b", b"some payload");
+        assert!(!token.hash.is_empty());
+        assert_eq!(token.hash.len(), 64);
+    }
 }

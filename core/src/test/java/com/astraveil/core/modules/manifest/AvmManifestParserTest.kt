@@ -88,7 +88,7 @@ class AvmManifestParserTest {
     }
 
     @Test
-    fun `missing module.json returns MISSING_MANIFEST`() {
+    fun `missing module json returns MISSING_MANIFEST`() {
         val avm = zip("README.txt" to "not a manifest")
         val result = parser.parse(ByteArrayInputStream(avm))
 

@@ -17,6 +17,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {
@@ -37,4 +41,8 @@ dependencies {
     // AstraSdkConstants (MODULE_API_LEVEL, SUPPORTED_PERMISSIONS) lives in :sdk
     // and is referenced by ModuleValidator at compile time.
     implementation(project(":sdk"))
+
+    testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("io.mockk:mockk:1.13.13")
 }
