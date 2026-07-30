@@ -52,7 +52,7 @@ import com.astraveil.app.ui.screens.DashboardScreen
 import com.astraveil.app.ui.screens.modules.ModulesScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
-import com.astraveil.app.ui.screens.RootManagerScreen
+import com.astraveil.app.ui.screens.SuperuserScreen
 import com.astraveil.app.ui.settings.ComingSoonScreen
 import com.astraveil.app.ui.settings.SettingsScreen
 import com.astraveil.app.ui.screens.update.UpdateCenterScreen
@@ -149,7 +149,7 @@ fun AstraVeilApp() {
                 ProviderScreen(viewModel = viewModel)
             }
             composable(Destinations.Superuser.route) {
-                RootManagerScreen(viewModel = viewModel)
+                SuperuserScreen()
             }
             composable(Destinations.Modules.route) {
                 ModulesScreen()
