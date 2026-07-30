@@ -1,49 +1,56 @@
-# AstraVeil v1.0.1 — Release Notes
+# AstraVeil v1.0.2 — Release Notes
 
 ## Overview
 
-Patch release with comprehensive UI overhaul: Liquid Glass navigation bar,
-real Superuser app management, multi-probe root verification, and permission
-declarations.
+Patch release with real Magisk su policy management. The Superuser screen
+now reads and writes Magisk's actual su database — changes take effect
+immediately when any app calls `su`.
 
-## What's new in v1.0.1
+## What's new in v1.0.2
 
-- **Liquid Glass Navigation Bar** — Floating pill-shaped bottom navigation
-  with multi-layer optical rendering (base tint + gradient + specular
-  highlight + border glow). Replaces the standard Material3 NavigationBar.
-- **Real Superuser Screen** — Queries PackageManager for actual installed
-  user apps. Each app shows its real icon, name, and package name. su grants
-  are tracked via PermissionEngine (persisted to astra_config.json). No more
-  hardcoded "示例应用".
-- **Multi-Probe Root Test** — `testRootCapability()` now runs 6 read-only
-  probes (id, getenforce, uname -r, ls /data/adb/, which su, cat /proc/mounts)
-  instead of just `id`. Each probe shows ✅/❌ with output.
-- **Permission Declarations** — Added QUERY_ALL_PACKAGES for app list queries.
-  POST_NOTIFICATIONS requested at runtime on Android 13+.
-- **Liquid Glass Surface Fix** — Removed incorrect Modifier.blur() that was
-  blurring the glass's own content instead of the background.
-- **AppIcon without Accompanist** — Drawable → Bitmap → ImageBitmap conversion
-  via remember cache. No third-party dependency.
+- **Real Magisk su Policy Management** — Superuser screen now reads/writes
+  `/data/adb/magisk.db` via `su -c sqlite3`. Policy changes (Allow/Ask/Deny)
+  take effect immediately: open Termux → type `su` → Magisk checks the
+  database → uses the policy AstraVeil set.
+- **Su Request Logs** — Reads Magisk's `logs` table and displays the 30
+  most recent su requests with app name, uid, action (allow/deny), and
+  timestamp.
+- **Su Authorization Dialog** — New `SuRequestDialog` component for Phase 1
+  real-time su prompts (Deny / Allow Once / Always).
+- **3-Way Policy Selector** — Each policy entry shows Allow/Ask/Deny
+  selector matching Magisk's policy values (0=deny, 1=ask, 2=allow).
+- **No-Root Handling** — Devices without Magisk/KernelSU/APatch show a
+  clear error message instead of fake switches.
 
-## Full feature set (from v1.0.0)
+## How it works
 
-- Liquid Glass Design System (4-layer optical rendering)
-- AstraUI — Compose dashboard with Chinese localization (i18n)
-- Module Trust Pipeline — SHA-256 + manifest pre-parse + risk analysis
-- AVM Module Runtime — install/uninstall/start/stop with real System.load + dlopen
-- AstraDaemon — C++20 system service with Unix socket IPC
-- Module Runner — fork + sandbox (namespace + seccomp 40+ + Landlock) + dlopen
-- Rust Security — PolicyEngine + SandboxPolicy + SHA-256 attestation
-- Provider Runtime — Magisk / KernelSU / APatch detection + intelligent routing
-- DaemonManager — App-side daemon connection with retry
-- Magisk Module Package — service.sh + init.rc for deploying astrad
+```
+User opens Superuser → detect Magisk provider → read policies table
+  → display real entries → user changes Allow/Ask/Deny
+  → write to Magisk DB → open Termux → type su
+  → Magisk checks DB → uses the policy AstraVeil set
+```
+
+## Full feature set (from v1.0.0+)
+
+- Liquid Glass Design System + Navigation Bar
+- Real Superuser (Magisk DB read/write)
+- Multi-Probe Root Test (6 probes)
+- Module Trust Pipeline (SHA-256 + manifest + risk + signature)
+- AVM Module Runtime (install/uninstall/start/stop with System.load + dlopen)
+- AstraDaemon (C++20 Unix socket IPC)
+- Module Runner (fork + sandbox + dlopen)
+- Rust Security (PolicyEngine + SandboxPolicy + SHA-256)
+- Provider Runtime (Magisk/KernelSU/APatch detection + routing)
+- DaemonManager + Magisk Module deployment package
 - 126 Unit Tests + Instrumented Test scaffold
+- Chinese localization (i18n)
 
 ## Minimum requirements
 
 - Android 8.0 (API 26) or later
 - ARM64 device
-- Java 17 or later for building
+- Magisk (for su policy management), KernelSU, or APatch for root features
 
 ## Install
 
