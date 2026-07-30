@@ -1,33 +1,43 @@
-# AstraVeil v1.0.0 — Release Notes
+# AstraVeil v1.0.1 — Release Notes
 
 ## Overview
 
-First stable release of AstraVeil — the Android Root Capability
-Operating Layer. Not a root tool; a capability abstraction platform
-above Magisk / KernelSU / APatch / (future) AstraRoot.
+Patch release with comprehensive UI overhaul: Liquid Glass navigation bar,
+real Superuser app management, multi-probe root verification, and permission
+declarations.
 
-## What's included
+## What's new in v1.0.1
 
-- **Liquid Glass Design System** — Multi-layer optical rendering with specular highlights, press compression, and spring bounce
-- **AstraUI** — Kotlin + Compose dashboard with Glass Design System + Chinese localization (i18n)
-- **AstraCore** — Capability Engine, Permission Engine (persisted), EventBus, ConfigManager (persisted), SecurityManager (Ed25519 + SHA-256)
-- **Module Trust Pipeline** — SHA-256 fingerprint + manifest pre-parse + risk analysis + signature status before install
-- **AVM Module Runtime** — .avm format with install/uninstall/start/stop, ModuleValidator, sandbox lifecycle, ModuleRuntime.load() via System.load + JNI_OnLoad + dlopen/dlsym entry invocation
-- **AstraDaemon** — C++20 system service with Unix socket IPC (JSON frames), capability/provider/module/security services
-- **Module Runner** — fork + sandbox (namespace + seccomp 40+ syscalls + Landlock) + dlopen + waitpid
-- **Rust Security** — PolicyEngine (Allow/Deny/RequireApproval) + SandboxPolicy + SHA-256 attestation + 42 unit tests
-- **Provider Runtime** — Magisk / KernelSU / APatch detection + intelligent provider routing
-- **DaemonManager** — App-side daemon connection with retry + ping verification
-- **Magisk Module Package** — service.sh + init.rc for deploying astrad at boot
-- **126 Unit Tests** — core/providers/modules Kotlin tests + Rust #[cfg(test)] modules
-- **CI/CD Pipelines** — Android APK, Native daemon, Rust tests, Release automation
+- **Liquid Glass Navigation Bar** — Floating pill-shaped bottom navigation
+  with multi-layer optical rendering (base tint + gradient + specular
+  highlight + border glow). Replaces the standard Material3 NavigationBar.
+- **Real Superuser Screen** — Queries PackageManager for actual installed
+  user apps. Each app shows its real icon, name, and package name. su grants
+  are tracked via PermissionEngine (persisted to astra_config.json). No more
+  hardcoded "示例应用".
+- **Multi-Probe Root Test** — `testRootCapability()` now runs 6 read-only
+  probes (id, getenforce, uname -r, ls /data/adb/, which su, cat /proc/mounts)
+  instead of just `id`. Each probe shows ✅/❌ with output.
+- **Permission Declarations** — Added QUERY_ALL_PACKAGES for app list queries.
+  POST_NOTIFICATIONS requested at runtime on Android 13+.
+- **Liquid Glass Surface Fix** — Removed incorrect Modifier.blur() that was
+  blurring the glass's own content instead of the background.
+- **AppIcon without Accompanist** — Drawable → Bitmap → ImageBitmap conversion
+  via remember cache. No third-party dependency.
 
-## Known limitations
+## Full feature set (from v1.0.0)
 
-- Provider execute() is interface-only (real `su -c` wiring in v1.1)
-- AstraRoot backend is a stub (Phase 7)
-- No module store / OTA updates
-- Daemon requires manual deployment via Magisk module
+- Liquid Glass Design System (4-layer optical rendering)
+- AstraUI — Compose dashboard with Chinese localization (i18n)
+- Module Trust Pipeline — SHA-256 + manifest pre-parse + risk analysis
+- AVM Module Runtime — install/uninstall/start/stop with real System.load + dlopen
+- AstraDaemon — C++20 system service with Unix socket IPC
+- Module Runner — fork + sandbox (namespace + seccomp 40+ + Landlock) + dlopen
+- Rust Security — PolicyEngine + SandboxPolicy + SHA-256 attestation
+- Provider Runtime — Magisk / KernelSU / APatch detection + intelligent routing
+- DaemonManager — App-side daemon connection with retry
+- Magisk Module Package — service.sh + init.rc for deploying astrad
+- 126 Unit Tests + Instrumented Test scaffold
 
 ## Minimum requirements
 
@@ -37,5 +47,5 @@ above Magisk / KernelSU / APatch / (future) AstraRoot.
 
 ## Install
 
-1. Install the debug APK: `adb install app-debug.apk`
+1. Install the APK: `adb install app-release.apk`
 2. For daemon support: flash the Magisk module zip from releases
