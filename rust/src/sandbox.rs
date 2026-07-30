@@ -185,4 +185,49 @@ mod tests {
         assert!(s.validate().is_ok());
         assert!(s.describe().contains("net=true"));
     }
+
+    #[test]
+    fn sandbox_restricted_is_readonly() {
+        assert_eq!(SandboxPolicy::restricted().filesystem, "readonly");
+    }
+
+    #[test]
+    fn sandbox_restricted_no_network() {
+        assert!(!SandboxPolicy::restricted().network);
+    }
+
+    #[test]
+    fn sandbox_restricted_no_root() {
+        assert!(!SandboxPolicy::restricted().root);
+    }
+
+    #[test]
+    fn sandbox_deny_all_filesystem_none() {
+        assert_eq!(SandboxPolicy::deny_all().filesystem, "none");
+    }
+
+    #[test]
+    fn sandbox_deny_all_no_network() {
+        assert!(!SandboxPolicy::deny_all().network);
+    }
+
+    #[test]
+    fn sandbox_deny_all_no_root() {
+        assert!(!SandboxPolicy::deny_all().root);
+    }
+
+    #[test]
+    fn sandbox_custom_policy() {
+        // A hand-built policy that opts into read-write filesystem and
+        // network but still forbids root: this exercises the public
+        // struct constructor without relying on the canned presets.
+        let p = SandboxPolicy {
+            filesystem: "readwrite".to_string(),
+            network: true,
+            root: false,
+        };
+        assert_eq!(p.filesystem, "readwrite");
+        assert!(p.network);
+        assert!(!p.root);
+    }
 }

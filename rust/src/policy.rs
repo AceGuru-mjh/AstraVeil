@@ -184,4 +184,73 @@ mod tests {
         engine.register(make_policy("m", &["ptrace"], Permission::None));
         assert_eq!(engine.evaluate("m", "ptrace"), Decision::Deny);
     }
+
+    #[test]
+    fn default_policy_has_denylist_permissions() {
+        // default_policy_for returns an empty permissions vector and a
+        // Permission::None ceiling — i.e. the default module is granted
+        // nothing, denylist or otherwise. This test pins that contract.
+        let p = default_policy_for("x");
+        assert_eq!(p.module_id, "x");
+        assert!(p.permissions.is_empty());
+        assert_eq!(p.max_level, Permission::None);
+        assert!(p.sandboxed);
+    }
+
+    #[test]
+    fn policy_engine_get_returns_none_for_unknown() {
+        let engine = PolicyEngine::new();
+        assert!(engine.get("unknown").is_none());
+    }
+
+    #[test]
+    fn policy_engine_register_then_get() {
+        let mut engine = PolicyEngine::new();
+        engine.register(make_policy("mod", &["filesystem"], Permission::Shell));
+        let got = engine.get("mod");
+        assert!(got.is_some());
+        assert_eq!(got.unwrap().module_id, "mod");
+        assert_eq!(got.unwrap().permissions, vec!["filesystem".to_string()]);
+    }
+
+    #[test]
+    fn policy_engine_evaluate_unknown_module_denied() {
+        let engine = PolicyEngine::new();
+        assert_eq!(engine.evaluate("unknown", "filesystem"), Decision::Deny);
+    }
+
+    #[test]
+    fn policy_engine_evaluate_registered_allowed() {
+        let mut engine = PolicyEngine::new();
+        engine.register(make_policy("mod", &["filesystem"], Permission::Shell));
+        // "filesystem" is permitted and not on the denylist ⇒ Allow.
+        assert_eq!(engine.evaluate("mod", "filesystem"), Decision::Allow);
+    }
+
+    #[test]
+    fn policy_engine_evaluate_denylist_requires_approval() {
+        let mut engine = PolicyEngine::new();
+        // "mount" is on the DENYLIST; with a max_level of Shell the
+        // engine routes the request through interactive approval rather
+        // than silently granting it.
+        engine.register(make_policy("mod", &["mount"], Permission::Shell));
+        assert_eq!(engine.evaluate("mod", "mount"), Decision::RequireApproval);
+    }
+
+    #[test]
+    fn permission_as_level_none() {
+        assert_eq!(Permission::None.as_level(), 0);
+    }
+
+    #[test]
+    fn permission_as_level_root() {
+        // The capability ladder is None(0) < Shell(1) < Root(2) < Kernel(3);
+        // Root sits at level 2.
+        assert_eq!(Permission::Root.as_level(), 2);
+    }
+
+    #[test]
+    fn permission_default_is_none() {
+        assert_eq!(Permission::default(), Permission::None);
+    }
 }

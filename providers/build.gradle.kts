@@ -45,4 +45,8 @@ dependencies {
     // The providers layer is built on top of the AstraVeil core engine
     // (EventBus, Logger, etc.). It must not depend on :sdk, :modules or :app.
     implementation(project(":core"))
+
+    testImplementation(libs.junit)
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }

@@ -94,4 +94,67 @@ mod tests {
         });
         assert_eq!(d, PolicyDecision::Allow);
     }
+
+    #[test]
+    fn policy_boundary_risk_80() {
+        // risk_level == 80 is the >= 80 boundary → RequireApproval,
+        // even when not approved.
+        let d = evaluate(ExecutionPolicy {
+            module_id: "m".into(),
+            capability: "BOUNDARY_80".into(),
+            risk_level: 80,
+            approved: false,
+        });
+        assert_eq!(d, PolicyDecision::RequireApproval);
+    }
+
+    #[test]
+    fn policy_boundary_risk_79() {
+        // risk_level == 79 is just below the threshold, so with
+        // approved == false it falls through to the Deny branch.
+        let d = evaluate(ExecutionPolicy {
+            module_id: "m".into(),
+            capability: "BOUNDARY_79".into(),
+            risk_level: 79,
+            approved: false,
+        });
+        assert_eq!(d, PolicyDecision::Deny);
+    }
+
+    #[test]
+    fn policy_approved_high_risk_still_requires_approval() {
+        // High-risk (>= 80) always prompts, even if previously approved,
+        // so the user re-confirms the dangerous action.
+        let d = evaluate(ExecutionPolicy {
+            module_id: "m".into(),
+            capability: "DANGEROUS".into(),
+            risk_level: 90,
+            approved: true,
+        });
+        assert_eq!(d, PolicyDecision::RequireApproval);
+    }
+
+    #[test]
+    fn policy_zero_risk_unapproved_denies() {
+        // Zero risk but no prior approval ⇒ Deny (no grant to spend).
+        let d = evaluate(ExecutionPolicy {
+            module_id: "m".into(),
+            capability: "BENIGN".into(),
+            risk_level: 0,
+            approved: false,
+        });
+        assert_eq!(d, PolicyDecision::Deny);
+    }
+
+    #[test]
+    fn policy_zero_risk_approved_allows() {
+        // Zero risk and prior approval ⇒ Allow.
+        let d = evaluate(ExecutionPolicy {
+            module_id: "m".into(),
+            capability: "BENIGN".into(),
+            risk_level: 0,
+            approved: true,
+        });
+        assert_eq!(d, PolicyDecision::Allow);
+    }
 }

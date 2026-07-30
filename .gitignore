@@ -24,3 +24,12 @@
 secrets.properties
 *.log
 *.jks
+core/build/
+providers/build/
+modules/build/
+app/build/
+native/build/
+sdk/build/
+*.iml
+local.properties
+.gradle/
