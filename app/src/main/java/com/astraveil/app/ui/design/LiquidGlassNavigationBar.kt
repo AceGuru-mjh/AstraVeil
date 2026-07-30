@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -21,32 +24,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * Floating pill-shaped liquid glass navigation bar.
- *
- * ```
- *  ┌─────────────────────────────────────┐
- *  │                                     │
- *  │          Screen Content             │
- *  │                                     │
- *  │   ╭───────────────────────────╮     │
- *  │   │  🏠   📦   🔍   🛡   ⚙️  │     │  ← 长条圆液态玻璃
- *  │   ╰───────────────────────────╯     │
- *  │        24dp horizontal margin       │
- *  └─────────────────────────────────────┘
- * ```
- */
 data class LiquidNavItem(
     val label: String,
     val icon: ImageVector,
 )
 
+/**
+ * Floating pill-shaped liquid glass navigation bar.
+ *
+ * Sits ABOVE the system gesture bar via WindowInsets.navigationBars.
+ * Uses full liquid glass rendering: edge refraction + chromatic
+ * aberration + specular + elastic press.
+ */
 @Composable
 fun LiquidGlassNavigationBar(
     items: List<LiquidNavItem>,
@@ -57,12 +51,15 @@ fun LiquidGlassNavigationBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 10.dp),
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 24.dp, vertical = 14.dp),
     ) {
         LiquidGlassSurface(
-            cornerRadius = 26.dp,
+            cornerRadius = 28.dp,
             enableSpecular = true,
             enablePressEffect = false,
+            enableRefraction = true,
+            enableAberration = true,
         ) {
             Row(
                 modifier = Modifier
@@ -90,14 +87,16 @@ private fun RowScope.LiquidNavEntry(
     onClick: () -> Unit,
 ) {
     val iconColor by animateColorAsState(
-        targetValue = if (selected) LiquidGlass.NavIconActive else LiquidGlass.NavIconInactive,
+        targetValue = if (selected) LiquidGlass.NavIconActive
+                      else LiquidGlass.NavIconInactive,
         animationSpec = spring(stiffness = 500f, dampingRatio = 0.8f),
-        label = "navIconColor",
+        label = "navIcon",
     )
     val labelColor by animateColorAsState(
-        targetValue = if (selected) Color.White.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.35f),
+        targetValue = if (selected) LiquidGlass.NavLabelActive
+                      else LiquidGlass.NavLabelInactive,
         animationSpec = spring(stiffness = 500f, dampingRatio = 0.8f),
-        label = "navLabelColor",
+        label = "navLabel",
     )
 
     Box(

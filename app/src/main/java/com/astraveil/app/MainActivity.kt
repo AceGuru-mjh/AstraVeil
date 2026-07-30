@@ -1,7 +1,9 @@
 package com.astraveil.app
 
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +18,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i("AstraVeil", "MainActivity.onCreate start")
+
+        // Window-level background blur (API 31+).
+        // This is the Android equivalent of CSS backdrop-filter: blur().
+        // It blurs the content BEHIND the entire window, giving all
+        // LiquidGlass surfaces a real frosted-glass background.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_BLUR_BEHIND,
+                WindowManager.LayoutParams.FLAG_BLUR_BEHIND,
+            )
+            window.attributes = window.attributes.apply {
+                blurBehindRadius = 48
+            }
+        }
 
         try {
             setContent {

@@ -10,7 +10,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Drop-in replacement for [GlassCard] with liquid glass rendering.
+ * Liquid Glass card — drop-in replacement for [GlassCard].
+ *
+ * Supports all liquid-glass-react visual features:
+ * edge refraction, chromatic aberration, specular highlight,
+ * elastic press, multi-layer border.
  */
 @Composable
 fun LiquidGlassCard(
@@ -19,6 +23,8 @@ fun LiquidGlassCard(
     accent: Color = Color.Transparent,
     enableSpecular: Boolean = true,
     enablePressEffect: Boolean = true,
+    enableRefraction: Boolean = true,
+    enableAberration: Boolean = true,
     contentPadding: Dp = 18.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -28,6 +34,8 @@ fun LiquidGlassCard(
         accent = accent,
         enableSpecular = enableSpecular,
         enablePressEffect = enablePressEffect,
+        enableRefraction = enableRefraction,
+        enableAberration = enableAberration,
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),
