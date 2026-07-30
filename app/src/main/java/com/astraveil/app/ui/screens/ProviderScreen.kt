@@ -277,7 +277,7 @@ private fun RootTestCard(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (result.success)
+                        containerColor = if (result.overallSuccess)
                             AstraSuccess.copy(alpha = 0.1f)
                         else
                             AstraError.copy(alpha = 0.1f)
@@ -287,24 +287,17 @@ private fun RootTestCard(
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                if (result.success) Icons.Filled.CheckCircle else Icons.Filled.Close,
+                                if (result.overallSuccess) Icons.Filled.CheckCircle else Icons.Filled.Close,
                                 null,
-                                tint = if (result.success) AstraSuccess else AstraError,
+                                tint = if (result.overallSuccess) AstraSuccess else AstraError,
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                if (result.success) "Root Available" else "Root Denied",
+                                if (result.overallSuccess) "Root Verified" else "Root NOT Verified",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (result.success) AstraSuccess else AstraError,
-                            )
-                        }
-                        if (result.output.isNotBlank()) {
-                            Text(
-                                result.output,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = if (result.overallSuccess) AstraSuccess else AstraError,
                             )
                         }
                         Text(
@@ -312,12 +305,33 @@ private fun RootTestCard(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        result.error?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AstraError,
-                            )
+                        result.tests.forEach { test ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Text(
+                                    text = if (test.success) "✅" else "❌",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = test.name,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    if (test.output.isNotBlank()) {
+                                        Text(
+                                            text = test.output,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

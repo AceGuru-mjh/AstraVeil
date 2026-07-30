@@ -10,34 +10,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Liquid Glass card — drop-in replacement for [GlassCard] with
- * multi-layer optical rendering.
- *
- * Usage:
- * ```
- * LiquidGlassCard {
- *     Text("Hello from liquid glass")
- * }
- *
- * // With accent:
- * LiquidGlassCard(accent = LiquidGlass.AccentViolet) {
- *     Text("Primary action card")
- * }
- * ```
- *
- * @param cornerRadius Corner radius in Dp. Default 22dp (matches GlassCard).
- * @param accent Optional accent tint (e.g. [LiquidGlass.AccentViolet]).
- * @param enableBlur Background blur on API 31+. Default true.
- * @param enableSpecular Touch-following specular highlight. Default true.
- * @param enablePressEffect Press compression + spring bounce. Default true.
- * @param contentPadding Inner padding. Default 18dp (matches GlassCard).
+ * Drop-in replacement for [GlassCard] with liquid glass rendering.
  */
 @Composable
 fun LiquidGlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 22.dp,
+    cornerRadius: Dp = 24.dp,
     accent: Color = Color.Transparent,
-    enableBlur: Boolean = true,
     enableSpecular: Boolean = true,
     enablePressEffect: Boolean = true,
     contentPadding: Dp = 18.dp,
@@ -47,7 +26,6 @@ fun LiquidGlassCard(
         modifier = modifier,
         cornerRadius = cornerRadius,
         accent = accent,
-        enableBlur = enableBlur,
         enableSpecular = enableSpecular,
         enablePressEffect = enablePressEffect,
     ) {
