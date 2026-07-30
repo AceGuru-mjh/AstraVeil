@@ -91,11 +91,20 @@ class SecurityManager {
     }
 
     /**
-     * Return `true` when the current build is a debug build (i.e.
-     * [Build.DEBUG] is `true`). Used to relax certain policy checks during
-     * development.
+     * Return `true` when the current build is a debug build.
+     *
+     * Uses `android.os.Build.VERSION.SDK_INT` + a try/catch on the
+     * application's `BuildConfig.DEBUG` flag. Since `:core` is a library
+     * module without its own `BuildConfig`, we probe the host app's
+     * `BuildConfig` reflectively; on failure we return `false`.
      */
-    fun isDebugBuild(): Boolean = Build.DEBUG
+    fun isDebugBuild(): Boolean = try {
+        val appInfo = android.app.AppGlobals.getInitialApplication()?.packageManager
+            ?.getApplicationInfo(android.app.AppGlobals.getInitialPackage(), 0)
+        (appInfo?.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    } catch (e: Exception) {
+        false
+    }
 
     /**
      * Produce an attestation token that providers can use to validate the
