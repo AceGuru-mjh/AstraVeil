@@ -173,9 +173,12 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Test root capability by executing `id` through the active provider.
-     * On success: output contains "uid=0(root)".
-     * On failure: error message explains why.
+     * Test root capability by running a battery of diagnostic probes
+     * (`id`, `getenforce`, `uname -r`, `ls /data/adb`, `which su`, `mount`)
+     * through the active root provider. Each probe is recorded as a
+     * [CapabilityTestResult]; the overall verdict is driven by the canonical
+     * `id` probe — root is "verified" only when `id` runs successfully AND
+     * returns `uid=0`.
      */
     fun testRootCapability() {
         viewModelScope.launch {
@@ -188,10 +191,16 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
 
                     if (info == null) {
                         return@withContext RootTestResult(
-                            success = false,
-                            output = "",
                             providerName = "None",
-                            error = "No root provider detected",
+                            overallSuccess = false,
+                            tests = listOf(
+                                CapabilityTestResult(
+                                    name = "Provider detection",
+                                    command = "detectActive()",
+                                    success = false,
+                                    output = "No root provider detected",
+                                )
+                            ),
                         )
                     }
 
@@ -200,31 +209,61 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
 
                     if (provider == null || !provider.available()) {
                         return@withContext RootTestResult(
-                            success = false,
-                            output = "",
                             providerName = info.displayName,
-                            error = "Provider not available",
+                            overallSuccess = false,
+                            tests = listOf(
+                                CapabilityTestResult(
+                                    name = "Provider availability",
+                                    command = "available()",
+                                    success = false,
+                                    output = "Provider not available",
+                                )
+                            ),
                         )
                     }
 
-                    // Execute `id` via the provider.
-                    val execResult = runCatching {
-                        provider.execute("id")
-                    }.getOrNull()
+                    // Six diagnostic probes — each runs through the active
+                    // root provider so we exercise the same code path that
+                    // real root calls would use.
+                    val probes = listOf(
+                        "id" to "Identity (uid)",
+                        "getenforce" to "SELinux mode",
+                        "uname -r" to "Kernel version",
+                        "ls /data/adb" to "Magisk data dir",
+                        "which su" to "su binary location",
+                        "mount" to "Mount table",
+                    )
 
-                    if (execResult == null || !execResult.success) {
-                        return@withContext RootTestResult(
-                            success = false,
-                            output = execResult?.stdout ?: "",
-                            providerName = provider.displayName,
-                            error = execResult?.stderr ?: "Execution failed",
+                    val tests = probes.map { (cmd, label) ->
+                        val execResult = runCatching { provider.execute(cmd) }.getOrNull()
+                        val success = execResult?.success == true
+                        val rawOutput = (execResult?.stdout ?: "").ifBlank {
+                            execResult?.stderr ?: ""
+                        }.trim()
+                        // Cap output so the UI stays readable.
+                        val output = if (rawOutput.length > 200) {
+                            rawOutput.take(200) + "…"
+                        } else {
+                            rawOutput
+                        }
+                        CapabilityTestResult(
+                            name = label,
+                            command = cmd,
+                            success = success,
+                            output = output,
                         )
                     }
+
+                    // Overall verdict: the `id` probe must succeed AND its
+                    // output must report uid=0 — i.e. we are actually root.
+                    val idProbe = tests.firstOrNull { it.command == "id" }
+                    val overallSuccess = idProbe?.success == true &&
+                        idProbe.output.contains("uid=0")
 
                     RootTestResult(
-                        success = true,
-                        output = execResult.stdout.trim(),
                         providerName = provider.displayName,
+                        overallSuccess = overallSuccess,
+                        tests = tests,
                     )
                 }
 
@@ -234,10 +273,16 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
                     it.copy(
                         rootTesting = false,
                         rootTestResult = RootTestResult(
-                            success = false,
-                            output = "",
                             providerName = "Error",
-                            error = t.message,
+                            overallSuccess = false,
+                            tests = listOf(
+                                CapabilityTestResult(
+                                    name = "Exception",
+                                    command = "testRootCapability()",
+                                    success = false,
+                                    output = t.message ?: "Unknown error",
+                                )
+                            ),
                         )
                     )
                 }
