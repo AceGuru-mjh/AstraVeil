@@ -1,5 +1,7 @@
 package com.astraveil.app.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,14 +24,12 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsInputComponent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +43,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.astraveil.app.BuildConfig
+import com.astraveil.app.ui.design.LiquidGlassNavigationBar
+import com.astraveil.app.ui.design.LiquidNavItem
 import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
@@ -78,25 +80,52 @@ fun AstraVeilApp() {
         )
     }
 
+    // ---- Runtime permission request (Android 13+ notifications) ----
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { /* result ignored — app works without notification permission */ }
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Destinations.Dashboard.route
+
+    // Map the current route to a nav-bar index. Only the 6 primary
+    // destinations appear in the liquid glass nav bar; settings sub-routes
+    // keep the last selection highlighted.
+    val navItems = remember {
+        Destinations.list.map { dest ->
+            LiquidNavItem(label = dest.label, icon = dest.icon)
+        }
+    }
+    val selectedIndex = remember(currentRoute) {
+        Destinations.list.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { AstraTopAppBar() },
         bottomBar = {
-            AstraBottomBar(currentRoute) { route ->
-                navController.navigate(route) {
-                    // Pop back to the start destination, saving state, so the
-                    // back stack stays shallow and tab state is preserved.
-                    popUpTo(navController.graph.findStartDestination().id) {
-                        saveState = true
+            LiquidGlassNavigationBar(
+                items = navItems,
+                selectedIndex = selectedIndex,
+                onItemSelected = { index ->
+                    val route = Destinations.list[index].route
+                    if (route != currentRoute) {
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            }
+                },
+            )
         }
     ) { innerPadding ->
         NavHost(
@@ -205,41 +234,10 @@ private fun AstraTopAppBar() {
     )
 }
 
-@Composable
-private fun AstraBottomBar(
-    currentRoute: String,
-    onNavigate: (String) -> Unit
-) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 0.dp
-    ) {
-        Destinations.list.forEach { destination ->
-            val selected = currentRoute == destination.route
-            NavigationBarItem(
-                selected = selected,
-                onClick = {
-                    if (!selected) onNavigate(destination.route)
-                },
-                icon = {
-                    Icon(
-                        imageVector = if (selected) destination.iconSelected else destination.icon,
-                        contentDescription = destination.label
-                    )
-                },
-                label = { Text(destination.label) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-        }
-    }
-}
+/**
+ * Legacy M3 bottom bar — replaced by [LiquidGlassNavigationBar] above.
+ * Kept for reference; not used in the current render path.
+ */
 
 /**
  * Navigation destinations for AstraUI Phase 0.

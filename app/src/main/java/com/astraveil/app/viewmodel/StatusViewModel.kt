@@ -24,11 +24,17 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
 
     enum class DaemonStatus { OFFLINE, CONNECTING, ONLINE }
 
-    data class RootTestResult(
+    data class CapabilityTestResult(
+        val name: String,
+        val command: String,
         val success: Boolean,
         val output: String,
+    )
+
+    data class RootTestResult(
         val providerName: String,
-        val error: String? = null,
+        val overallSuccess: Boolean,
+        val tests: List<CapabilityTestResult>,
     )
 
     data class AuthorizedApp(

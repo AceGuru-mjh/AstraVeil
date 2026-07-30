@@ -17,11 +17,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -30,49 +30,25 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Liquid Glass surface — the core rendering component.
+ * Liquid Glass surface renderer.
  *
- * Renders 4 optical layers inside a [Box]:
- * ```
- * ┌─────────────────────────────────────────┐
- * │ Layer 3: border glow (inner + outer)    │
- * │ ┌─────────────────────────────────────┐ │
- * │ │ Layer 2: specular highlight         │ │
- * │ │ ┌─────────────────────────────────┐ │ │
- * │ │ │ Layer 1: vertical gradient      │ │ │
- * │ │ │ ┌─────────────────────────────┐ │ │ │
- * │ │ │ │ Layer 0: base tint          │ │ │ │
- * │ │ │ └─────────────────────────────┘ │ │ │
- * │ │ └─────────────────────────────────┘ │ │
- * │ └─────────────────────────────────────┘ │
- * └─────────────────────────────────────────┘
- * ```
- *
- * On press the glass "compresses": tint increases, specular intensifies,
- * and the surface scales down with a spring bounce on release.
- * On API 31+ an optional background blur can be applied via [enableBlur].
- *
- * @param cornerRadius Corner radius in Dp. Defaults to 22dp.
- * @param accent Optional accent tint blended into Layer 0.
- * @param enableBlur Whether to apply background blur on API 31+.
- * @param enableSpecular Whether to render the touch-following specular.
- * @param enablePressEffect Whether to animate press compression.
+ * Draws 4 optical layers. Does NOT use Modifier.blur() — that would
+ * blur the glass's own content. Background blur is a window-level
+ * concern handled at the Activity level on API 31+.
  */
 @Composable
 fun LiquidGlassSurface(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 22.dp,
+    cornerRadius: Dp = 24.dp,
     accent: Color = Color.Transparent,
-    enableBlur: Boolean = true,
     enableSpecular: Boolean = true,
     enablePressEffect: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
 
-    // ---- Interaction state ----
     var pressed by remember { mutableStateOf(false) }
-    var specularCenter by remember { mutableStateOf(Offset(0.5f, 0.3f)) }
+    var specularNorm by remember { mutableStateOf(Offset(0.5f, 0.25f)) }
 
     val scale by animateFloatAsState(
         targetValue = if (pressed && enablePressEffect) LiquidGlass.PressScale else 1f,
@@ -80,83 +56,66 @@ fun LiquidGlassSurface(
             stiffness = LiquidGlass.SpringStiffness,
             dampingRatio = LiquidGlass.SpringDamping,
         ),
-        label = "liquidGlassScale",
+        label = "lgScale",
     )
 
     val tintAlpha by animateFloatAsState(
-        targetValue = if (pressed) 0.12f else 0.06f,
+        targetValue = if (pressed) 0.13f else 0.07f,
         animationSpec = spring(stiffness = 600f, dampingRatio = 0.8f),
-        label = "liquidGlassTint",
+        label = "lgTint",
     )
 
     Box(
         modifier = modifier
             .clip(shape)
-            // ---- Layer 0: base tint ----
+            // Layer 0: base tint
+            .background(Color.White.copy(alpha = tintAlpha), shape)
+            // Layer 1: vertical gradient
             .background(
-                color = Color.White.copy(alpha = tintAlpha),
-                shape = shape,
-            )
-            // ---- Layer 1: vertical gradient (light from above) ----
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        LiquidGlass.GradientTop,
-                        LiquidGlass.GradientBottom,
-                    ),
+                Brush.verticalGradient(
+                    listOf(LiquidGlass.GradientTop, LiquidGlass.GradientBottom),
                 ),
-                shape = shape,
+                shape,
             )
-            // ---- Accent blend ----
+            // Accent blend
             .then(
-                if (accent != Color.Transparent) {
-                    Modifier.background(color = accent, shape = shape)
-                } else {
-                    Modifier
-                }
+                if (accent != Color.Transparent) Modifier.background(accent, shape)
+                else Modifier,
             )
-            // ---- Layer 2 + 3: specular + border (drawn in drawWithContent) ----
+            // Layer 2 + 3: specular + border glow
             .drawWithContent {
                 drawContent()
-
                 if (enableSpecular) {
-                    drawSpecularHighlight(
+                    drawSpecular(
                         center = Offset(
-                            x = specularCenter.x * size.width,
-                            y = specularCenter.y * size.height,
+                            specularNorm.x * size.width,
+                            specularNorm.y * size.height,
                         ),
                         pressed = pressed,
                     )
                 }
-
-                drawBorderGlow(cornerRadius.toPx())
+                drawInnerGlow(cornerRadius.toPx())
             }
-            // ---- Outer border ----
-            .border(
-                width = 1.dp,
-                color = LiquidGlass.BorderOuter,
-                shape = shape,
-            )
-            // ---- Press interaction ----
+            // Outer border
+            .border(1.dp, LiquidGlass.BorderOuter, shape)
+            // Press interaction
             .then(
                 if (enablePressEffect) {
                     Modifier.pointerInput(Unit) {
                         awaitEachGesture {
                             val down = awaitFirstDown()
                             pressed = true
-                            specularCenter = Offset(
-                                x = (down.position.x / size.width).coerceIn(0f, 1f),
-                                y = (down.position.y / size.height).coerceIn(0f, 1f),
+                            specularNorm = Offset(
+                                (down.position.x / size.width).coerceIn(0f, 1f),
+                                (down.position.y / size.height).coerceIn(0f, 1f),
                             )
                             waitForUpOrCancellation()
                             pressed = false
                         }
                     }
-                } else {
-                    Modifier
-                }
+                } else Modifier,
             )
-            // ---- Scale animation ----
+            // Scale
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -166,18 +125,12 @@ fun LiquidGlassSurface(
     }
 }
 
-// ---- Draw helpers ----
-
-private fun DrawScope.drawSpecularHighlight(
-    center: Offset,
-    pressed: Boolean,
-) {
-    val coreColor = if (pressed) LiquidGlass.PressedSpecular else LiquidGlass.SpecularCore
-    val radius = size.minDimension * if (pressed) 0.7f else 0.55f
-
+private fun DrawScope.drawSpecular(center: Offset, pressed: Boolean) {
+    val core = if (pressed) LiquidGlass.SpecularPressed else LiquidGlass.SpecularCore
+    val radius = size.minDimension * if (pressed) 0.75f else 0.55f
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(coreColor, LiquidGlass.SpecularEdge),
+            listOf(core, LiquidGlass.SpecularEdge),
             center = center,
             radius = radius,
         ),
@@ -186,21 +139,17 @@ private fun DrawScope.drawSpecularHighlight(
     )
 }
 
-private fun DrawScope.drawBorderGlow(cornerRadiusPx: Float) {
-    val strokeWidth = 1.5.dp.toPx()
-    val inset = strokeWidth / 2
-
+private fun DrawScope.drawInnerGlow(cornerPx: Float) {
+    val sw = 1.5.dp.toPx()
+    val inset = sw / 2
     drawRoundRect(
         color = LiquidGlass.BorderGlow,
         topLeft = Offset(inset, inset),
-        size = Size(
-            width = size.width - strokeWidth,
-            height = size.height - strokeWidth,
+        size = Size(size.width - sw, size.height - sw),
+        cornerRadius = CornerRadius(
+            (cornerPx - inset).coerceAtLeast(0f),
+            (cornerPx - inset).coerceAtLeast(0f),
         ),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(
-            x = cornerRadiusPx - inset,
-            y = cornerRadiusPx - inset,
-        ),
-        style = Stroke(width = strokeWidth),
+        style = Stroke(width = sw),
     )
 }
