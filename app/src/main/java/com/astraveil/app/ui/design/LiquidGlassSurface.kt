@@ -89,8 +89,6 @@ fun LiquidGlassSurface(
         label = "liquidGlassTint",
     )
 
-    val cornerRadiusPx = cornerRadius.toPx()
-
     Box(
         modifier = modifier
             .clip(shape)
@@ -131,7 +129,7 @@ fun LiquidGlassSurface(
                     )
                 }
 
-                drawBorderGlow(cornerRadiusPx)
+                drawBorderGlow(cornerRadius.toPx())
             }
             // ---- Outer border ----
             .border(
