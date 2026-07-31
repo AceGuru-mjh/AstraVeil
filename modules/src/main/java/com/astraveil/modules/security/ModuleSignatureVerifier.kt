@@ -59,6 +59,14 @@ object ModuleSignatureVerifier {
 
     private fun unsigned() = SignatureVerification(SignatureStatus.UNSIGNED, TrustLevel.UNSIGNED, null, null, "no signature block")
     private fun invalid(reason: String) = SignatureVerification(SignatureStatus.INVALID, TrustLevel.INVALID, null, null, reason)
+
+    /**
+     * Public accessor for the "no signature block" verdict. Used by
+     * [com.astraveil.modules.ModuleManager] as a safe fallback when the
+     * structured verifier throws, so the install record still carries a
+     * well-formed [TrustLevel] (`UNSIGNED`) rather than crashing.
+     */
+    fun unsignedVerification(): SignatureVerification = unsigned()
     private fun fingerprint(certBytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(certBytes).joinToString(":") { "%02x".format(it) }
 
     private data class Manifest(val signer: String?, val files: Map<String, String>)

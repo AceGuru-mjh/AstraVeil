@@ -47,6 +47,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.astraveil.app.BuildConfig
+import com.astraveil.app.hub.AstraHubScreen
 import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
@@ -168,6 +169,9 @@ fun AstraVeilApp() {
             }
             composable("terminal") {
                 TerminalScreen()
+            }
+            composable("astrahub") {
+                AstraHubScreen()
             }
             composable(Destinations.Modules.route) {
                 ModulesScreen()

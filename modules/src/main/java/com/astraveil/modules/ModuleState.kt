@@ -51,11 +51,17 @@ enum class ModuleState {
  * @property installPath        Absolute path the .avm was unpacked into.
  * @property grantedPermissions Permissions the user has approved for this
  *                             module. Subset of [ModuleManifest.permissions].
+ * @property trustLevelName     Name of the [com.astraveil.modules.security.TrustLevel]
+ *                             recorded at install time. Read by
+ *                             [com.astraveil.modules.ModuleRuntime] to drive
+ *                             [com.astraveil.modules.security.NativeModuleLoadPolicy].
+ *                             Defaults to `UNSIGNED` for legacy modules.
  */
 data class AstraModule(
     val id: String,
     val manifest: ModuleManifest,
     val state: ModuleState,
     val installPath: String,
-    val grantedPermissions: Set<String> = emptySet()
+    val grantedPermissions: Set<String> = emptySet(),
+    val trustLevelName: String = "UNSIGNED",
 )

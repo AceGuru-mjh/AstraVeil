@@ -46,8 +46,12 @@ class SecurityManager(
      * This is a 44-byte DER-encoded SubjectPublicKeyInfo. When Ed25519
      * is unavailable on the runtime JDK (API < 33), [verifySignature]
      * falls back to `false` with a logged warning.
+     *
+     * Exposed publicly so [com.astraveil.modules.security.ModuleSignatureVerifier]
+     * can compare a module's embedded certificate against the same
+     * pinned release key when computing its [com.astraveil.modules.security.TrustLevel].
      */
-    private val pinnedPublicKeyB64: String =
+    val pinnedPublicKeyB64: String =
         "MCowBQYDK2VwAyEAGb1ECM5g7Y2xwY2m3a9Q1zKQ8v5nR2tL6hJf0sY="
 
     /**

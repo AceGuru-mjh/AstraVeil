@@ -229,10 +229,15 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Test root capability by running a battery of diagnostic probes
      * (`id`, `getenforce`, `uname -r`, `ls /data/adb`, `which su`, `mount`)
-     * through the active root provider. Each probe is recorded as a
-     * [CapabilityTestResult]; the overall verdict is driven by the canonical
-     * `id` probe — root is "verified" only when `id` runs successfully AND
-     * returns `uid=0`.
+     * through a [com.astraveil.app.execution.TrustedInteractiveSession] opened
+     * against the active root provider with source [SessionSource.ROOT_TEST].
+     *
+     * P1-12: the six probes are interactive privileged commands and MUST
+     * go through the same gated + audited path as the Terminal — they
+     * are NOT module execution and must not bypass the audit trail. The
+     * session is opened, approved programmatically (the user already
+     * tapped "Test Root" — that is the explicit approval gesture), used
+     * to run every probe, and closed immediately afterwards.
      */
     fun testRootCapability() {
         viewModelScope.launch {
@@ -276,49 +281,67 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
                         )
                     }
 
-                    // Six diagnostic probes — each runs through the active
-                    // root provider so we exercise the same code path that
-                    // real root calls would use.
-                    val probes = listOf(
-                        "id" to "Identity (uid)",
-                        "getenforce" to "SELinux mode",
-                        "uname -r" to "Kernel version",
-                        "ls /data/adb" to "Magisk data dir",
-                        "which su" to "su binary location",
-                        "mount" to "Mount table",
+                    // Open an audited interactive session for the test probes.
+                    // The "Test Root" button is the user's explicit approval
+                    // gesture; we record APPROVED in the audit log and close
+                    // the session when the probes finish.
+                    val auditLogger = com.astraveil.core.execution.CommandAuditLogger(
+                        getApplication()
                     )
+                    val session = com.astraveil.app.execution.TrustedInteractiveSession(
+                        provider = provider,
+                        auditLogger = auditLogger,
+                        source = com.astraveil.core.execution.SessionSource.ROOT_TEST,
+                    )
+                    session.approve()
 
-                    val tests = probes.map { (cmd, label) ->
-                        val execResult = runCatching { provider.execute(cmd) }.getOrNull()
-                        val success = execResult?.success == true
-                        val rawOutput = (execResult?.stdout ?: "").ifBlank {
-                            execResult?.stderr ?: ""
-                        }.trim()
-                        // Cap output so the UI stays readable.
-                        val output = if (rawOutput.length > 200) {
-                            rawOutput.take(200) + "…"
-                        } else {
-                            rawOutput
-                        }
-                        CapabilityTestResult(
-                            name = label,
-                            command = cmd,
-                            success = success,
-                            output = output,
+                    try {
+                        // Six diagnostic probes — each runs through the
+                        // audited session so we exercise the same code path
+                        // that real root calls would use.
+                        val probes = listOf(
+                            "id" to "Identity (uid)",
+                            "getenforce" to "SELinux mode",
+                            "uname -r" to "Kernel version",
+                            "ls /data/adb" to "Magisk data dir",
+                            "which su" to "su binary location",
+                            "mount" to "Mount table",
                         )
+
+                        val tests = probes.map { (cmd, label) ->
+                            val execResult = runCatching { session.execute(cmd) }.getOrNull()
+                            val success = execResult?.success == true
+                            val rawOutput = (execResult?.stdout ?: "").ifBlank {
+                                execResult?.stderr ?: ""
+                            }.trim()
+                            // Cap output so the UI stays readable.
+                            val output = if (rawOutput.length > 200) {
+                                rawOutput.take(200) + "…"
+                            } else {
+                                rawOutput
+                            }
+                            CapabilityTestResult(
+                                name = label,
+                                command = cmd,
+                                success = success,
+                                output = output,
+                            )
+                        }
+
+                        // Overall verdict: the `id` probe must succeed AND its
+                        // output must report uid=0 — i.e. we are actually root.
+                        val idProbe = tests.firstOrNull { it.command == "id" }
+                        val overallSuccess = idProbe?.success == true &&
+                            idProbe.output.contains("uid=0")
+
+                        RootTestResult(
+                            providerName = provider.displayName,
+                            overallSuccess = overallSuccess,
+                            tests = tests,
+                        )
+                    } finally {
+                        session.close()
                     }
-
-                    // Overall verdict: the `id` probe must succeed AND its
-                    // output must report uid=0 — i.e. we are actually root.
-                    val idProbe = tests.firstOrNull { it.command == "id" }
-                    val overallSuccess = idProbe?.success == true &&
-                        idProbe.output.contains("uid=0")
-
-                    RootTestResult(
-                        providerName = provider.displayName,
-                        overallSuccess = overallSuccess,
-                        tests = tests,
-                    )
                 }
 
                 _uiState.update { it.copy(rootTesting = false, rootTestResult = result) }

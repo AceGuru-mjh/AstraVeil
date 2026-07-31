@@ -17,13 +17,32 @@ plugins {
 android {
     namespace = "com.astraveil.core"
 
-    compileSdk = 35
+    compileSdk = providers.gradleProperty("astraveil.compileSdk").orNull?.toIntOrNull() ?: 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = providers.gradleProperty("astraveil.minSdk").orNull?.toIntOrNull() ?: 26
         // Instrumented tests live in :app; the core module ships only JVM tests.
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        // Single source of truth: the version is read from gradle.properties
+        // and exposed to Kotlin via BuildConfig so [com.astraveil.core.version.Version]
+        // can derive NAME/CODE without hardcoding (which caused the earlier
+        // 1.2.1 / 1.0.0 / 0.1.0-alpha drift).
+        buildConfigField(
+            "String",
+            "ASTRAVEIL_VERSION",
+            "\"${providers.gradleProperty("astraveil.version").orNull ?: "0.0.0"}\""
+        )
+        buildConfigField(
+            "int",
+            "ASTRAVEIL_VERSION_CODE",
+            providers.gradleProperty("astraveil.versionCode").orNull ?: "1"
+        )
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

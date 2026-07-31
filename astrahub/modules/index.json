@@ -1,23 +1,40 @@
 {
-  "schema": 1,
-  "updated": "2026-07-26",
-  "categories": [
-    "system-tools",
-    "customization",
-    "performance",
-    "security"
-  ],
+  "schemaVersion": 1,
+  "updatedAt": "2026-07-31T00:00:00Z",
   "modules": [
     {
-      "id": "example.tool",
-      "name": "Example Tool",
-      "version": "1.0",
-      "author": "developer",
-      "category": "system-tools",
-      "permissions": ["ROOT_ACCESS"],
-      "security_score": 30,
-      "risk_level": "MEDIUM",
-      "description": "Reference AVM module demonstrating the SDK surface."
+      "id": "com.astraveil.fontmod",
+      "name": "Font Replacer",
+      "version": "1.2.0",
+      "apiVersion": 3,
+      "author": "AstraVeil Team",
+      "description": "Systemless font replacement via overlayfs.",
+      "requiredCapabilities": ["overlayfs", "mount_namespace"],
+      "optionalCapabilities": [],
+      "trustLevel": "OFFICIAL",
+      "signatureFingerprint": "ab:cd:ef:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff",
+      "downloadUrl": "https://github.com/AceGuru-mjh/AstraVeil/releases/download/hub/fontmod-1.2.0.avm",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sizeBytes": 184320,
+      "publishedAt": "2026-07-30T12:00:00Z",
+      "minAstraVeilVersion": "1.1.0"
+    },
+    {
+      "id": "com.astraveil.builtin.diags",
+      "name": "Diagnostics Probe",
+      "version": "0.9.0",
+      "apiVersion": 3,
+      "author": "AstraVeil Team",
+      "description": "Built-in diagnostic probes. Reference AVM module.",
+      "requiredCapabilities": [],
+      "optionalCapabilities": [],
+      "trustLevel": "OFFICIAL",
+      "signatureFingerprint": "ab:cd:ef:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff",
+      "downloadUrl": "https://github.com/AceGuru-mjh/AstraVeil/releases/download/hub/diags-0.9.0.avm",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sizeBytes": 65536,
+      "publishedAt": "2026-07-29T10:00:00Z",
+      "minAstraVeilVersion": "1.1.0"
     }
   ]
 }

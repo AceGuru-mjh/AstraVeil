@@ -73,12 +73,25 @@ fun TerminalScreen(
     val isRunning by viewModel.isRunning.collectAsStateWithLifecycle()
     val mode by viewModel.mode.collectAsStateWithLifecycle()
     val providerName by viewModel.providerName.collectAsStateWithLifecycle()
+    val needsApproval by viewModel.needsApproval.collectAsStateWithLifecycle()
+    val sessionApproved by viewModel.sessionApproved.collectAsStateWithLifecycle()
 
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
     LaunchedEffect(lines.size) {
         if (lines.isNotEmpty()) { listState.animateScrollToItem(lines.size - 1) }
+    }
+
+    // P1-12: strong acknowledgment gate before any privileged command
+    // can run. Surfaced the moment the user tries a ROOT/ADB command
+    // without an approved session.
+    if (needsApproval) {
+        TerminalApprovalDialog(
+            backendName = providerName ?: "the active root backend",
+            onApproved = { viewModel.beginSession() },
+            onDismiss = { viewModel.cancelApproval() },
+        )
     }
 
     Column(
@@ -96,7 +109,11 @@ fun TerminalScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text("Superuser Terminal",
                     style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(providerName?.let { "backend: $it" } ?: "no root backend",
+                val subtitle = buildString {
+                    append(providerName?.let { "backend: $it" } ?: "no root backend")
+                    if (sessionApproved) append(" · audited session")
+                }
+                Text(subtitle,
                     style = MaterialTheme.typography.labelSmall, color = AstraOnSurfaceMuted)
             }
 
