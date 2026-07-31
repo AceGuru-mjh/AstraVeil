@@ -164,7 +164,7 @@ fun AstraVeilApp() {
                 ProviderScreen(viewModel = viewModel)
             }
             composable(Destinations.Superuser.route) {
-                SuperuserScreen()
+                SuperuserScreen(navController = navController)
             }
             composable("terminal") {
                 TerminalScreen()
