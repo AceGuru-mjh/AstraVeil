@@ -35,9 +35,9 @@ class RuntimeRepository(
         val online = info != null && info.detected
         return RuntimeStatus(
             daemonOnline = online,
-            latencyMs = if (online) 8 else 0, // TODO: real heartbeat when IPC wired
-            daemonVersion = "0.1.0",
-            pid = if (online) 0 else 0, // TODO: real PID from daemon
+            latencyMs = 0, // TODO: real heartbeat
+            daemonVersion = "—",
+            pid = -1, // TODO: real PID
         )
     }
 

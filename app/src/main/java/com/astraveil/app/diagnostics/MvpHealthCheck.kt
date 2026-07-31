@@ -24,7 +24,7 @@ class MvpHealthCheck(
         }
 
         SystemHealthStatus(
-            daemonOnline = true,
+            daemonOnline = available,
             provider = info?.displayName ?: "none",
             rootAvailable = available,
             capabilities = caps,

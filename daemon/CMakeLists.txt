@@ -123,3 +123,15 @@ endif()
 # future protobuf migration lives in `proto/astra.proto` (authored by another
 # task). When that lands, link `libprotobuf-lite` here and switch the handler
 # in `main.cpp` to decode `astra.Request` instead of the manual framing.
+
+# PR-F: daemon tests
+option(ASTRA_BUILD_TESTS "Build daemon unit tests" ON)
+if(ASTRA_BUILD_TESTS)
+    enable_testing()
+    add_executable(test_peer_auth tests/test_peer_auth.cpp)
+    target_include_directories(test_peer_auth PRIVATE include)
+    add_test(NAME peer_auth COMMAND test_peer_auth)
+
+    add_executable(test_frame_codec tests/test_frame_codec.cpp)
+    add_test(NAME frame_codec COMMAND test_frame_codec)
+endif()
