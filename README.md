@@ -9,7 +9,7 @@ layer that abstracts root backends (Magisk / KernelSU / APatch / AstraRoot)
 behind a capability matrix, a Rust security policy, and isolated module
 execution.
 
-`v3.0` · Architecture Refactor
+`v1.5.0` · Alpha — P0/P1 security hardening + AstraHub
 
 </div>
 

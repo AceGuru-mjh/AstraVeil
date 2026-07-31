@@ -81,6 +81,22 @@ object ProviderRegistry {
     /** Return every registered provider (detection is NOT triggered). */
     fun all(): List<RootProvider> = providers
 
+    /**
+     * Return the currently-active [RootProvider] instance, or `null` if
+     * no backend has been (or can be) detected.
+     *
+     * This is the v3 entry point used by [com.astraveil.core.execution.InteractiveSessionFactory]
+     * and other call-sites that need the provider *instance* (rather
+     * than the [RootInfo] snapshot returned by [detectActive]).
+     *
+     * Triggers detection on first use; subsequent calls return the
+     * cached active provider until [invalidate] is called.
+     */
+    suspend fun activeProvider(): RootProvider? {
+        val info = cachedActive ?: detectActive() ?: return null
+        return byId(info.providerName)
+    }
+
     /** Look up a provider by its [RootProvider.id], or `null` if unknown. */
     fun byId(id: String): RootProvider? = providers.firstOrNull { it.id == id }
 

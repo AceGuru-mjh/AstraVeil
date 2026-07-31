@@ -87,6 +87,29 @@ class ModuleRuntime(
                 return@withLock false
             }
 
+            // ── P0-4 interim mitigation ──────────────────────────────────
+            // Until the isolated ModuleRunner (daemon fork + dlopen) lands,
+            // refuse to load third-party / developer-signed / unsigned
+            // native code INTO the app process. Only built-in or
+            // officially-signed native modules may load in-process.
+            // Everything else must wait for Phase 1 isolation.
+            val trustLevel = runCatching {
+                com.astraveil.modules.security.TrustLevel.valueOf(module.trustLevelName)
+            }.getOrDefault(com.astraveil.modules.security.TrustLevel.UNSIGNED)
+            val loadDecision = com.astraveil.modules.security.NativeModuleLoadPolicy.decide(
+                moduleId = module.id,
+                hasNativeLib = soFile.exists(),
+                trustLevel = trustLevel,
+            )
+            if (loadDecision == com.astraveil.modules.security.NativeModuleLoadPolicy.Decision.REQUIRE_ISOLATION) {
+                AstraLogger.e(
+                    TAG,
+                    com.astraveil.modules.security.NativeModuleLoadPolicy.refusalReason(module.id, trustLevel),
+                    null,
+                )
+                return@withLock false
+            }
+
             // 3. System.load — triggers JNI_OnLoad if the .so defines it.
             //    This is the primary entry path: modules self-register via
             //    RegisterNatives inside JNI_OnLoad.

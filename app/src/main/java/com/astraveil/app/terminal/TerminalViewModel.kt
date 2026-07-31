@@ -4,6 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.astraveil.app.adb.AdbManager
+import com.astraveil.app.execution.InteractiveSessionFactory
+import com.astraveil.app.execution.TrustedInteractiveSession
+import com.astraveil.core.execution.CommandAuditLogger
+import com.astraveil.core.execution.SessionSource
 import com.astraveil.core.logger.AstraLogger
 import com.astraveil.providers.ProviderRegistry
 import kotlinx.coroutines.Dispatchers
@@ -53,8 +57,28 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
     private val _providerName = MutableStateFlow<String?>(null)
     val providerName: StateFlow<String?> = _providerName.asStateFlow()
 
+    /**
+     * `true` once the user has acknowledged the privileged-session dialog
+     * (or when no root backend is present and we fall back to the local
+     * app-UID shell, which needs no privileged approval).
+     */
+    private val _sessionApproved = MutableStateFlow(false)
+    val sessionApproved: StateFlow<Boolean> = _sessionApproved.asStateFlow()
+
+    /** `true` while a privileged session is open and the approval dialog should show. */
+    private val _needsApproval = MutableStateFlow(false)
+    val needsApproval: StateFlow<Boolean> = _needsApproval.asStateFlow()
+
     private val history = mutableListOf<String>()
     private var historyCursor = -1
+
+    // ---- TrustedInteractiveSession plumbing (P1-12) ----
+    private val auditLogger = CommandAuditLogger(app)
+    private val sessionFactory = InteractiveSessionFactory(auditLogger)
+
+    // Current privileged session; null when no root backend is present
+    // or the user has not yet opened a privileged session.
+    private var session: TrustedInteractiveSession? = null
 
     init {
         addLine(TerminalLine(LineType.INFO, "AstraVeil Terminal v1.2.0"))
@@ -95,6 +119,65 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         return history[historyCursor]
     }
 
+    /**
+     * Request a privileged session. Opens an unapproved
+     * [TrustedInteractiveSession] against the active root backend (if any)
+     * and asks the UI to show the approval dialog. When no root backend
+     * is present, falls back to the local app-UID shell — no privileged
+     * approval is required in that case.
+     */
+    fun requestPrivilegedSession() {
+        if (_sessionApproved.value) return
+        viewModelScope.launch {
+            val s = withContext(Dispatchers.IO) {
+                runCatching { sessionFactory.open(SessionSource.TERMINAL) }.getOrNull()
+            }
+            if (s == null) {
+                addLine(TerminalLine(LineType.INFO,
+                    "No root backend — terminal runs in app-UID shell only."))
+                session = null
+                _sessionApproved.value = true
+                _needsApproval.value = false
+                return@launch
+            }
+            session = s
+            _needsApproval.value = true
+        }
+    }
+
+    /** UI calls this after the user acknowledges [TerminalApprovalDialog]. */
+    fun beginSession() {
+        val s = session ?: run {
+            _needsApproval.value = false
+            _sessionApproved.value = true
+            return
+        }
+        s.approve()
+        _needsApproval.value = false
+        _sessionApproved.value = true
+        addLine(TerminalLine(LineType.INFO,
+            "Privileged session started (backend=${s.let { "root" }}). " +
+                "All commands are audited."))
+    }
+
+    /** Cancel the approval dialog without starting a privileged session. */
+    fun cancelApproval() {
+        _needsApproval.value = false
+        session?.close()
+        session = null
+        // Force SHELL mode so the user is not stranded on a ROOT prompt
+        // that cannot execute anything.
+        _mode.value = TerminalMode.SHELL
+        addLine(TerminalLine(LineType.INFO,
+            "Privileged session not approved — switched to SHELL mode."))
+    }
+
+    fun endSession() {
+        session?.close()
+        session = null
+        _sessionApproved.value = false
+    }
+
     fun executeCommand(raw: String) {
         val command = raw.trim()
         if (command.isBlank() || _isRunning.value) return
@@ -106,7 +189,21 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
 
         when (command.lowercase()) {
             "clear" -> { clear(); return }
-            "exit" -> { addLine(TerminalLine(LineType.INFO, "Session closed.")); return }
+            "exit" -> {
+                endSession()
+                addLine(TerminalLine(LineType.INFO, "Session closed."))
+                return
+            }
+        }
+
+        // Privileged modes require an approved session. If the user has
+        // not yet approved, surface the dialog instead of executing.
+        val privileged = currentMode == TerminalMode.ROOT || currentMode == TerminalMode.ADB
+        if (privileged && !_sessionApproved.value) {
+            requestPrivilegedSession()
+            addLine(TerminalLine(LineType.INFO,
+                "Privileged session required — approve to continue."))
+            return
         }
 
         viewModelScope.launch {
@@ -114,7 +211,7 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val result = withContext(Dispatchers.IO) {
                     when (currentMode) {
-                        TerminalMode.ROOT -> runAsRoot(command)
+                        TerminalMode.ROOT -> runPrivileged(command)
                         TerminalMode.ADB -> runAsAdbShell(command)
                         TerminalMode.SHELL -> runLocal(command)
                     }
@@ -129,37 +226,44 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private suspend fun runAsRoot(command: String): TerminalResult {
-        val info = runCatching { ProviderRegistry.detectActive() }.getOrNull()
-        val provider = info?.let { ProviderRegistry.byId(it.providerName) }
-        if (provider == null || !runCatching { provider.available() }.getOrDefault(false)) {
+    /**
+     * ROOT mode goes through the [TrustedInteractiveSession] — this is
+     * the gated, audited path. Refuses if the session is not approved.
+     */
+    private suspend fun runPrivileged(command: String): TerminalResult {
+        val s = session
+        if (s == null || !s.isApproved()) {
             return TerminalResult(false, "",
-                "no root backend — switch to SHELL mode or install Magisk/KernelSU/APatch")
+                "Privileged session not approved. Tap a ROOT command to request one.")
         }
-        val r = runCatching { provider.execute(command) }.getOrNull()
+        val r = runCatching { s.execute(command) }.getOrNull()
             ?: return TerminalResult(false, "", "provider execution failed")
         return TerminalResult(r.success, r.stdout, r.stderr)
     }
 
+    /**
+     * ADB mode wraps the user command in `su 2000 sh -c` (uid 2000 =
+     * Android's adb shell uid) and runs the wrapped command through the
+     * same [TrustedInteractiveSession] so it is still gated + audited.
+     */
     private suspend fun runAsAdbShell(command: String): TerminalResult {
-        val info = runCatching { ProviderRegistry.detectActive() }.getOrNull()
-        val provider = info?.let { ProviderRegistry.byId(it.providerName) }
-        val hasRoot = provider != null && runCatching { provider.available() }.getOrDefault(false)
-
-        if (hasRoot && provider != null) {
-            val adbCommand = AdbManager.buildAdbShellCommand(command, hasRoot = true)
-            val r = runCatching { provider.execute(adbCommand) }.getOrNull()
-                ?: return TerminalResult(false, "", "provider execution failed")
-            return TerminalResult(r.success, r.stdout, r.stderr)
+        val s = session
+        if (s == null || !s.isApproved()) {
+            return TerminalResult(false, "",
+                "Privileged session not approved. Tap an ADB command to request one.")
         }
-
-        val result = runLocal(command)
-        return result.copy(
-            stderr = result.stderr + "\n(note: no root — running as app UID, " +
-                "not uid 2000. Not a true adb shell.)",
-        )
+        val adbCommand = AdbManager.buildAdbShellCommand(command, hasRoot = true)
+        val r = runCatching { s.execute(adbCommand) }.getOrNull()
+            ?: return TerminalResult(false, "", "provider execution failed")
+        return TerminalResult(r.success, r.stdout, r.stderr)
     }
 
+    /**
+     * SHELL mode is a plain app-UID `sh -c` — NOT privileged, so it does
+     * NOT go through the [TrustedInteractiveSession] and is NOT audited
+     * as a privileged command. It is the safe fallback when no root is
+     * present or the user declined the privileged session.
+     */
     private fun runLocal(command: String): TerminalResult {
         return try {
             val process = ProcessBuilder("sh", "-c", command).redirectErrorStream(false).start()
@@ -187,5 +291,10 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun addLine(line: TerminalLine) {
         _lines.update { current -> (current + line).takeLast(MAX_LINES) }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        session?.close()
     }
 }

@@ -96,5 +96,13 @@ data class ProviderExecResult(
     val exitCode: Int,
     val stdout: String,
     val stderr: String,
-    val success: Boolean
+    val success: Boolean,
+    /**
+     * `true` when the execution was aborted because it exceeded the
+     * provider's timeout. Defaults to `false` for every v2 provider
+     * that does not yet implement per-call timeouts; surfaced in the
+     * [com.astraveil.core.execution.CommandAuditEntry] audit trail so
+     * interactive sessions can record it without an API change later.
+     */
+    val timedOut: Boolean = false,
 )

@@ -7,7 +7,10 @@ import com.astraveil.core.event.ModuleUninstalledEvent
 import com.astraveil.modules.registry.ModuleRecord
 import com.astraveil.modules.registry.ModuleRegistry
 import com.astraveil.modules.registry.SignatureStatus
+import com.astraveil.modules.security.DeveloperKeyStore
+import com.astraveil.modules.security.ModuleSignatureVerifier
 import com.astraveil.modules.security.TrustGate
+import com.astraveil.modules.security.TrustLevel
 import com.astraveil.providers.ProviderRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -74,6 +77,19 @@ class ModuleManager(
     private val registry = ModuleRegistry(modulesRoot)
     private val persistentMeta = mutableMapOf<String, ModuleRecord>()
 
+    // P0-4: the user's trusted-developer key store. Read on every install
+    // so newly-trusted keys take effect without a restart. Sourced from
+    // the same on-disk file that DeveloperKeyStore maintains.
+    private val developerKeyStore = DeveloperKeyStore(context)
+
+    /** Pinned release key — same one [verifySignature] checks against. */
+    private val officialPublicKeyB64: String
+        get() = runCatching { core.security.pinnedPublicKeyB64 }.getOrDefault("")
+
+    /** Live snapshot of developer keys the user has chosen to trust. */
+    private val trustedDeveloperKeys: Set<String>
+        get() = runCatching { developerKeyStore.trustedKeySet() }.getOrDefault(emptySet())
+
     init {
         for ((id, record) in registry.load()) {
             val manifestFile = File(record.installPath, "module.json")
@@ -87,6 +103,7 @@ class ModuleManager(
                 id = id, manifest = manifest, state = state,
                 installPath = record.installPath,
                 grantedPermissions = record.grantedPermissions,
+                trustLevelName = record.trustLevel,
             )
             persistentMeta[id] = record
         }
@@ -130,8 +147,23 @@ class ModuleManager(
                 "unsafe module id (must match ${MODULE_ID_REGEX.pattern}): '$moduleId'"
             }
 
-            // Trust Gate (P1-9): mandatory, cannot be bypassed
+            // Trust Gate (P1-9): mandatory, cannot be bypassed.
+            //
+            // P0-4: we ALSO compute the structured SignatureVerification
+            // (Ed25519 + trust chain) so the install record carries a
+            // trust level that NativeModuleLoadPolicy can act on later.
             val signatureStatus = verifySignature(avmFile)
+            val verification = runCatching {
+                ModuleSignatureVerifier.verify(
+                    avmFile = avmFile,
+                    officialPublicKeyB64 = officialPublicKeyB64,
+                    trustedKeys = trustedDeveloperKeys,
+                )
+            }.getOrNull() ?: ModuleSignatureVerifier.unsignedVerification()
+            // The structured trust level wins when the legacy verify()
+            // agrees; if they disagree, prefer the stricter (lower) verdict
+            // so we never accidentally treat an invalid signature as trusted.
+            val effectiveTrustLevel = resolveTrustLevel(signatureStatus, verification.trustLevel)
             val trustReport = TrustGate.evaluate(
                 stagedFile = avmFile,
                 manifestValid = true,
@@ -227,14 +259,17 @@ class ModuleManager(
                 modules[moduleId] = module
 
                 val now = System.currentTimeMillis()
+                val moduleWithTrust = module.copy(trustLevelName = effectiveTrustLevel.name)
+                modules[moduleId] = moduleWithTrust
                 persistentMeta[moduleId] = ModuleRecord(
                     id = moduleId, version = manifest.version,
-                    apiVersion = manifest.api, installPath = module.installPath,
-                    state = module.state.name, sourceHash = sourceHash,
+                    apiVersion = manifest.api, installPath = moduleWithTrust.installPath,
+                    state = moduleWithTrust.state.name, sourceHash = sourceHash,
                     signatureStatus = signatureStatus,
                     installSource = avmFile.absolutePath,
-                    grantedPermissions = module.grantedPermissions,
+                    grantedPermissions = moduleWithTrust.grantedPermissions,
                     installTime = now, lastUpdateTime = now,
+                    trustLevel = effectiveTrustLevel.name,
                 )
                 registry.save(snapshotRecords())
 
@@ -350,8 +385,31 @@ class ModuleManager(
                 grantedPermissions = module.grantedPermissions,
                 installTime = meta?.installTime ?: System.currentTimeMillis(),
                 lastUpdateTime = System.currentTimeMillis(),
+                trustLevel = module.trustLevelName,
             )
         }
+    }
+
+    /**
+     * Resolve the final [TrustLevel] from the legacy [SignatureStatus]
+     * (hash of `module.json` vs the pinned release key) and the
+     * structured [ModuleSignatureVerifier] verdict (Ed25519 + trust
+     * chain). When the two disagree we pick the stricter verdict so a
+     * malformed signature can never be elevated to a trusted level.
+     */
+    private fun resolveTrustLevel(
+        legacy: SignatureStatus,
+        structured: TrustLevel,
+    ): TrustLevel = when {
+        legacy == SignatureStatus.INVALID || structured == TrustLevel.INVALID ->
+            TrustLevel.INVALID
+        legacy == SignatureStatus.VERIFIED && structured == TrustLevel.OFFICIAL ->
+            TrustLevel.OFFICIAL
+        legacy == SignatureStatus.VERIFIED && structured == TrustLevel.TRUSTED_DEVELOPER ->
+            TrustLevel.TRUSTED_DEVELOPER
+        legacy == SignatureStatus.VERIFIED -> TrustLevel.UNKNOWN_DEVELOPER
+        legacy == SignatureStatus.UNSIGNED -> TrustLevel.UNSIGNED
+        else -> TrustLevel.UNSIGNED
     }
 
     /**
