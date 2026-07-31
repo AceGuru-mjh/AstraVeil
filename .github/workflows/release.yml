@@ -31,9 +31,11 @@ jobs:
 
       - name: Generate SHA-256 checksum
         run: |
-          cd app/build/outputs/apk/release
-          sha256sum app-release.apk > app-release.apk.sha256
-          cat app-release.apk.sha256
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -z "$APK_PATH" ]; then echo "No APK found"; exit 1; fi
+          echo "APK found: $APK_PATH"
+          sha256sum "$APK_PATH" > "$APK_PATH.sha256"
+          cat "$APK_PATH.sha256"
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
@@ -47,6 +49,6 @@ jobs:
           name: AstraVeil ${{ github.ref_name }}
           body_path: release/release_notes.md
           files: |
-            app/build/outputs/apk/release/app-release.apk
-            app/build/outputs/apk/release/app-release.apk.sha256
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.apk.sha256
           prerelease: false
