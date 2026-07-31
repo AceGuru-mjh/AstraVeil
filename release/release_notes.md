@@ -1,27 +1,31 @@
-# AstraVeil v1.3.1 — Release Notes
+# AstraVeil v1.4.0 — Release Notes
 
 ## Overview
 
-Critical security fixes: IPC authentication, Rust policy fail-closed, Zip Slip protection, update chain hardening.
+Security hardening complete: module registry persistence, trust gate, data provenance, CI verification.
 
-## What's new in v1.3.1
+## What's new in v1.4.0
 
-### P0-1: IPC Authentication (Local Privilege Escalation fix)
-- Socket permissions tightened: 0666 → 0660 (owner+group only)
-- SO_PEERCRED authentication on every connection (uid whitelist: root, system, shell, app UIDs)
-- Read timeout (10s poll) to prevent slowloris attacks
+### PR-C: Module Registry + Trust Gate
+- **ModuleRegistry**: persists module list to `.registry.json` (survives app restart)
+- **TrustGate**: mandatory trust verification — `requireInstallable()` throws if hash missing, manifest invalid, or signature unverified
 
-### P0-2: Rust Policy Fail-Closed
-- Weak fallback changed from Allow (0) to Deny (1)
-- New `policy_is_available()` marker symbol: PolicyBridge denies all if Rust not linked
-- Eliminates the local privilege escalation chain (0666 socket + fail-open policy)
+### PR-E: Data Provenance
+- **DataProvenance enum**: PROBED/DETECTED/ADVERTISED/INFERRED/UNAVAILABLE
+- **ProvenancedValue<T>**: every data point carries its source
+- Removed hardcoded `latencyMs=8`, `pid=0`, `daemonVersion="0.1.0"`, `daemonOnline=true`
 
-### P0-3: AVM Unpack Hardening
-- Zip Slip: canonical path validation on every entry
-- Zip bomb: max 1024 entries, 50MB single file, 200MB total, 100:1 compression ratio
-- Module ID regex validation (prevent path injection)
+### PR-F: CI Verification
+- **Daemon tests**: peer UID whitelist (12 assertions), frame codec round-trip (5 cases)
+- **Secret scan**: `check_no_secrets.sh` blocks keystore files and hardcoded passwords
+- **Android CI**: now runs `testDebugUnitTest` + `lintDebug`
+- **Native CI**: now runs `ctest`
+- **Keystore untracked**: removed from git
 
-### PR-D: Update Chain Security
-- `REQUEST_INSTALL_PACKAGES` permission declared
-- `FileProvider` configured for secure APK install
-- Release workflow now generates and uploads SHA-256 checksum
+## Security audit PRs A-F summary
+- PR-A: IPC auth (0660 + SO_PEERCRED) + Rust fail-closed
+- PR-B: Zip Slip + zip bomb + ID regex
+- PR-C: Registry persistence + trust gate
+- PR-D: REQUEST_INSTALL_PACKAGES + FileProvider + SHA-256 checksum
+- PR-E: Data provenance (remove hardcoded values)
+- PR-F: CI verification (tests + lint + ctest + secret scan)
