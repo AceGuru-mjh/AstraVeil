@@ -1,23 +1,15 @@
-# AstraVeil v1.0.2 — Release Notes
+# AstraVeil v1.0.3 — Release Notes
 
 ## Overview
 
-UI reverted to standard Material 3. Replaced all Liquid Glass custom
-rendering with plain M3 Card + NavigationBar for reliability and
-clarity.
+Patch release: replaced hardcoded app list with real PackageManager query.
 
-## What's new in v1.0.2
+## What's new in v1.0.3
 
-- **Standard M3 Navigation Bar** — Replaced custom Liquid Glass nav bar
-  with Material 3 NavigationBar (surface color + tonal elevation).
-  Automatically handles system insets. Selected item uses primary color.
-- **AstraCard** — New M3 Card wrapper replacing GlassCard/LiquidGlassCard.
-  Plain surfaceVariant background + 1dp elevation. No blur, no specular,
-  no custom rendering.
-- **Removed FLAG_BLUR_BEHIND** — No longer needed without Liquid Glass.
-- **All screens migrated** — Dashboard, Provider, Superuser, Diagnostics,
-  About, Settings, Updates, Modules, SecurityReviewDialog, SuRequestDialog
-  all use AstraCard and M3 color tokens.
+- **Real App List** — Superuser screen now shows actual installed user apps
+  from PackageManager (was hardcoded: Termux, ADB Shell, Magisk, etc.).
+  Uses ApplicationInfoFlags.of on API 33+, deprecated overload below.
+  Su grants checked via PermissionEngine.
 
 ## Full feature set
 
