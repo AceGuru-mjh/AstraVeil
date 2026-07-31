@@ -1,29 +1,27 @@
-# AstraVeil v1.3.0 — Release Notes
+# AstraVeil v1.3.1 — Release Notes
 
 ## Overview
 
-Major UI overhaul: Dashboard and Superuser screens completely rewritten.
+Critical security fixes: IPC authentication, Rust policy fail-closed, Zip Slip protection, update chain hardening.
 
-## What's new in v1.3.0
+## What's new in v1.3.1
 
-### Dashboard
-- **Device header** — Shows manufacturer, model, Android version, API level
-- **Quick actions** — Terminal / Superuser / Modules / Settings buttons
-- **Daemon status** — Real-time AstraDaemon connection indicator
-- **Grouped capabilities** — Human-readable labels, organized by category
-- **Refresh button** — Re-probe device capabilities on demand
-- **Root test** — Disabled when no provider, shows 6 probe results
+### P0-1: IPC Authentication (Local Privilege Escalation fix)
+- Socket permissions tightened: 0666 → 0660 (owner+group only)
+- SO_PEERCRED authentication on every connection (uid whitelist: root, system, shell, app UIDs)
+- Read timeout (10s poll) to prevent slowloris attacks
 
-### Superuser
-- **App picker** — Add su policy for any installed app
-- **Search/filter** — Find policies by package name or UID
-- **App icons** — Real icons from PackageManager
-- **Logging/notification toggles** — Control Magisk DB fields per app
-- **Su usage stats** — "used N×" aggregated from logs
-- **ADB Shell entry** — uid 2000 special policy card
-- **Refresh button** — Reload policies and logs
-- **Terminal + ADB console** — Actually visible in UI (were imported but not rendered)
+### P0-2: Rust Policy Fail-Closed
+- Weak fallback changed from Allow (0) to Deny (1)
+- New `policy_is_available()` marker symbol: PolicyBridge denies all if Rust not linked
+- Eliminates the local privilege escalation chain (0666 socket + fail-open policy)
 
-## Full feature set
+### P0-3: AVM Unpack Hardening
+- Zip Slip: canonical path validation on every entry
+- Zip bomb: max 1024 entries, 50MB single file, 200MB total, 100:1 compression ratio
+- Module ID regex validation (prevent path injection)
 
-See v1.2.1 release notes.
+### PR-D: Update Chain Security
+- `REQUEST_INSTALL_PACKAGES` permission declared
+- `FileProvider` configured for secure APK install
+- Release workflow now generates and uploads SHA-256 checksum
