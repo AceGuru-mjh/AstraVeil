@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.QuickActionCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.components.StatusCard
 import com.astraveil.app.ui.components.StatusPill
 import com.astraveil.app.ui.theme.AstraAccent
