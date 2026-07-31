@@ -3,8 +3,8 @@
 // Implementation of the AstraVeil daemon IPC server. Uses an AF_UNIX
 // SOCK_STREAM socket with a 4-byte big-endian length prefix framing.
 //
-// Signal handling: SIGTERM and SIGINT call `stop()` via a small trampoline
-// that only touches an atomic flag, which is async-signal-safe.
+// Security: socket mode 0660 (owner+group only), SO_PEERCRED authentication
+// on every connection, read timeout to prevent slowloris.
 
 #include "astra/ipc/socket_server.hpp"
 
@@ -12,6 +12,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -32,11 +33,9 @@ namespace {
 SocketServer* g_server_for_signal = nullptr;
 
 void signal_trampoline(int signum) {
-    // Async-signal-safe: only flip atomics and call signal-safe functions.
     if (g_server_for_signal != nullptr) {
         g_server_for_signal->stop();
     }
-    // Re-install default so a second Ctrl+C kills us hard.
     ::signal(signum, SIG_DFL);
 }
 
@@ -48,8 +47,67 @@ void install_signal_handlers(SocketServer* server) {
     sa.sa_flags = 0;
     ::sigaction(SIGTERM, &sa, nullptr);
     ::sigaction(SIGINT, &sa, nullptr);
-    // Ignore SIGPIPE — a disconnected client should not kill the daemon.
     ::signal(SIGPIPE, SIG_IGN);
+}
+
+// ---- P0-1 fix: peer authentication via SO_PEERCRED ----
+
+bool isAllowedUid(uid_t uid) {
+    constexpr uid_t UID_ROOT   = 0;
+    constexpr uid_t UID_SYSTEM = 1000;
+    constexpr uid_t UID_SHELL  = 2000;
+    constexpr uid_t AID_APP_START = 10000;
+    constexpr uid_t AID_APP_END   = 19999;
+
+    return uid == UID_ROOT ||
+           uid == UID_SYSTEM ||
+           uid == UID_SHELL ||
+           (uid >= AID_APP_START && uid <= AID_APP_END);
+}
+
+bool authenticatePeer(int fd) {
+    struct ucred cred{};
+    socklen_t len = sizeof(cred);
+    if (::getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) < 0) {
+        ALOGE("socket_server: SO_PEERCRED failed: %s", std::strerror(errno));
+        return false;
+    }
+    if (!isAllowedUid(cred.uid)) {
+        ALOGE("socket_server: rejected connection from uid=%d pid=%d (not whitelisted)",
+              cred.uid, cred.pid);
+        return false;
+    }
+    ALOGI("socket_server: accepted peer uid=%d pid=%d", cred.uid, cred.pid);
+    return true;
+}
+
+// ---- P1-15 fix: read with timeout to prevent slowloris ----
+
+bool readExactWithTimeout(int fd, void* out, std::size_t n, int timeoutMs) {
+    auto* p = static_cast<std::uint8_t*>(out);
+    std::size_t got = 0;
+    while (got < n) {
+        struct pollfd pfd{};
+        pfd.fd = fd;
+        pfd.events = POLLIN;
+        int pr = ::poll(&pfd, 1, timeoutMs);
+        if (pr == 0) {
+            ALOGW("socket_server: read timeout (%d ms)", timeoutMs);
+            return false;
+        }
+        if (pr < 0) {
+            if (errno == EINTR) continue;
+            return false;
+        }
+        ssize_t r = ::read(fd, p + got, n - got);
+        if (r == 0) return false;
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            return false;
+        }
+        got += static_cast<std::size_t>(r);
+    }
+    return true;
 }
 
 }  // namespace
@@ -69,18 +127,7 @@ void SocketServer::set_handler(Handler handler) {
 }
 
 bool SocketServer::read_exact(int fd, void* out, std::size_t n) {
-    auto* p = static_cast<std::uint8_t*>(out);
-    std::size_t got = 0;
-    while (got < n) {
-        ssize_t r = ::read(fd, p + got, n - got);
-        if (r == 0) return false;       // EOF
-        if (r < 0) {
-            if (errno == EINTR) continue;
-            return false;
-        }
-        got += static_cast<std::size_t>(r);
-    }
-    return true;
+    return readExactWithTimeout(fd, out, n, 10000);  // 10s timeout
 }
 
 bool SocketServer::write_exact(int fd, const void* in, std::size_t n) {
@@ -98,7 +145,6 @@ bool SocketServer::write_exact(int fd, const void* in, std::size_t n) {
 }
 
 bool SocketServer::start() {
-    // Create the parent directory (e.g. /dev/astra) with reasonable perms.
     try {
         const fs::path parent = fs::path(socket_path_).parent_path();
         if (!parent.empty() && !fs::exists(parent)) {
@@ -116,7 +162,6 @@ bool SocketServer::start() {
         return false;
     }
 
-    // Remove any stale socket file at our path.
     ::unlink(socket_path_.c_str());
 
     listen_fd_ = ::socket(AF_UNIX, SOCK_STREAM, 0);
@@ -142,7 +187,8 @@ bool SocketServer::start() {
         return false;
     }
 
-    ::chmod(socket_path_.c_str(), 0666);
+    // P0-1 fix: 0660 (owner+group only, no world access)
+    ::chmod(socket_path_.c_str(), 0660);
 
     if (::listen(listen_fd_, 5) < 0) {
         ALOGE("socket_server: listen() failed: %s", std::strerror(errno));
@@ -153,7 +199,7 @@ bool SocketServer::start() {
 
     running_ = true;
     install_signal_handlers(this);
-    ALOGI("socket_server: listening on %s", socket_path_.c_str());
+    ALOGI("socket_server: listening on %s (mode 0660, SO_PEERCRED auth)", socket_path_.c_str());
     return true;
 }
 
@@ -164,7 +210,6 @@ void SocketServer::stop() {
         ::close(listen_fd_);
         listen_fd_ = -1;
     }
-    // Best-effort cleanup of the socket file.
     ::unlink(socket_path_.c_str());
     ALOGI("socket_server: stopped");
 }
@@ -182,17 +227,23 @@ void SocketServer::run() {
             ALOGW("socket_server: accept() failed: %s", std::strerror(errno));
             continue;
         }
+
+        // P0-1 fix: authenticate peer before handling
+        if (!authenticatePeer(client_fd)) {
+            ::close(client_fd);
+            continue;
+        }
+
         handle_client(client_fd);
         ::close(client_fd);
     }
 }
 
 void SocketServer::handle_client(int client_fd) {
-    // Loop so a single connection can issue multiple pipelined requests.
     while (running_.load()) {
         std::uint32_t net_len = 0;
         if (!read_exact(client_fd, &net_len, sizeof(net_len))) {
-            return;  // client closed or error
+            return;
         }
         std::uint32_t len = ntohl(net_len);
         if (len == 0 || len > (8 * 1024 * 1024)) {
@@ -214,8 +265,6 @@ void SocketServer::handle_client(int client_fd) {
         }
 
         if (response.empty()) {
-            // No response body — still send a 0-length frame so the client
-            // knows the request was processed.
             std::uint32_t zero = htonl(0);
             write_exact(client_fd, &zero, sizeof(zero));
             return;

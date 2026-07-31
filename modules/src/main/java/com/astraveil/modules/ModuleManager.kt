@@ -50,6 +50,15 @@ class ModuleManager(
     /** All registered modules keyed by id. */
     private val modules = mutableMapOf<String, AstraModule>()
 
+    // P0-3 fix: unpack safety constants
+    companion object {
+        private const val MAX_ENTRIES = 1024
+        private const val MAX_SINGLE_FILE_BYTES = 50L * 1024 * 1024   // 50MB
+        private const val MAX_TOTAL_BYTES = 200L * 1024 * 1024        // 200MB
+        private const val MAX_COMPRESSION_RATIO = 100.0
+        private val MODULE_ID_REGEX = Regex("^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$")
+    }
+
     /** Root directory under which every module is unpacked. */
     private val modulesRoot: File = File(context.filesDir, "astra_modules").apply {
         if (!exists()) mkdirs()
@@ -87,23 +96,69 @@ class ModuleManager(
                 .getOrElse { throw it }
             val moduleId = manifest.name
 
+            // 2.5 P0-3 fix: validate module ID (prevent path injection)
+            require(MODULE_ID_REGEX.matches(moduleId)) {
+                "unsafe module id (must match ${MODULE_ID_REGEX.pattern}): '$moduleId'"
+            }
+
             mutex.withLock {
                 require(!modules.containsKey(moduleId)) {
                     "module '$moduleId' is already installed"
                 }
 
-                // 3. Unpack
+                // 3. Unpack (P0-3 fix: Zip Slip + zip bomb protection)
                 val target = File(modulesRoot, moduleId).apply { if (exists()) deleteRecursively() }
                 target.mkdirs()
+                val canonicalTarget = target.canonicalFile
                 zip.use { z ->
-                    z.entries().toList().forEach { entry ->
+                    val entries = z.entries().toList()
+                    require(entries.size <= MAX_ENTRIES) {
+                        "too many entries: ${entries.size} > $MAX_ENTRIES"
+                    }
+                    var totalBytes = 0L
+                    for (entry in entries) {
                         val out = File(target, entry.name)
+                        val canonicalOut = out.canonicalFile
+                        // Zip Slip protection
+                        require(canonicalOut.path.startsWith(canonicalTarget.path + File.separator) ||
+                                canonicalOut == canonicalTarget) {
+                            "Zip Slip detected: '${entry.name}' escapes module directory"
+                        }
+                        // Reject absolute paths and parent traversal
+                        require(!entry.name.startsWith("/") && !entry.name.contains("..")) {
+                            "unsafe entry path: '${entry.name}'"
+                        }
                         if (entry.isDirectory) {
                             out.mkdirs()
-                        } else {
-                            out.parentFile?.mkdirs()
-                            z.getInputStream(entry).use { input ->
-                                out.outputStream().use { input.copyTo(it) }
+                            continue
+                        }
+                        // Single file size limit
+                        if (entry.size > MAX_SINGLE_FILE_BYTES) {
+                            target.deleteRecursively()
+                            throw IllegalStateException("single file too large: '${entry.name}' = ${entry.size} bytes")
+                        }
+                        out.parentFile?.mkdirs()
+                        z.getInputStream(entry).use { input ->
+                            out.outputStream().use { os ->
+                                val buf = ByteArray(8192)
+                                var n = input.read(buf)
+                                while (n > 0) {
+                                    totalBytes += n
+                                    if (totalBytes > MAX_TOTAL_BYTES) {
+                                        target.deleteRecursively()
+                                        throw IllegalStateException("total extraction exceeds $MAX_TOTAL_BYTES bytes (zip bomb?)")
+                                    }
+                                    os.write(buf, 0, n)
+                                    n = input.read(buf)
+                                }
+                            }
+                        }
+                        // Compression ratio check (zip bomb)
+                        if (entry.compressedSize > 0) {
+                            val ratio = entry.size.toDouble() / entry.compressedSize
+                            if (ratio > MAX_COMPRESSION_RATIO) {
+                                target.deleteRecursively()
+                                throw IllegalStateException("suspicious compression ratio ${"%.1f".format(ratio)} on '${entry.name}' (zip bomb?)")
                             }
                         }
                     }
@@ -118,11 +173,6 @@ class ModuleManager(
                 // 5. Request permissions (policy-gated + persisted)
                 val granted = mutableSetOf<String>()
                 for (perm in manifest.permissions) {
-                    // requestAndPersistPermission: respects the dangerous-permission
-                    // policy gate AND persists to astra_config.json. Calling
-                    // permissionEngine.request() directly would lose grants on
-                    // restart; calling updatePermission() would skip the policy
-                    // gate.
                     if (core.requestAndPersistPermission(moduleId, perm)) granted += perm
                 }
 

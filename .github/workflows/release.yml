@@ -29,6 +29,12 @@ jobs:
           ASTRAVEIL_KEY_PASSWORD: ${{ secrets.ASTRAVEIL_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
+      - name: Generate SHA-256 checksum
+        run: |
+          cd app/build/outputs/apk/release
+          sha256sum app-release.apk > app-release.apk.sha256
+          cat app-release.apk.sha256
+
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
@@ -41,5 +47,6 @@ jobs:
           name: AstraVeil ${{ github.ref_name }}
           body_path: release/release_notes.md
           files: |
-            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/release/app-release.apk.sha256
           prerelease: false
