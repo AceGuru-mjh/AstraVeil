@@ -4,8 +4,14 @@ import com.astraveil.sdk.AstraSdkConstants
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
+
+/**
+ * Local [fail] helper that returns [Nothing], so it can substitute for any type
+ * in `Result.getOrElse { fail(...) }` without losing the manifest's type info
+ * (org.junit.Assert.fail returns Unit which would widen the inferred type).
+ */
+private fun fail(message: String): Nothing = throw AssertionError(message)
 
 /**
  * Unit tests for [ModuleValidator.validateManifest] — the String overload
