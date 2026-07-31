@@ -71,13 +71,8 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val defaultApps = listOf(
-        AuthorizedApp("com.termux", "Termux", "Terminal emulator with package manager", false),
-        AuthorizedApp("com.android.shell", "ADB Shell", "Android Debug Bridge Shell", true, isSystem = true),
-        AuthorizedApp("com.topjohnwu.magisk", "Magisk App", "The classic Magisk root manager client", false),
-        AuthorizedApp("com.astraveil.sample", "AstraVeil Client", "AstraVeil native module prototype", true),
-        AuthorizedApp("com.google.android.apps.photos", "Google Photos", "Unlocks unlimited storage patches", false)
-    )
+    // No hardcoded app list — refreshAppsList() queries PackageManager for
+    // real installed user apps.
 
     fun refresh() {
         viewModelScope.launch {
@@ -148,12 +143,39 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun refreshAppsList() {
-        val core = runCatching { com.astraveil.app.AstraVeilApplication.core }.getOrNull() ?: return
-        val apps = defaultApps.map { app ->
-            val hasSu = core.permissionEngine.canExecute(app.packageName, "su")
-            app.copy(rootAuthorized = hasSu)
+        viewModelScope.launch {
+            val apps = withContext(Dispatchers.IO) {
+                val pm = getApplication<Application>().packageManager
+                val installed = if (android.os.Build.VERSION.SDK_INT >= 33) {
+                    pm.getInstalledApplications(
+                        android.content.pm.PackageManager.ApplicationInfoFlags.of(0L)
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getInstalledApplications(0)
+                }
+
+                val core = runCatching {
+                    com.astraveil.app.AstraVeilApplication.core
+                }.getOrNull()
+
+                installed
+                    .filter { it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM == 0 }
+                    .map { info ->
+                        val hasSu = core?.permissionEngine
+                            ?.canExecute(info.packageName, "su") ?: false
+                        AuthorizedApp(
+                            packageName = info.packageName,
+                            displayName = pm.getApplicationLabel(info).toString(),
+                            description = info.packageName,
+                            rootAuthorized = hasSu,
+                            isSystem = false,
+                        )
+                    }
+                    .sortedBy { it.displayName.lowercase() }
+            }
+            _uiState.update { it.copy(authorizedApps = apps) }
         }
-        _uiState.update { it.copy(authorizedApps = apps) }
     }
 
     fun generateAndExportDiagnosticReport() {
