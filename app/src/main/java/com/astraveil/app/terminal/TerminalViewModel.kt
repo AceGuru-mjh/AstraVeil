@@ -66,7 +66,7 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         addLine(TerminalLine(LineType.INFO, "AstraVeil Terminal v1.1.0"))
-        addLine(LineType.INFO, "Type a command and press Run. Toggle ROOT/SHELL above."))
+        addLine(TerminalLine(LineType.INFO, "Type a command and press Run. Toggle ROOT/SHELL above."))
         viewModelScope.launch {
             val name = withContext(Dispatchers.IO) {
                 runCatching {
