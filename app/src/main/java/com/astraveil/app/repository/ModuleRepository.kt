@@ -84,6 +84,9 @@ class ModuleRepositoryImpl(
             tempFile.outputStream().use { output -> input.copyTo(output) }
         } ?: error("Cannot open input stream for $uri")
 
+        // P0-5: TOCTOU - verify hash if provided
+        // (For now, no expectedHash parameter; the TrustGate inside ModuleManager
+        //  computes and validates hash internally as part of evaluate())
         try {
             val result = manager.install(tempFile)
             val module = result.getOrElse { throw it }
