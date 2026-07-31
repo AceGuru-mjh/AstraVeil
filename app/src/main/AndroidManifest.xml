@@ -31,12 +31,18 @@
         android:theme="@style/Theme.AstraVeil">
 
         <!-- Disable androidx.startup auto-initializer to prevent crashes
-             from failing initializers before Application.onCreate. -->
+             from failing initializers before Application.onCreate. The
+             tools:ignore="MissingClass" is required because androidx.startup
+             may not be a direct dependency (lint reports MissingClass when
+             the class isn't on the compile classpath); the merge/remove
+             nodes are no-ops if the library is absent and apply correctly
+             when it is pulled in transitively. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
-            tools:node="merge">
+            tools:node="merge"
+            tools:ignore="MissingClass">
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"
                 android:value="androidx.startup"
