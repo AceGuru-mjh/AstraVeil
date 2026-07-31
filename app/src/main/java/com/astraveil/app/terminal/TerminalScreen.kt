@@ -30,8 +30,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -51,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.astraveil.app.adb.AdbManager
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraWarning
@@ -61,7 +60,7 @@ private val TermOutput = Color(0xFFC9D1D9)
 private val TermError = Color(0xFFFF7B72)
 private val TermInfo = Color(0xFF8B949E)
 
-private val quickCommands = listOf(
+private val rootQuickCommands = listOf(
     "id", "getenforce", "uname -a", "magisk -v",
     "whoami", "df -h", "getprop ro.build.version.release",
 )
@@ -72,93 +71,71 @@ fun TerminalScreen(
 ) {
     val lines by viewModel.lines.collectAsStateWithLifecycle()
     val isRunning by viewModel.isRunning.collectAsStateWithLifecycle()
-    val useRoot by viewModel.useRoot.collectAsStateWithLifecycle()
+    val mode by viewModel.mode.collectAsStateWithLifecycle()
     val providerName by viewModel.providerName.collectAsStateWithLifecycle()
 
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
     LaunchedEffect(lines.size) {
-        if (lines.isNotEmpty()) {
-            listState.animateScrollToItem(lines.size - 1)
-        }
+        if (lines.isNotEmpty()) { listState.animateScrollToItem(lines.size - 1) }
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Filled.Terminal,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
-            )
+            Icon(Icons.Filled.Terminal, null,
+                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Superuser Terminal",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = providerName?.let { "backend: $it" }
-                        ?: "no root backend",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AstraOnSurfaceMuted,
-                )
+                Text("Superuser Terminal",
+                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(providerName?.let { "backend: $it" } ?: "no root backend",
+                    style = MaterialTheme.typography.labelSmall, color = AstraOnSurfaceMuted)
             }
 
-            Text(
-                text = if (useRoot) "ROOT" else "SHELL",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (useRoot) AstraSuccess else AstraWarning,
-            )
-            Spacer(Modifier.width(6.dp))
-            Switch(
-                checked = useRoot,
-                onCheckedChange = { viewModel.toggleRoot() },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = AstraSuccess,
-                ),
-            )
+            // Mode cycle button
+            val modeColor = when (mode) {
+                TerminalViewModel.TerminalMode.ROOT -> AstraSuccess
+                TerminalViewModel.TerminalMode.ADB -> AstraWarning
+                TerminalViewModel.TerminalMode.SHELL -> AstraOnSurfaceMuted
+            }
+            Box(
+                modifier = Modifier
+                    .background(modeColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                    .clickable { viewModel.cycleMode() }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(mode.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold, color = modeColor,
+                    fontFamily = FontFamily.Monospace)
+            }
 
+            Spacer(Modifier.width(8.dp))
             IconButton(onClick = { viewModel.clear() }) {
-                Icon(
-                    Icons.Filled.DeleteSweep,
-                    contentDescription = "Clear",
-                    tint = AstraOnSurfaceMuted,
-                )
+                Icon(Icons.Filled.DeleteSweep, "Clear", tint = AstraOnSurfaceMuted)
             }
         }
 
+        // Output area
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(TermBg, RoundedCornerShape(12.dp))
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth().weight(1f)
+                .background(TermBg, RoundedCornerShape(12.dp)).padding(12.dp),
         ) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                items(lines) { line ->
-                    TerminalLineRow(line)
-                }
+                items(lines) { line -> TerminalLineRow(line) }
                 if (isRunning) {
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(12.dp),
-                                color = TermInfo,
-                                strokeWidth = 2.dp,
-                            )
+                            CircularProgressIndicator(modifier = Modifier.size(12.dp),
+                                color = TermInfo, strokeWidth = 2.dp)
                             Spacer(Modifier.width(8.dp))
                             Text("…", color = TermInfo, fontFamily = FontFamily.Monospace)
                         }
@@ -167,86 +144,61 @@ fun TerminalScreen(
             }
         }
 
+        // Quick commands (mode-aware)
+        val quickCmds = when (mode) {
+            TerminalViewModel.TerminalMode.ADB -> AdbManager.quickCommands
+            else -> rootQuickCommands
+        }
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            quickCommands.forEach { cmd ->
-                QuickChip(cmd) {
-                    viewModel.executeCommand(cmd)
-                }
-            }
+            quickCmds.forEach { cmd -> QuickChip(cmd) { viewModel.executeCommand(cmd) } }
         }
 
+        // Input row
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = {
-                    viewModel.historyPrevious()?.let { input = it }
-                },
-                modifier = Modifier.size(36.dp),
-            ) {
+            IconButton(onClick = { viewModel.historyPrevious()?.let { input = it } },
+                modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Filled.ArrowUpward, "Previous", tint = AstraOnSurfaceMuted)
             }
-            IconButton(
-                onClick = {
-                    viewModel.historyNext()?.let { input = it }
-                },
-                modifier = Modifier.size(36.dp),
-            ) {
+            IconButton(onClick = { viewModel.historyNext()?.let { input = it } },
+                modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Filled.ArrowDownward, "Next", tint = AstraOnSurfaceMuted)
             }
 
             TextField(
-                value = input,
-                onValueChange = { input = it },
+                value = input, onValueChange = { input = it },
                 modifier = Modifier.weight(1f),
                 placeholder = {
                     Text(
-                        if (useRoot) "run as root…" else "run in shell…",
-                        fontFamily = FontFamily.Monospace,
-                    )
+                        when (mode) {
+                            TerminalViewModel.TerminalMode.ROOT -> "run as root (su)…"
+                            TerminalViewModel.TerminalMode.ADB -> "run as adb shell (uid 2000)…"
+                            TerminalViewModel.TerminalMode.SHELL -> "run in app shell…"
+                        },
+                        fontFamily = FontFamily.Monospace)
                 },
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = FontFamily.Monospace,
-                ),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(
-                    onSend = {
-                        viewModel.executeCommand(input)
-                        input = ""
-                    },
-                ),
+                keyboardActions = KeyboardActions(onSend = { viewModel.executeCommand(input); input = "" }),
                 colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                ),
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary),
             )
 
             Spacer(Modifier.width(8.dp))
-
             IconButton(
-                onClick = {
-                    viewModel.executeCommand(input)
-                    input = ""
-                },
+                onClick = { viewModel.executeCommand(input); input = "" },
                 enabled = !isRunning && input.isNotBlank(),
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(
-                        MaterialTheme.colorScheme.primary,
-                        RoundedCornerShape(12.dp),
-                    ),
+                modifier = Modifier.size(44.dp)
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)),
             ) {
-                Icon(
-                    Icons.Filled.PlayArrow,
-                    contentDescription = "Run",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
+                Icon(Icons.Filled.PlayArrow, "Run",
+                    tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
@@ -260,32 +212,22 @@ private fun TerminalLineRow(line: TerminalLine) {
         LineType.ERROR -> TermError
         LineType.INFO -> TermInfo
     }
-    Text(
-        text = line.text.ifBlank { " " },
-        color = color,
-        fontFamily = FontFamily.Monospace,
-        fontSize = 12.5.sp,
-        lineHeight = 17.sp,
-        modifier = Modifier.fillMaxWidth(),
-    )
+    Text(line.text.ifBlank { " " }, color = color,
+        fontFamily = FontFamily.Monospace, fontSize = 12.5.sp, lineHeight = 17.sp,
+        modifier = Modifier.fillMaxWidth())
 }
 
 @Composable
 private fun QuickChip(command: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                RoundedCornerShape(8.dp),
-            )
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        Text(
-            text = command,
-            style = MaterialTheme.typography.labelSmall,
+        Text(command, style = MaterialTheme.typography.labelSmall,
             fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
