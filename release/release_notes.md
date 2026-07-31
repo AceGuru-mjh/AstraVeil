@@ -1,16 +1,23 @@
-# AstraVeil v1.0.1 — Release Notes
+# AstraVeil v1.0.2 — Release Notes
 
 ## Overview
 
-Patch release: removed unused RootManagerScreen with fake su switches.
+UI reverted to standard Material 3. Replaced all Liquid Glass custom
+rendering with plain M3 Card + NavigationBar for reliability and
+clarity.
 
-## What's new in v1.0.1
+## What's new in v1.0.2
 
-- **Removed RootManagerScreen** — The old Superuser screen wrote su grants
-  to AstraVeil's local PermissionEngine (DataStore), not Magisk's su
-  database. This had no effect on actual su behavior. Replaced by
-  SuperuserScreen (PR #48) which reads/writes Magisk's real
-  /data/adb/magisk.db via su -c sqlite3.
+- **Standard M3 Navigation Bar** — Replaced custom Liquid Glass nav bar
+  with Material 3 NavigationBar (surface color + tonal elevation).
+  Automatically handles system insets. Selected item uses primary color.
+- **AstraCard** — New M3 Card wrapper replacing GlassCard/LiquidGlassCard.
+  Plain surfaceVariant background + 1dp elevation. No blur, no specular,
+  no custom rendering.
+- **Removed FLAG_BLUR_BEHIND** — No longer needed without Liquid Glass.
+- **All screens migrated** — Dashboard, Provider, Superuser, Diagnostics,
+  About, Settings, Updates, Modules, SecurityReviewDialog, SuRequestDialog
+  all use AstraCard and M3 color tokens.
 
 ## Full feature set
 
