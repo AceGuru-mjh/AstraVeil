@@ -65,7 +65,7 @@ import java.util.Locale
  *   policy that AstraVeil set.
  */
 @Composable
-fun SuperuserScreen() {
+fun SuperuserScreen(navController: androidx.navigation.NavController? = null) {
     val scope = rememberCoroutineScope()
 
     var loading by remember { mutableStateOf(true) }
@@ -146,6 +146,18 @@ fun SuperuserScreen() {
                     )
                 }
             }
+        }
+
+        // ---- Terminal launcher (action, not switch) ----
+        item {
+            com.astraveil.app.ui.screens.superuser.TerminalLauncherCard(
+                onOpenTerminal = { navController?.navigate("terminal") },
+            )
+        }
+
+        // ---- Embedded ADB console (real execution) ----
+        item {
+            com.astraveil.app.ui.screens.superuser.AdbConsoleCard()
         }
 
         // ---- State 1: No root — amber info card, NOT red error ----
