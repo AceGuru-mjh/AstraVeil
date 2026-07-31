@@ -51,6 +51,7 @@ import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
 import com.astraveil.app.ui.screens.modules.ModulesScreen
+import com.astraveil.app.terminal.TerminalScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.SuperuserScreen
@@ -164,6 +165,9 @@ fun AstraVeilApp() {
             }
             composable(Destinations.Superuser.route) {
                 SuperuserScreen()
+            }
+            composable("terminal") {
+                TerminalScreen()
             }
             composable(Destinations.Modules.route) {
                 ModulesScreen()
