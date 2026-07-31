@@ -1,23 +1,29 @@
-# AstraVeil v1.2.1 — Release Notes
+# AstraVeil v1.3.0 — Release Notes
 
 ## Overview
 
-Superuser page now has real, usable tools instead of placeholders.
+Major UI overhaul: Dashboard and Superuser screens completely rewritten.
 
-## What's new in v1.2.1
+## What's new in v1.3.0
 
-- **Terminal Launcher Card** — Clickable card on Superuser page that
-  opens the full-screen terminal. Shows three mode badges (ROOT/ADB/SHELL)
-  so users know what they're opening. This is an action (open), not a
-  toggle (enable/disable).
-- **Embedded ADB Console** — Real ADB console directly on the Superuser
-  page. Live status dots (ADB enabled / adbd running / root available /
-  USB-TCP). Dark console output area. Quick command chips (getprop, pm
-  list packages, dumpsys battery, wm size, etc). Input field + execute
-  button. Commands run as uid 2000 with root, or app UID without.
-- **No Toggles** — Every interaction produces real output. No more
-  switches that do nothing.
+### Dashboard
+- **Device header** — Shows manufacturer, model, Android version, API level
+- **Quick actions** — Terminal / Superuser / Modules / Settings buttons
+- **Daemon status** — Real-time AstraDaemon connection indicator
+- **Grouped capabilities** — Human-readable labels, organized by category
+- **Refresh button** — Re-probe device capabilities on demand
+- **Root test** — Disabled when no provider, shows 6 probe results
+
+### Superuser
+- **App picker** — Add su policy for any installed app
+- **Search/filter** — Find policies by package name or UID
+- **App icons** — Real icons from PackageManager
+- **Logging/notification toggles** — Control Magisk DB fields per app
+- **Su usage stats** — "used N×" aggregated from logs
+- **ADB Shell entry** — uid 2000 special policy card
+- **Refresh button** — Reload policies and logs
+- **Terminal + ADB console** — Actually visible in UI (were imported but not rendered)
 
 ## Full feature set
 
-See v1.2.0 release notes.
+See v1.2.1 release notes.
