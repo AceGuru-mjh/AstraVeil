@@ -3,26 +3,34 @@
 #include "astra/logger/logger.hpp"
 
 // Rust FFI — declared in rust/src/ffi.rs, linked from libastra_rust.a.
-// When the Rust static library is NOT linked (e.g. CI builds without
-// cargo-ndk), these weak symbols fall back to a default-allow stub so
-// the daemon compiles and runs. On production device builds the real
-// Rust implementation overrides them.
+//
+// P0-2 fix: weak fallbacks are now DENY (fail-closed), not ALLOW.
+// A new weak symbol policy_is_available() returns 0 by default
+// (meaning "Rust NOT linked"). The real libastra_rust.a overrides
+// it to return 1. PolicyBridge checks this before calling policy_check.
 extern "C" {
-/// Weak default: allow (0). Overridden by libastra_rust.a when linked.
-__attribute__((weak)) int policy_check() {
-    return 0;  // Allow
+
+/// Weak default: 0 = Rust NOT linked. Overridden by libastra_rust.a.
+__attribute__((weak)) int policy_is_available() {
+    return 0;
 }
 
-/// Weak default: allow (0). Overridden by libastra_rust.a when linked.
+/// Weak default: DENY (1). Overridden by libastra_rust.a when linked.
+__attribute__((weak)) int policy_check() {
+    return 1;  // Deny (fail closed)
+}
+
+/// Weak default: DENY (1). Overridden by libastra_rust.a when linked.
 __attribute__((weak)) int policy_check_with(
     const char* /*module_id*/,
     const char* /*capability*/,
     unsigned int /*risk_level*/,
     bool /*approved*/
 ) {
-    return 0;  // Allow
+    return 1;  // Deny (fail closed)
 }
-}
+
+}  // extern "C"
 
 namespace astra {
 
@@ -39,6 +47,12 @@ PolicyResult decode(int raw) {
 }  // namespace
 
 PolicyResult PolicyBridge::check() {
+    // P0-2 fix: fail closed if Rust policy engine is not linked
+    if (::policy_is_available() == 0) {
+        ALOGE("PolicyBridge: Rust policy engine NOT linked — FAILING CLOSED (deny). "
+              "This is a release build misconfiguration.");
+        return PolicyResult::DENY;
+    }
     const int raw = ::policy_check();
     const auto result = decode(raw);
     ALOGI("PolicyBridge: check() -> %d (%s)", raw,
@@ -53,6 +67,13 @@ PolicyResult PolicyBridge::checkWith(
     unsigned int riskLevel,
     bool approved
 ) {
+    // P0-2 fix: fail closed if Rust policy engine is not linked
+    if (::policy_is_available() == 0) {
+        ALOGE("PolicyBridge: Rust NOT linked — FAILING CLOSED for "
+              "checkWith(%s,%s). Release misconfiguration.",
+              moduleId.c_str(), capability.c_str());
+        return PolicyResult::DENY;
+    }
     const int raw = ::policy_check_with(
         moduleId.c_str(), capability.c_str(), riskLevel, approved);
     const auto result = decode(raw);

@@ -17,6 +17,15 @@
 
 use crate::execution_policy::{evaluate, ExecutionPolicy, PolicyDecision};
 
+/// Marker: always returns 1 when the real Rust policy engine is linked.
+/// Overrides the C++ weak default of 0 so PolicyBridge knows Rust is
+/// available and can safely call policy_check/policy_check_with.
+/// P0-2 fix: without this, PolicyBridge fails closed (DENY).
+#[no_mangle]
+pub extern "C" fn policy_is_available() -> i32 {
+    1
+}
+
 /// C ABI policy check. Returns 0/1/2 — see module docs.
 #[no_mangle]
 pub extern "C" fn policy_check() -> i32 {
