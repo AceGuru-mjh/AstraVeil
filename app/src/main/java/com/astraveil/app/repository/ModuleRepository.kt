@@ -12,6 +12,7 @@ import com.astraveil.modules.ModuleManager
 import com.astraveil.modules.ModuleRuntime
 import com.astraveil.modules.ModuleSandbox
 import com.astraveil.modules.ModuleState
+import com.astraveil.app.notification.AstraNotificationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -86,14 +87,28 @@ class ModuleRepositoryImpl(
         try {
             val result = manager.install(tempFile)
             val module = result.getOrElse { throw it }
-            module.toModuleInfo()
+            val info = module.toModuleInfo()
+            AstraNotificationManager.notifyModuleChange(
+                context = context,
+                moduleName = info.name,
+                installed = true,
+            )
+            info
         } finally {
             tempFile.delete()
         }
     }
 
     override suspend fun uninstall(id: String): Boolean = withContext(Dispatchers.IO) {
-        manager.uninstall(id)
+        val success = manager.uninstall(id)
+        if (success) {
+            AstraNotificationManager.notifyModuleChange(
+                context = context,
+                moduleName = id,
+                installed = false,
+            )
+        }
+        success
     }
 
     override suspend fun start(id: String) = withContext(Dispatchers.IO) {

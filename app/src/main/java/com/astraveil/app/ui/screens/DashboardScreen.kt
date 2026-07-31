@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.QuickActionCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.components.StatusCard
 import com.astraveil.app.ui.components.StatusPill
 import com.astraveil.app.ui.theme.AstraAccent
@@ -25,6 +26,11 @@ import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraTeal
 import com.astraveil.app.ui.theme.AstraWarning
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import com.astraveil.app.viewmodel.StatusViewModel
 import com.astraveil.core.capability.SelinuxStatus
 import com.astraveil.core.compatibility.CompatibilityLevel
@@ -49,6 +55,7 @@ fun DashboardScreen(
         ) {
             item { HeaderCard(state) }
             item { SystemStatusCard(state) }
+            item { RootAccessCard(viewModel) }
             item { DeviceIntelligenceCard(state) }
             item { CompatibilityAssessmentCard(state) }
             item { PrivilegeBackendCard(state, onNavigate) }
@@ -521,4 +528,101 @@ private fun selinuxColor(status: SelinuxStatus): Color = when (status) {
     SelinuxStatus.PERMISSIVE -> AstraWarning
     SelinuxStatus.DISABLED -> AstraError
     SelinuxStatus.UNKNOWN -> AstraWarning
+}
+
+@Composable
+private fun RootAccessCard(viewModel: StatusViewModel) {
+    val accessStatus by viewModel.rootAccessStatus.collectAsStateWithLifecycle()
+    val requesting by viewModel.requestingAccess.collectAsStateWithLifecycle()
+
+    AstraCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = when (accessStatus) {
+                    com.astraveil.app.root.RootAccessStatus.GRANTED -> Icons.Filled.CheckCircle
+                    com.astraveil.app.root.RootAccessStatus.DENIED -> Icons.Filled.Warning
+                    else -> Icons.Filled.Lock
+                },
+                contentDescription = null,
+                tint = when (accessStatus) {
+                    com.astraveil.app.root.RootAccessStatus.GRANTED -> AstraSuccess
+                    com.astraveil.app.root.RootAccessStatus.DENIED -> AstraWarning
+                    else -> MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "Root Access",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        when {
+            requesting -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = "A system dialog from your root backend just " +
+                            "appeared — tap ALLOW / GRANT on it.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            accessStatus == com.astraveil.app.root.RootAccessStatus.GRANTED -> {
+                Text(
+                    text = "Root granted. AstraVeil can now manage su " +
+                        "policies, modules, and run privileged commands.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AstraSuccess,
+                )
+            }
+
+            accessStatus == com.astraveil.app.root.RootAccessStatus.DENIED -> {
+                Text(
+                    text = "Root request denied. Retry, or grant AstraVeil " +
+                        "in your backend's superuser settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AstraWarning,
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = { viewModel.requestRootAccess() }) {
+                    Text("Retry Request")
+                }
+            }
+
+            accessStatus == com.astraveil.app.root.RootAccessStatus.NO_BACKEND -> {
+                Text(
+                    text = "No root backend detected. Install Magisk, " +
+                        "KernelSU, or APatch first.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            else -> {
+                Text(
+                    text = "AstraVeil needs root to manage your device. " +
+                        "Tap below to request it from your root backend.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = { viewModel.requestRootAccess() }) {
+                    Icon(Icons.Filled.Lock, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Grant Root Access")
+                }
+            }
+        }
+    }
 }

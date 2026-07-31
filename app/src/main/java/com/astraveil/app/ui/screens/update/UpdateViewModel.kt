@@ -20,7 +20,17 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
     val currentVersion: String = Version.VERSION
 
     fun checkForUpdate() {
-        viewModelScope.launch { manager.check() }
+        viewModelScope.launch {
+            manager.check()
+            val s = state.value
+            if (s is UpdateState.Available) {
+                com.astraveil.app.notification.AstraNotificationManager.notifyUpdateAvailable(
+                    context = getApplication(),
+                    versionName = s.version,
+                    releaseNotes = s.releaseNotes,
+                )
+            }
+        }
     }
 
     fun downloadAndInstall() {
