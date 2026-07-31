@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.astraveil.app.ui.design.GlassCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraTeal
 
@@ -33,7 +33,7 @@ fun QuickActionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    GlassCard(modifier = modifier) {
+    AstraCard(modifier = modifier) {
         Button(
             onClick = onClick,
             colors = ButtonDefaults.buttonColors(

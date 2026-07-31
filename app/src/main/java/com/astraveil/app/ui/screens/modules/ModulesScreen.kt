@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.astraveil.app.ui.AstraStrings
-import com.astraveil.app.ui.design.AstraGlass
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraTeal
@@ -126,7 +125,7 @@ fun ModulesScreen(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(28.dp),
-                            color = AstraGlass.Glow,
+                            color = MaterialTheme.colorScheme.primary,
                             strokeWidth = 2.5.dp,
                         )
                     }
@@ -165,7 +164,7 @@ fun ModulesScreen(
         FloatingActionButton(
             onClick = launchPicker,
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
-            containerColor = AstraGlass.Glow,
+            containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
         ) {
             Icon(Icons.Filled.Add, contentDescription = "Install AVM Module")
@@ -181,7 +180,7 @@ fun ModulesScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(
-                        color = AstraGlass.Glow,
+                        color = MaterialTheme.colorScheme.primary,
                         strokeWidth = 3.dp,
                     )
                     Spacer(Modifier.height(8.dp))
@@ -347,7 +346,7 @@ private fun ModuleCard(
         ) {
             Box(
                 modifier = Modifier.size(40.dp).background(
-                    color = AstraGlass.Glow.copy(alpha = 0.14f),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                     shape = RoundedCornerShape(12.dp),
                 ),
                 contentAlignment = Alignment.Center,
@@ -355,7 +354,7 @@ private fun ModuleCard(
                 Icon(
                     Icons.Filled.Extension,
                     contentDescription = null,
-                    tint = AstraGlass.Glow,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -403,7 +402,7 @@ private fun ModuleCard(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(14.dp),
                                 strokeWidth = 2.dp,
-                                color = AstraGlass.Glow,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                             Spacer(Modifier.width(6.dp))
                         } else {
@@ -420,7 +419,7 @@ private fun ModuleCard(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(14.dp),
                                 strokeWidth = 2.dp,
-                                color = AstraGlass.Glow,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                             Spacer(Modifier.width(6.dp))
                         } else {
@@ -464,7 +463,7 @@ private fun OperationFeedbackRow(
             CircularProgressIndicator(
                 modifier = Modifier.size(12.dp),
                 strokeWidth = 2.dp,
-                color = AstraGlass.Glow,
+                color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(6.dp))
             Text(

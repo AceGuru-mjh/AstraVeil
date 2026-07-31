@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.astraveil.app.ui.design.GlassCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -77,7 +77,7 @@ private fun UpdateHeader(currentVersion: String) {
 
 @Composable
 private fun UpdateStatusCard(state: UpdateState, viewModel: UpdateViewModel) {
-    GlassCard {
+    AstraCard {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Astra Update", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface)
@@ -174,7 +174,7 @@ private fun UpdateStatusCard(state: UpdateState, viewModel: UpdateViewModel) {
 
 @Composable
 private fun ReleaseNotesCard(notes: String) {
-    GlassCard {
+    AstraCard {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Release Notes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 color = AstraAccent)
@@ -191,7 +191,7 @@ private fun ReleaseNotesCard(notes: String) {
 
 @Composable
 private fun DownloadProgressCard(progress: Int) {
-    GlassCard {
+    AstraCard {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Download", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 color = AstraTeal)

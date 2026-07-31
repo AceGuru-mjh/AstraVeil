@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.astraveil.app.ui.design.LiquidGlassCard
+import com.astraveil.app.ui.design.AstraCard
 
 @Composable
 fun StatusCard(
@@ -34,11 +34,7 @@ fun StatusCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    LiquidGlassCard(
-        modifier = modifier,
-        accent = accent.copy(alpha = 0.06f),
-        enablePressEffect = false,
-    ) {
+    AstraCard(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,

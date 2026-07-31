@@ -24,6 +24,9 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsInputComponent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -44,8 +47,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.astraveil.app.BuildConfig
-import com.astraveil.app.ui.design.LiquidGlassNavigationBar
-import com.astraveil.app.ui.design.LiquidNavItem
 import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
@@ -95,13 +96,8 @@ fun AstraVeilApp() {
     val currentRoute = backStackEntry?.destination?.route ?: Destinations.Dashboard.route
 
     // Map the current route to a nav-bar index. Only the 6 primary
-    // destinations appear in the liquid glass nav bar; settings sub-routes
+    // destinations appear in the M3 NavigationBar; settings sub-routes
     // keep the last selection highlighted.
-    val navItems = remember {
-        Destinations.list.map { dest ->
-            LiquidNavItem(label = dest.label, icon = dest.icon)
-        }
-    }
     val selectedIndex = remember(currentRoute) {
         Destinations.list.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
     }
@@ -111,22 +107,40 @@ fun AstraVeilApp() {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { AstraTopAppBar() },
         bottomBar = {
-            LiquidGlassNavigationBar(
-                items = navItems,
-                selectedIndex = selectedIndex,
-                onItemSelected = { index ->
-                    val route = Destinations.list[index].route
-                    if (route != currentRoute) {
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 3.dp,
+            ) {
+                Destinations.list.forEachIndexed { index, dest ->
+                    NavigationBarItem(
+                        selected = index == selectedIndex,
+                        onClick = {
+                            val route = dest.route
+                            if (route != currentRoute) {
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
-            )
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (index == selectedIndex) dest.iconSelected else dest.icon,
+                                contentDescription = dest.label,
+                            )
+                        },
+                        label = { Text(text = dest.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        ),
+                    )
+                }
+            }
         }
     ) { innerPadding ->
         NavHost(
@@ -234,11 +248,6 @@ private fun AstraTopAppBar() {
         )
     )
 }
-
-/**
- * Legacy M3 bottom bar — replaced by [LiquidGlassNavigationBar] above.
- * Kept for reference; not used in the current render path.
- */
 
 /**
  * Navigation destinations for AstraUI Phase 0.

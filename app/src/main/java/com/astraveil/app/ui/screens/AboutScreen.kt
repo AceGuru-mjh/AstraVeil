@@ -29,7 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.astraveil.app.ui.AstraStrings
-import com.astraveil.app.ui.design.GlassCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.core.version.Version
 
 /**
@@ -86,7 +86,7 @@ private fun AboutHeader() {
 
 @Composable
 private fun DeveloperCard() {
-    GlassCard {
+    AstraCard {
         InfoRow(icon = Icons.Filled.Person, label = "Developer", value = Version.DEVELOPER)
         Spacer(Modifier.height(10.dp))
         InfoRow(icon = Icons.Filled.Code, label = "GitHub", value = "AceGuru-mjh/AstraVeil")
@@ -95,7 +95,7 @@ private fun DeveloperCard() {
 
 @Composable
 private fun VersionCard() {
-    GlassCard {
+    AstraCard {
         InfoRow(icon = Icons.Filled.Build, label = "Version", value = Version.VERSION)
         Spacer(Modifier.height(10.dp))
         InfoRow(icon = Icons.Filled.Code, label = "API Level", value = Version.API.toString())
@@ -104,7 +104,7 @@ private fun VersionCard() {
 
 @Composable
 private fun TechStackCard() {
-    GlassCard {
+    AstraCard {
         Text(
             text = AstraStrings.aboutTechStack,
             style = MaterialTheme.typography.labelLarge,

@@ -10,18 +10,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.astraveil.app.ui.design.AstraGlass
-import com.astraveil.app.ui.design.LiquidGlassSurface
 
 /**
  * Su authorization request dialog.
@@ -50,9 +51,13 @@ fun SuRequestDialog(
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        LiquidGlassSurface(
-            cornerRadius = 24.dp,
-            enablePressEffect = false,
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         ) {
             Column(
                 modifier = Modifier
@@ -65,7 +70,7 @@ fun SuRequestDialog(
                     Icon(
                         Icons.Filled.AdminPanelSettings,
                         contentDescription = null,
-                        tint = AstraGlass.Glow,
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(

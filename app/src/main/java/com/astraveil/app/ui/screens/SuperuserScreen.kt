@@ -44,9 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.astraveil.app.su.MagiskSuRepository
-import com.astraveil.app.ui.design.AstraGlass
-import com.astraveil.app.ui.design.LiquidGlass
-import com.astraveil.app.ui.design.LiquidGlassCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -143,7 +141,7 @@ fun SuperuserScreen() {
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(28.dp),
-                        color = AstraGlass.Glow,
+                        color = MaterialTheme.colorScheme.primary,
                         strokeWidth = 2.5.dp,
                     )
                 }
@@ -158,7 +156,7 @@ fun SuperuserScreen() {
         // ---- State 3: Root error (root detected but DB inaccessible) ----
         if (errorMessage != null) {
             item {
-                LiquidGlassCard(accent = LiquidGlass.AccentError) {
+                AstraCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Filled.Warning,
@@ -184,7 +182,7 @@ fun SuperuserScreen() {
                     Icon(
                         Icons.Filled.Shield,
                         contentDescription = null,
-                        tint = AstraGlass.Glow,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))
@@ -222,7 +220,7 @@ fun SuperuserScreen() {
         // ---- No policies ----
         if (dbAvailable && !loading && policies.isEmpty()) {
             item {
-                LiquidGlassCard {
+                AstraCard {
                     Text(
                         text = "No su policies yet. When an app requests su " +
                             "(e.g. Termux → type 'su'), Magisk will prompt you. " +
@@ -242,7 +240,7 @@ fun SuperuserScreen() {
                     Icon(
                         Icons.Filled.History,
                         contentDescription = null,
-                        tint = AstraGlass.Teal,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))
@@ -271,7 +269,7 @@ fun SuperuserScreen() {
 
 @Composable
 private fun NoRootInfoCard() {
-    LiquidGlassCard(accent = LiquidGlass.AccentAmber) {
+    AstraCard {
         // Title row
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -361,7 +359,7 @@ private fun NoRootInfoCard() {
                     text = name,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = AstraGlass.Glow,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.width(80.dp),
                 )
                 Text(
@@ -391,8 +389,7 @@ private fun SuPolicyCard(
             Triple(Icons.Filled.Block, AstraError, "Denied")
     }
 
-    LiquidGlassCard(
-        enablePressEffect = false,
+    AstraCard(
         contentPadding = 14.dp,
     ) {
         Row(
@@ -491,9 +488,7 @@ private fun SuLogCard(log: MagiskSuRepository.SuLogEntry) {
     val sdf = remember { SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault()) }
     val allowed = log.action.contains("allow", ignoreCase = true)
 
-    LiquidGlassCard(
-        enablePressEffect = false,
-        enableSpecular = false,
+    AstraCard(
         contentPadding = 12.dp,
     ) {
         Row(
