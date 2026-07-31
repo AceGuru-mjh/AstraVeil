@@ -50,6 +50,7 @@ import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraTeal
+import com.astraveil.app.ui.theme.AstraWarning
 import com.astraveil.core.modules.model.ModuleInfo
 import com.astraveil.core.modules.model.ModuleUiState
 
@@ -388,6 +389,16 @@ private fun ModuleCard(
 
         // ---- Operation feedback (Patch 18.2.3) ----
         OperationFeedbackRow(operation, onClearOp)
+
+        // Phase 0 honesty: module loaded in app process, not isolated/rooted
+        if (module.state == ModuleUiState.RUNNING) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Loaded in app process · Phase 0 (not isolated, not rooted)",
+                style = MaterialTheme.typography.labelSmall,
+                color = AstraWarning,
+            )
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),

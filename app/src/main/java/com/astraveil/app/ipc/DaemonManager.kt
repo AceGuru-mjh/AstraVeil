@@ -64,6 +64,10 @@ class DaemonManager(private val context: Context) {
                     if (pong != null) {
                         AstraLogger.i(TAG, "Daemon ping OK: $pong")
                     }
+                    com.astraveil.app.notification.AstraNotificationManager.notifyDaemonStatus(
+                        context = context,
+                        connected = true,
+                    )
                     return@launch
                 }
 
@@ -76,6 +80,10 @@ class DaemonManager(private val context: Context) {
                 TAG,
                 "Daemon not available after $MAX_STARTUP_ATTEMPTS attempts. " +
                     "App will run in local-only mode (no daemon IPC)."
+            )
+            com.astraveil.app.notification.AstraNotificationManager.notifyDaemonStatus(
+                context = context,
+                connected = false,
             )
         }
     }
