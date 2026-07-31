@@ -50,12 +50,19 @@ object UpdateVerifier {
         digest.digest().joinToString("") { "%02x".format(it) }
     } catch (e: Exception) { null }
 
-    fun verifySignatureMatches(context: Context, apkFile: File): Boolean = try {
-        val installedCerts = getInstalledCertHashes(context)
-        val apkCerts = getApkCertHashes(context, apkFile)
-        if (installedCerts.isEmpty() || apkCerts.isEmpty()) return false
-        apkCerts.any { it in installedCerts }
-    } catch (e: Exception) { false }
+    fun verifySignatureMatches(context: Context, apkFile: File): Boolean {
+        return try {
+            val installedCerts = getInstalledCertHashes(context)
+            val apkCerts = getApkCertHashes(context, apkFile)
+            if (installedCerts.isEmpty() || apkCerts.isEmpty()) {
+                false
+            } else {
+                apkCerts.any { it in installedCerts }
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     private fun getInstalledCertHashes(context: Context): Set<String> {
         val pm = context.packageManager
