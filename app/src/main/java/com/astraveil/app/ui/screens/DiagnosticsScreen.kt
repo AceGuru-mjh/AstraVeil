@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -138,49 +139,66 @@ private fun DiagnosticActions(
 @Composable
 private fun SystemRecommendationsCard(state: StatusViewModel.UiState) {
     val manufacturer = state.deviceProfile.manufacturer.lowercase()
-    val isSamsung = manufacturer.contains("samsung")
-    val isXiaomi = manufacturer.contains("xiaomi")
+    val selinuxEnforcing = state.capability.selinuxStatus == com.astraveil.core.capability.SelinuxStatus.ENFORCING
+    val hasOverlayFs = state.capability.overlayFsCapability
+    val providerName = state.providerName
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
+    AstraCard(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            RecommendationRow(
-                icon = Icons.Filled.CheckCircle,
-                tint = AstraSuccess,
-                title = "Use AstraRoot Brokered Mode",
-                description = "Enables fine-grained permission control and prevents legacy raw su execution flaws."
-            )
-
-            if (isSamsung) {
+            // Dynamic: based on actual provider state
+            if (providerName == "None" || providerName.isBlank()) {
                 RecommendationRow(
-                    icon = Icons.Filled.Info,
+                    icon = Icons.Filled.Warning,
                     tint = AstraWarning,
-                    title = "Knox Restriction Bypass",
-                    description = "Samsung Knox enforces secure boot checks. Ensure Custom ROM signature spoofing or KnoxPatch is active."
-                )
-            } else if (isXiaomi) {
-                RecommendationRow(
-                    icon = Icons.Filled.Info,
-                    tint = AstraWarning,
-                    title = "Mount Namespace Fix",
-                    description = "HyperOS limits mount propagations. Disable 'Mount Namespace Separation' in your Root Manager if bind mounts fail."
+                    title = "No Root Backend",
+                    description = "Install Magisk, KernelSU, or APatch to unlock root capabilities. AstraVeil abstracts over all three."
                 )
             } else {
                 RecommendationRow(
+                    icon = Icons.Filled.CheckCircle,
+                    tint = AstraSuccess,
+                    title = "$providerName Active",
+                    description = "Root backend detected. Capability matrix is populated from live device probes."
+                )
+            }
+
+            // Dynamic: based on actual SELinux state
+            if (selinuxEnforcing) {
+                RecommendationRow(
                     icon = Icons.Filled.Info,
                     tint = AstraAccent,
-                    title = "Optimize OverlayFS",
-                    description = "For reliable system module mounts, ensure system partition is remounted as read-write or use overlayfs helpers."
+                    title = "SELinux Enforcing",
+                    description = "Modules must declare sepolicy rules. AstraVeil's astrad loads .te fragments at boot."
+                )
+            }
+
+            // Dynamic: based on actual overlayfs capability
+            if (!hasOverlayFs) {
+                RecommendationRow(
+                    icon = Icons.Filled.Warning,
+                    tint = AstraWarning,
+                    title = "OverlayFS Unavailable",
+                    description = "Kernel does not support overlayfs. Systemless module mounts will use bind-mount fallback."
+                )
+            }
+
+            // Dynamic: manufacturer-specific
+            if (manufacturer.contains("samsung")) {
+                RecommendationRow(
+                    icon = Icons.Filled.Info,
+                    tint = AstraWarning,
+                    title = "Samsung Knox Detected",
+                    description = "Knox may trip on boot image modification. Check Warranty bit before flashing."
+                )
+            } else if (manufacturer.contains("xiaomi")) {
+                RecommendationRow(
+                    icon = Icons.Filled.Info,
+                    tint = AstraWarning,
+                    title = "Xiaomi HyperOS",
+                    description = "HyperOS limits mount propagations. Disable 'Mount Namespace Separation' in your Root Manager if bind mounts fail."
                 )
             }
         }
