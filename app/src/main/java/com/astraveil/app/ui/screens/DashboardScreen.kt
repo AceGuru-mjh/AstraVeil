@@ -20,7 +20,6 @@ import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.QuickActionCard
 import com.astraveil.app.ui.components.StatusCard
 import com.astraveil.app.ui.components.StatusPill
-import com.astraveil.app.ui.design.GlassCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess

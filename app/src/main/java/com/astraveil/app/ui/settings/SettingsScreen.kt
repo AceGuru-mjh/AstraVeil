@@ -29,7 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.astraveil.app.ui.AstraStrings
-import com.astraveil.app.ui.design.GlassCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.theme.AstraAccent
 
 data class SettingEntry(
@@ -71,7 +71,7 @@ fun SettingsScreen(
             }
         }
         items(SettingEntries.list) { entry ->
-            GlassCard(
+            AstraCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onNavigate(entry.route) }

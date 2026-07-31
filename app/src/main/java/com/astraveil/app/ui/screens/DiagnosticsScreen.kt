@@ -25,7 +25,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.astraveil.app.ui.design.GlassCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraWarning
@@ -95,7 +95,7 @@ private fun DiagnosticActions(
     viewModel: StatusViewModel,
     state: StatusViewModel.UiState
 ) {
-    GlassCard {
+    AstraCard {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 text = AstraStrings.diagHealthScanner,

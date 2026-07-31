@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.InstallMobile
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,8 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.astraveil.app.ui.AstraStrings
-import com.astraveil.app.ui.design.AstraGlass
-import com.astraveil.app.ui.design.LiquidGlassSurface
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -91,7 +91,13 @@ fun SecurityReviewDialog(
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        LiquidGlassSurface(cornerRadius = 24.dp, enablePressEffect = false) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -104,7 +110,7 @@ fun SecurityReviewDialog(
                     Icon(
                         imageVector = Icons.Filled.InstallMobile,
                         contentDescription = null,
-                        tint = AstraGlass.Glow,
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
@@ -205,7 +211,7 @@ fun SecurityReviewDialog(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(14.dp),
                                 strokeWidth = 2.dp,
-                                color = AstraGlass.Glow,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(AstraStrings.secInstalling)
@@ -228,7 +234,7 @@ private fun FingerprintRow(hash: String) {
             Icon(
                 Icons.Filled.Fingerprint,
                 contentDescription = null,
-                tint = AstraGlass.Glow,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp),
             )
             Spacer(Modifier.width(6.dp))

@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.StatusPill
-import com.astraveil.app.ui.design.GlassCard
+import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -238,7 +238,7 @@ private fun RootTestCard(
     viewModel: StatusViewModel,
     state: StatusViewModel.UiState,
 ) {
-    GlassCard {
+    AstraCard {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 "Root Capability Test",
