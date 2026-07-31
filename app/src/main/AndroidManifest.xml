@@ -11,6 +11,13 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- Legacy storage (API 23-32 only, for directory scanning).
+         .avm import uses SAF (OpenDocument) which needs NO storage permission. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <application
         android:name=".AstraVeilApplication"
         android:allowBackup="false"
