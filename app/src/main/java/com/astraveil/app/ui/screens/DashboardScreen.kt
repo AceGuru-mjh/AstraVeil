@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -196,6 +197,7 @@ private fun DeviceHeaderCard(state: StatusViewModel.UiState, onRefresh: () -> Un
 // 2. Quick actions
 // ================================================================
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuickActionsRow(onNavigate: (String) -> Unit) {
     AstraCard(modifier = Modifier.fillMaxWidth()) {
