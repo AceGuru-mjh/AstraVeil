@@ -1,16 +1,32 @@
 package com.astraveil.app.notification
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.astraveil.app.MainActivity
 import com.astraveil.app.R
 
+/**
+ * Centralised notification dispatcher for AstraVeil.
+ *
+ * Every `notify(...)` / `cancel(...)` call is guarded by [canPost], which on
+ * Android 13+ (Tiramisu / API 33) explicitly checks the runtime
+ * `POST_NOTIFICATIONS` permission via [ContextCompat.checkSelfPermission]
+ * AND the user's per-channel notification preference. Lint still flags the
+ * `NotificationManagerCompat.notify(...)` calls because it cannot follow the
+ * guard across method boundaries, so we suppress `MissingPermission` at the
+ * object level — the runtime check is performed in [canPost].
+ */
+@SuppressLint("MissingPermission")
 object AstraNotificationManager {
 
     const val CHANNEL_SU_REQUESTS = "su_requests"
@@ -73,11 +89,19 @@ object AstraNotificationManager {
     }
 
     private fun canPost(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            NotificationManagerCompat.from(context).areNotificationsEnabled()
+        // On Android 13+ (API 33, Tiramisu) POST_NOTIFICATIONS is a runtime
+        // permission — verify it explicitly. On older API levels notifications
+        // are gated only by the user's per-app preference.
+        val hasRuntimePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
         } else {
             true
         }
+        return hasRuntimePermission &&
+            NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
     fun notifySuRequest(context: Context, appName: String, packageName: String, uid: Int) {
