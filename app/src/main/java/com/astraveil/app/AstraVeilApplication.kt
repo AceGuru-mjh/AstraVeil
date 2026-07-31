@@ -17,6 +17,10 @@ class AstraVeilApplication : Application() {
         Log.i(TAG, "onCreate")
         core = com.astraveil.core.AstraCore(this)
         daemonManager = DaemonManager(this)
+
+        // Create notification channels (no-op on API < 26)
+        com.astraveil.app.notification.AstraNotificationManager.init(this)
+
         appScope.launch {
             core.initialize()
             com.astraveil.providers.ProviderRegistry.eventBus = core.eventBus

@@ -71,8 +71,40 @@ class StatusViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    // ---- Root access state ----
+    private val _rootAccessStatus = MutableStateFlow<com.astraveil.app.root.RootAccessStatus?>(null)
+    val rootAccessStatus: StateFlow<com.astraveil.app.root.RootAccessStatus?> = _rootAccessStatus.asStateFlow()
+
+    private val _requestingAccess = MutableStateFlow(false)
+    val requestingAccess: StateFlow<Boolean> = _requestingAccess.asStateFlow()
+
     // No hardcoded app list — refreshAppsList() queries PackageManager for
     // real installed user apps.
+
+    fun requestRootAccess() {
+        if (_requestingAccess.value) return
+        viewModelScope.launch {
+            _requestingAccess.value = true
+            _rootAccessStatus.value = null
+            val status = withContext(Dispatchers.IO) {
+                val info = runCatching {
+                    com.astraveil.providers.ProviderRegistry.detectActive()
+                }.getOrNull()
+                val provider = info?.let {
+                    com.astraveil.providers.ProviderRegistry.byId(it.providerName)
+                } ?: return@withContext com.astraveil.app.root.RootAccessStatus.NO_BACKEND
+
+                com.astraveil.app.root.RootAccessManager.requestAccess(provider)
+            }
+            _requestingAccess.value = false
+            _rootAccessStatus.value = status
+
+            if (status == com.astraveil.app.root.RootAccessStatus.GRANTED) {
+                refresh()
+                refreshAppsList()
+            }
+        }
+    }
 
     fun refresh() {
         viewModelScope.launch {
