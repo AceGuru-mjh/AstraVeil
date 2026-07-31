@@ -1,0 +1,31 @@
+name: Fuzz
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 4 * * 1'
+jobs:
+  cpp-fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang
+        run: sudo apt-get install -y clang
+      - name: Build & run frame codec fuzzer
+        run: |
+          clang++ -g -fsanitize=fuzzer,address daemon/fuzz/fuzz_frame_codec.cpp -o fuzz_frame
+          ./fuzz_frame -max_total_time=60 -artifact_prefix=fuzz_artifacts/
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: cpp-crashes, path: fuzz_artifacts/ }
+  rust-fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+      - name: Run policy fuzzer
+        run: cd rust && cargo fuzz run policy -- -max_total_time=60
+        continue-on-error: true

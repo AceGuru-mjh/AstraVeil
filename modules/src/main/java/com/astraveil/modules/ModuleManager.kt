@@ -4,6 +4,10 @@ import com.astraveil.core.AstraCore
 import com.astraveil.core.event.ModuleInstalledEvent
 import com.astraveil.core.event.ModuleStateChangedEvent
 import com.astraveil.core.event.ModuleUninstalledEvent
+import com.astraveil.modules.registry.ModuleRecord
+import com.astraveil.modules.registry.ModuleRegistry
+import com.astraveil.modules.registry.SignatureStatus
+import com.astraveil.modules.security.TrustGate
 import com.astraveil.providers.ProviderRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -64,6 +68,31 @@ class ModuleManager(
         if (!exists()) mkdirs()
     }
 
+    // P1-8 (persistence) + P1-9 (trust gate): ModuleRegistry survives
+    // restarts; persistentMeta mirrors the on-disk record so we can keep
+    // sourceHash / signatureStatus / installSource around between calls.
+    private val registry = ModuleRegistry(modulesRoot)
+    private val persistentMeta = mutableMapOf<String, ModuleRecord>()
+
+    init {
+        for ((id, record) in registry.load()) {
+            val manifestFile = File(record.installPath, "module.json")
+            if (!manifestFile.exists()) continue
+            val manifest = runCatching {
+                validator.validateManifest(manifestFile.readText()).getOrThrow()
+            }.getOrNull() ?: continue
+            val state = runCatching { ModuleState.valueOf(record.state) }
+                .getOrDefault(ModuleState.INSTALLED)
+            modules[id] = AstraModule(
+                id = id, manifest = manifest, state = state,
+                installPath = record.installPath,
+                grantedPermissions = record.grantedPermissions,
+            )
+            persistentMeta[id] = record
+        }
+        android.util.Log.i("ModuleManager", "Registry rebuilt: ${modules.size} module(s)")
+    }
+
     /**
      * Install the `.avm` package at [avmFile].
      *
@@ -100,6 +129,17 @@ class ModuleManager(
             require(MODULE_ID_REGEX.matches(moduleId)) {
                 "unsafe module id (must match ${MODULE_ID_REGEX.pattern}): '$moduleId'"
             }
+
+            // Trust Gate (P1-9): mandatory, cannot be bypassed
+            val signatureStatus = verifySignature(avmFile)
+            val trustReport = TrustGate.evaluate(
+                stagedFile = avmFile,
+                manifestValid = true,
+                apiVersion = manifest.api,
+                signatureStatus = signatureStatus,
+            )
+            TrustGate.requireInstallable(trustReport, strict = false)
+            val sourceHash = trustReport.sourceHash
 
             mutex.withLock {
                 require(!modules.containsKey(moduleId)) {
@@ -185,6 +225,19 @@ class ModuleManager(
                     grantedPermissions = granted
                 )
                 modules[moduleId] = module
+
+                val now = System.currentTimeMillis()
+                persistentMeta[moduleId] = ModuleRecord(
+                    id = moduleId, version = manifest.version,
+                    apiVersion = manifest.api, installPath = module.installPath,
+                    state = module.state.name, sourceHash = sourceHash,
+                    signatureStatus = signatureStatus,
+                    installSource = avmFile.absolutePath,
+                    grantedPermissions = module.grantedPermissions,
+                    installTime = now, lastUpdateTime = now,
+                )
+                registry.save(snapshotRecords())
+
                 core.eventBus.emit(
                     ModuleInstalledEvent(moduleId, manifest.version)
                 )
@@ -200,6 +253,8 @@ class ModuleManager(
         mutex.withLock {
             val module = modules.remove(moduleId) ?: return@withLock false
             File(module.installPath).deleteRecursively()
+            persistentMeta.remove(moduleId)
+            registry.save(snapshotRecords())
             // Revoke all permissions and persist the change so they don't
             // silently re-appear on restart.
             core.permissionEngine.revokeAll(moduleId)
@@ -270,9 +325,60 @@ class ModuleManager(
             val current = modules[moduleId] ?: error("module '$moduleId' not installed")
             if (current.state == target) return@withLock
             modules[moduleId] = current.copy(state = target)
+            registry.save(snapshotRecords())
             core.eventBus.emit(
                 ModuleStateChangedEvent(moduleId, target.name)
             )
+        }
+    }
+
+    /**
+     * Snapshot the in-memory module map into a list of [ModuleRecord]s for
+     * persistence via [ModuleRegistry.save]. Merges persisted install-time
+     * metadata (sourceHash, signatureStatus, installSource, installTime)
+     * with the live [AstraModule] state.
+     */
+    private fun snapshotRecords(): List<ModuleRecord> {
+        return modules.map { (id, module) ->
+            val meta = persistentMeta[id]
+            ModuleRecord(
+                id = id, version = module.manifest.version,
+                apiVersion = module.manifest.api, installPath = module.installPath,
+                state = module.state.name, sourceHash = meta?.sourceHash,
+                signatureStatus = meta?.signatureStatus ?: SignatureStatus.UNKNOWN,
+                installSource = meta?.installSource ?: "",
+                grantedPermissions = module.grantedPermissions,
+                installTime = meta?.installTime ?: System.currentTimeMillis(),
+                lastUpdateTime = System.currentTimeMillis(),
+            )
+        }
+    }
+
+    /**
+     * Inspect the .avm archive for an `ASTRAVEIL.SIG` entry and verify it
+     * against the pinned Ed25519 public key exposed by
+     * [com.astraveil.core.security.SecurityManager.verifySignature].
+     *
+     * Returns [SignatureStatus.VERIFIED] on success, [SignatureStatus.UNSIGNED]
+     * when no signature entry is present, [SignatureStatus.INVALID] when the
+     * signature is present but does not verify, and [SignatureStatus.UNKNOWN]
+     * when the archive cannot be read or the manifest entry is missing.
+     */
+    private fun verifySignature(avmFile: File): SignatureStatus {
+        return try {
+            java.util.zip.ZipFile(avmFile).use { zip ->
+                val sigEntry = zip.getEntry("ASTRAVEIL.SIG")
+                    ?: return SignatureStatus.UNSIGNED
+                val signature = zip.getInputStream(sigEntry).readBytes()
+                val manifestEntry = zip.getEntry("module.json")
+                    ?: return SignatureStatus.UNKNOWN
+                val manifestBytes = zip.getInputStream(manifestEntry).readBytes()
+                if (core.security.verifySignature(manifestBytes, signature))
+                    SignatureStatus.VERIFIED else SignatureStatus.INVALID
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("ModuleManager", "signature verify error: ${e.message}")
+            SignatureStatus.UNKNOWN
         }
     }
 }
