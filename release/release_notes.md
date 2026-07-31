@@ -1,27 +1,18 @@
-# AstraVeil v1.0.4 — Release Notes
+# AstraVeil v1.0.5 — Release Notes
 
 ## Overview
 
-Critical fix: Superuser page now works on root devices.
+Patch release: DiagnosticsScreen recommendations now dynamic.
 
-## What's new in v1.0.4
+## What's new in v1.0.5
 
-- **magisk --sqlite** — Replaced `sqlite3` (not shipped by Magisk) with
-  `magisk --sqlite` for all su policy database operations. This is the
-  canonical Magisk interface for querying/modifying the su policy DB.
-  The Superuser page was completely non-functional on root devices
-  because `sqlite3: not found`.
-- **Output format parser** — `magisk --sqlite` outputs rows as
-  `key=value | key=value | ...` (not pipe-delimited values). Replaced
-  the old positional parser with a key-value map parser.
-
-## Root user path (now works)
-
-```
-Detect Magisk → magisk --sqlite SELECT → real policy list
-→ user changes Allow/Ask/Deny → magisk --sqlite INSERT → Magisk DB updated
-→ Termux su → Magisk checks DB → uses AstraVeil's policy
-```
+- **Dynamic Diagnostics Recommendations** — Replaced hardcoded recommendations
+  with ones derived from real device state:
+  - Provider: "No Root Backend" (amber) vs "<provider> Active" (green)
+  - SELinux: "SELinux Enforcing" shown only when status is ENFORCING
+  - OverlayFS: "OverlayFS Unavailable" shown only when not supported
+  - Manufacturer: Samsung Knox / Xiaomi HyperOS tips shown conditionally
+- **AstraCard** — DiagnosticsScreen now uses AstraCard for visual consistency
 
 ## Full feature set
 
