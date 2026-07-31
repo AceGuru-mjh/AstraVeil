@@ -1,15 +1,27 @@
-# AstraVeil v1.0.3 — Release Notes
+# AstraVeil v1.0.4 — Release Notes
 
 ## Overview
 
-Patch release: replaced hardcoded app list with real PackageManager query.
+Critical fix: Superuser page now works on root devices.
 
-## What's new in v1.0.3
+## What's new in v1.0.4
 
-- **Real App List** — Superuser screen now shows actual installed user apps
-  from PackageManager (was hardcoded: Termux, ADB Shell, Magisk, etc.).
-  Uses ApplicationInfoFlags.of on API 33+, deprecated overload below.
-  Su grants checked via PermissionEngine.
+- **magisk --sqlite** — Replaced `sqlite3` (not shipped by Magisk) with
+  `magisk --sqlite` for all su policy database operations. This is the
+  canonical Magisk interface for querying/modifying the su policy DB.
+  The Superuser page was completely non-functional on root devices
+  because `sqlite3: not found`.
+- **Output format parser** — `magisk --sqlite` outputs rows as
+  `key=value | key=value | ...` (not pipe-delimited values). Replaced
+  the old positional parser with a key-value map parser.
+
+## Root user path (now works)
+
+```
+Detect Magisk → magisk --sqlite SELECT → real policy list
+→ user changes Allow/Ask/Deny → magisk --sqlite INSERT → Magisk DB updated
+→ Termux su → Magisk checks DB → uses AstraVeil's policy
+```
 
 ## Full feature set
 
