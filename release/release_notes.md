@@ -1,31 +1,34 @@
-# AstraVeil v1.4.0 — Release Notes
+# AstraVeil v1.5.0 — Release Notes
 
 ## Overview
 
-Security hardening complete: module registry persistence, trust gate, data provenance, CI verification.
+Security engineering completion: trust gate wired, update verifier, signature infrastructure, threat model, fuzzing, cross-backend executor.
 
-## What's new in v1.4.0
+## What's new in v1.5.0
 
-### PR-C: Module Registry + Trust Gate
-- **ModuleRegistry**: persists module list to `.registry.json` (survives app restart)
-- **TrustGate**: mandatory trust verification — `requireInstallable()` throws if hash missing, manifest invalid, or signature unverified
+### PR-C Completion: Module Registry + Trust Gate (wired)
+- ModuleManager now loads from `.registry.json` on startup (survives restart)
+- TrustGate.requireInstallable() enforced inside install() — cannot be bypassed
+- verifySignature() reads ASTRAVEIL.SIG from .avm archive
+- registry.save() called on install/uninstall/state-transition
 
-### PR-E: Data Provenance
-- **DataProvenance enum**: PROBED/DETECTED/ADVERTISED/INFERRED/UNAVAILABLE
-- **ProvenancedValue<T>**: every data point carries its source
-- Removed hardcoded `latencyMs=8`, `pid=0`, `daemonVersion="0.1.0"`, `daemonOnline=true`
+### PR-D Completion: Update Chain Security
+- UpdateVerifier: SHA-256 checksum + signing certificate matching
+- ModuleSignatureVerifier: Ed25519 signature + manifest hash + trust levels
+- DeveloperKeyStore: user-managed trust store for developer keys
+- AvMSigner: CLI tool for keygen + signing .avm packages
 
-### PR-F: CI Verification
-- **Daemon tests**: peer UID whitelist (12 assertions), frame codec round-trip (5 cases)
-- **Secret scan**: `check_no_secrets.sh` blocks keystore files and hardcoded passwords
-- **Android CI**: now runs `testDebugUnitTest` + `lintDebug`
-- **Native CI**: now runs `ctest`
-- **Keystore untracked**: removed from git
+### Security Engineering
+- docs/THREAT_MODEL.md: STRIDE analysis, attack trees, residual risks
+- docs/MODULE_DEVELOPER_GUIDE.md: full .avm developer documentation
+- docs/SECURITY.md: vulnerability reporting policy
 
-## Security audit PRs A-F summary
-- PR-A: IPC auth (0660 + SO_PEERCRED) + Rust fail-closed
-- PR-B: Zip Slip + zip bomb + ID regex
-- PR-C: Registry persistence + trust gate
-- PR-D: REQUEST_INSTALL_PACKAGES + FileProvider + SHA-256 checksum
-- PR-E: Data provenance (remove hardcoded values)
-- PR-F: CI verification (tests + lint + ctest + secret scan)
+### Cross-Backend + Compatibility
+- ShellExecutor: robust command execution with timeout + async I/O
+- CapabilityCompatibilityChecker: install-before-you-try capability check
+
+### Fuzzing
+- daemon/fuzz/fuzz_frame_codec.cpp: libFuzzer IPC frame harness
+- .github/workflows/fuzz.yml: CI fuzz workflow (C++ + Rust)
+
+## Security audit status: ALL 6 PRs (A-F) fully landed
