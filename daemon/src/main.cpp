@@ -21,11 +21,14 @@
 #include "astra/security/risk_engine.hpp"
 #include "astra/security/signature_verifier.hpp"
 #include "astra/security/policy_bridge.hpp"
+#include "astra/ipc/json_codec.h"
+#include <nlohmann/json.hpp>
 
 #include <getopt.h>
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
@@ -36,6 +39,15 @@
 #include <vector>
 
 namespace {
+
+/// Daemon start time for uptime calculation.
+static const std::chrono::steady_clock::time_point kDaemonStart =
+    std::chrono::steady_clock::now();
+
+static long long uptimeMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - kDaemonStart).count();
+}
 
 /// Escape a string for embedding inside a JSON string literal.
 std::string json_escape(const std::string& s) {
@@ -193,74 +205,79 @@ int main(int argc, char** argv) {
                 // active provider offers it. NoRoot reports none, so on
                 // an unrooted device every entry is false.
                 const auto caps = provider_manager.capabilities();
-                std::ostringstream po;
-                po << "{\"root\":{"
-                   << "\"provider\":\"" << json_escape(pname) << "\""
-                   << ",\"type\":" << ptype
-                   << ",\"available\":" << (pavail ? "true" : "false")
-                   << "},\"capabilities\":{";
-                bool first = true;
+                std::map<std::string, bool> cap_map;
                 for (const auto c : astra::capability::all_capabilities()) {
-                    if (!first) po << ",";
-                    first = false;
                     const bool offered =
                         std::find(caps.begin(), caps.end(), c) != caps.end();
-                    po << "\"" << astra::capability::capability_name(c)
-                       << "\":" << (offered ? "true" : "false");
+                    cap_map[astra::capability::capability_name(c)] = offered;
                 }
-                po << "}}";
-                response_json = po.str();
+                // Build response with nlohmann (proper escaping)
+                nlohmann::json j;
+                j["root"]["provider"] = pname;
+                j["root"]["type"] = ptype;
+                j["root"]["available"] = pavail;
+                nlohmann::json cap_json = nlohmann::json::object();
+                for (const auto& [k, v] : cap_map) cap_json[k] = v;
+                j["capabilities"] = cap_json;
+                response_json = j.dump();
 
                 ctx.active_provider = pname;
                 ctx.provider_online.store(pname != "none");
                 break;
             }
             case RequestType::Execute: {
-                if (!permission_service.can_execute(body)) {
-                    response_json =
-                        "{\"error\":\"permission_denied\"}";
+                // P0-1: parse structured request — raw command strings are
+                // never the public IPC API. Missing fields → reject.
+                astra::ipc::ExecReq req;
+                if (!astra::ipc::parse_execute_request(body, req)) {
+                    response_json = astra::ipc::make_error_response(
+                        "bad_request",
+                        "malformed or incomplete execute request "
+                        "(need moduleId/capability/riskLevel/approved/"
+                        "caller/command)");
                     break;
                 }
 
-                // P0-2: All execution MUST go through the Rust policy engine.
-                // The current IPC body is a bare command string; until the
-                // structured IPC protocol lands we treat every Execute as an
-                // "interactive" context with high risk and no pre-approval.
-                // Fail-closed: if Rust is not linked, policy_bridge.checkWith
-                // returns DENY and the command never runs.
-                const std::string exec_module_id = "interactive";
-                const std::string exec_capability = "shell";
-                const unsigned int exec_risk_level = 90;
-                const bool exec_approved = false;
+                if (!permission_service.can_execute(req.command)) {
+                    response_json = astra::ipc::make_error_response(
+                        "permission_denied", "no active root provider");
+                    break;
+                }
 
+                ALOGI("Execute: caller=%s module=%s cap=%s risk=%u approved=%d",
+                      req.caller.c_str(), req.module_id.c_str(),
+                      req.capability.c_str(), req.risk_level,
+                      req.approved ? 1 : 0);
+
+                // P0-2: structured policy check (fail-closed if Rust not linked)
                 const auto decision = policy_bridge.checkWith(
-                    exec_module_id, exec_capability,
-                    exec_risk_level, exec_approved);
+                    req.module_id, req.capability,
+                    req.risk_level, req.approved);
 
                 if (decision == astra::PolicyResult::DENY) {
-                    response_json =
-                        "{\"error\":\"policy_denied\","
-                        "\"reason\":\"Rust policy denied execution\"}";
+                    response_json = astra::ipc::make_error_response(
+                        "policy_denied",
+                        "Rust policy denied execution for module '" +
+                        req.module_id + "' capability '" + req.capability + "'");
                     break;
                 }
                 if (decision == astra::PolicyResult::APPROVAL) {
-                    response_json =
-                        "{\"error\":\"approval_required\","
-                        "\"reason\":\"execution requires user approval\"}";
+                    response_json = astra::ipc::make_error_response(
+                        "approval_required",
+                        "execution requires user approval");
                     break;
                 }
 
                 // Only ALLOW reaches here.
-                const auto result = executor.execute(body);
-                std::ostringstream out;
-                out << "{\"exit_code\":" << result.exit_code
-                    << ",\"stdout\":\"" << json_escape(result.stdout_) << "\""
-                    << ",\"stderr\":\"" << json_escape(result.stderr_) << "\"}";
-                response_json = out.str();
+                const auto result = executor.execute(req.command);
+                response_json = astra::ipc::make_exec_response(
+                    result.success, result.exit_code,
+                    result.stdout_, result.stderr_);
                 break;
             }
             case RequestType::Ping: {
-                response_json = "{\"pong\":true,\"version\":\"" + ctx.version + "\"}";
+                response_json = astra::ipc::make_ping_response(
+                    ctx.version, uptimeMs());
                 break;
             }
             case RequestType::GetCapabilityMatrix: {
@@ -415,24 +432,19 @@ int main(int argc, char** argv) {
                 break;
             }
             case RequestType::GetAuditLog: {
-                // Return the last N lines of the audit log (best-effort).
+                // Return audit log lines as a valid JSON array (nlohmann).
                 std::ifstream af("/data/astra/log/security.log");
                 std::ostringstream ro;
-                ro << "[";
                 std::string line;
-                bool first = true;
-                while (std::getline(af, line)) {
-                    if (!first) ro << ",";
-                    first = false;
-                    ro << line;
-                }
-                ro << "]";
-                response_json = ro.str();
+                while (std::getline(af, line)) ro << line << "\n";
+                response_json = astra::ipc::make_audit_array(ro.str());
                 break;
             }
             default: {
                 ALOGW("astrad: unknown request type 0x%02x", static_cast<unsigned>(type));
-                response_json = "{\"error\":\"unknown_request_type\"}";
+                response_json = astra::ipc::make_error_response(
+                    "unknown_request_type",
+                    "unrecognized type byte");
                 break;
             }
         }

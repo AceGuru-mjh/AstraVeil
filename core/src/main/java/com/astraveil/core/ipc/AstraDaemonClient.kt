@@ -5,6 +5,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -54,6 +56,9 @@ class AstraDaemonClient(
     private var heartbeatJob: Job? = null
     private var reconnectAttempts = 0
 
+    /** Serializes requests so concurrent callers don't interleave frames. */
+    private val ioMutex = Mutex()
+
     /**
      * Connect to the daemon socket. Transitions state to CONNECTING → ONLINE or FAILED.
      */
@@ -95,34 +100,78 @@ class AstraDaemonClient(
             AstraLogger.w(TAG, "request() called while state=${_state.value}")
             return@withContext null
         }
-        try {
-            // P1-14: use byte count, not char count — body.length counts
-            // chars, but copyInto writes UTF-8 bytes. For multi-byte chars
-            // (Chinese, etc.) the array was too small → IndexOutOfBounds.
-            val bodyBytes = body.toByteArray(Charsets.UTF_8)
-            val payload = ByteArray(1 + bodyBytes.size)
-            payload[0] = type
-            bodyBytes.copyInto(payload, 1)
+        // Serialize requests so concurrent callers don't interleave frames
+        // on the shared socket stream.
+        ioMutex.withLock {
+            try {
+                // P1-14: use byte count, not char count — body.length counts
+                // chars, but copyInto writes UTF-8 bytes. For multi-byte chars
+                // (Chinese, etc.) the array was too small → IndexOutOfBounds.
+                val bodyBytes = body.toByteArray(Charsets.UTF_8)
+                val payload = ByteArray(1 + bodyBytes.size)
+                payload[0] = type
+                bodyBytes.copyInto(payload, 1)
 
-            sendFrame(payload)
-            val response = readFrame()
-            if (response == null || response.isEmpty()) return@withContext null
+                sendFrame(payload)
+                val response = readFrame()
+                if (response == null || response.isEmpty()) return@withLock null
 
-            // First byte of response echoes the request type; rest is JSON
-            String(response, 1, response.size - 1, Charsets.UTF_8)
-        } catch (e: Exception) {
-            AstraLogger.e(TAG, "request failed: ${e.message}", e)
-            _state.value = DaemonState.FAILED
-            scheduleReconnect()
-            null
+                // First byte of response echoes the request type; rest is JSON
+                String(response, 1, response.size - 1, Charsets.UTF_8)
+            } catch (e: Exception) {
+                AstraLogger.e(TAG, "request failed: ${e.message}", e)
+                _state.value = DaemonState.FAILED
+                scheduleReconnect()
+                null
+            }
         }
     }
 
-    /** Convenience: execute a shell command via the daemon. */
+    /** Convenience: execute a shell command via the daemon (raw, legacy). */
     suspend fun execute(command: String): String? = request(TYPE_EXECUTE, command)
+
+    /**
+     * Structured execute (audit P0-1). Sends an [DaemonProtocol.ExecuteRequest]
+     * JSON body so the daemon can route it through PolicyBridge with real
+     * moduleId/capability/risk/approved fields. Returns a parsed
+     * [DaemonProtocol.DaemonResponse].
+     */
+    suspend fun executeStructured(
+        command: String,
+        moduleId: String = "interactive",
+        capability: String = "shell",
+        riskLevel: Int = 90,
+        approved: Boolean = false,
+        caller: String = "com.astraveil.app",
+    ): DaemonProtocol.DaemonResponse {
+        val req = DaemonProtocol.ExecuteRequest(
+            moduleId, capability, riskLevel, approved, caller, command)
+        val body = DaemonProtocol.json.encodeToString(
+            DaemonProtocol.ExecuteRequest.serializer(), req)
+        val raw = request(TYPE_EXECUTE, body)
+            ?: return DaemonProtocol.DaemonResponse(
+                error = "unreachable", reason = "daemon not connected")
+        return runCatching {
+            DaemonProtocol.json.decodeFromString(
+                DaemonProtocol.DaemonResponse.serializer(), raw)
+        }.getOrDefault(DaemonProtocol.DaemonResponse(
+            error = "bad_response", reason = raw))
+    }
 
     /** Convenience: get the live capability matrix JSON. */
     suspend fun getCapabilityMatrix(): String? = request(TYPE_GET_CAPABILITY_MATRIX)
+
+    /**
+     * Typed capability matrix from the daemon (ADVERTISED provenance).
+     * Returns null if unreachable or malformed.
+     */
+    suspend fun getCapabilityMatrixTyped(): DaemonCapabilityResponse? {
+        val raw = request(TYPE_GET_CAPABILITY_MATRIX) ?: return null
+        return runCatching {
+            DaemonProtocol.json.decodeFromString(
+                DaemonCapabilityResponse.serializer(), raw)
+        }.getOrNull()
+    }
 
     /** Convenience: ping the daemon. */
     suspend fun ping(): String? = request(TYPE_PING)

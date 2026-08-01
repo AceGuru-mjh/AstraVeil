@@ -42,6 +42,7 @@ set(ASTRAD_SOURCES
     src/ipc/request_handler.cpp
     src/provider/provider_registry.cpp
     src/security_bridge/policy_bridge.cpp
+    src/ipc/json_codec.cpp
     src/sandbox/sandbox_manager.cpp
     src/sandbox/namespace_manager.cpp
     src/sandbox/mount_isolation.cpp
@@ -92,7 +93,10 @@ set(ASTRAD_SOURCES
 add_executable(astrad ${ASTRAD_SOURCES})
 
 # ---- Includes ---------------------------------------------------------------
-target_include_directories(astrad PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(astrad PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+)
 
 # ---- Threads ----------------------------------------------------------------
 find_package(Threads REQUIRED)
