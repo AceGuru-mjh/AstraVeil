@@ -96,9 +96,13 @@ class AstraDaemonClient(
             return@withContext null
         }
         try {
-            val payload = ByteArray(1 + body.length)
+            // P1-14: use byte count, not char count — body.length counts
+            // chars, but copyInto writes UTF-8 bytes. For multi-byte chars
+            // (Chinese, etc.) the array was too small → IndexOutOfBounds.
+            val bodyBytes = body.toByteArray(Charsets.UTF_8)
+            val payload = ByteArray(1 + bodyBytes.size)
             payload[0] = type
-            body.toByteArray(Charsets.UTF_8).copyInto(payload, 1)
+            bodyBytes.copyInto(payload, 1)
 
             sendFrame(payload)
             val response = readFrame()

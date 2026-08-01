@@ -17,3 +17,19 @@ jobs:
         run: cmake --build build-daemon -j
       - name: Run daemon tests
         run: ctest --test-dir build-daemon --output-on-failure
+      - name: Verify Rust policy linked (fail-closed guarantee)
+        run: |
+          ASTRAD=$(find build-daemon -name "astrad" -type f | head -1)
+          if [ -z "$ASTRAD" ]; then
+            echo "FATAL: astrad binary not found"; exit 1
+          fi
+          echo "Checking $ASTRAD..."
+          if nm "$ASTRAD" | grep -qE " [wW] policy_is_available"; then
+            echo "FATAL: policy_is_available is WEAK — Rust not linked, would fail open"
+            exit 1
+          fi
+          if ! nm "$ASTRAD" | grep -q "T policy_is_available"; then
+            echo "FATAL: policy_is_available missing from binary"
+            exit 1
+          fi
+          echo "OK: Rust policy linked (policy_is_available is a strong symbol), fail-closed enforced"
