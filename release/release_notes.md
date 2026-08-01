@@ -1,66 +1,56 @@
-# AstraVeil v1.9.0 — Release Notes
+# AstraVeil v2.0.0 — Release Notes
 
 ## Overview
 
-Three fixes in one release: **settings integration** (all 12 entries now
-open real functional screens), **liquid glass cleanup** (all liquid glass
-removed, pure Material 3), and **capability compatibility UI** (shown in
-the pre-install security review dialog).
+Settings consolidation: 12 entries → 10. Two merged screens replace four
+separate ones, and the theme preference now actually drives the color scheme.
 
-## What's new in v1.9.0
+## What's new in v2.0.0
 
-### Settings integration (root cause fix)
-All 9 settings sub-routes previously led to `ComingSoonScreen`. Now every
-entry opens a real functional screen:
+### Preferences (Appearance + Language merged)
+- **Theme mode** (Dark / Light / System): persisted to
+  `SharedPreferences("astra_ui_prefs")/"theme_mode"`. `MainActivity` reads
+  this at startup and passes a `ThemeMode` to `AstraVeilTheme` — the
+  preference now actually controls the color scheme (previously it was
+  stored but never read by the theme).
+- **Language** (English / 中文): persisted + `AstraStrings.setLocaleOverride`
+  + `Activity.recreate()` — applies immediately.
+- Both settings call `recreate()` so the user sees the change instantly.
 
-| Entry | Screen | Wired to |
-|---|---|---|
-| Security | SecuritySettingsScreen | AstraConfig.dangerousApproval, DeveloperKeyStore, CommandAuditLogger |
-| Provider | ProviderSettingsScreen | ProviderRegistry.all() + detectActive() |
-| Daemon | DaemonSettingsScreen | AstraConfig.daemonEnabled |
-| Modules | ModulesSettingsScreen | AstraConfig.moduleAutoStart |
-| Appearance | AppearanceScreen | SharedPreferences (theme_mode) |
-| Language | LanguageScreen | AstraStrings.setLocaleOverride + Activity.recreate() |
-| Notifications | NotificationsScreen | SharedPreferences (5 channel toggles) |
-| Backup | BackupSettingsScreen | config.load(), DeveloperKeyStore, CommandAuditLogger.export() |
-| Developer | DeveloperSettingsScreen | AstraConfig.logLevel + AstraLogger.setMinLevel |
-| Diagnostics | DiagnosticsScreen | (already existed) |
-| Updates | UpdateCenterScreen | (already existed) |
-| About | AboutScreen | (already existed) |
+### Update & Backup (Update Center + Backup merged)
+- **Update card**: `when`-matches the `UpdateState` sealed class
+  (Idle / Checking / Available / Downloading / Verifying / Installing /
+  Success / Latest / Error) and renders the appropriate UI — check
+  button, download progress bar, verify spinner, install button, error
+  message. Wired to the real `UpdateViewModel` (`checkForUpdate()` /
+  `downloadAndInstall()`).
+- **Backup card**: export/import a ZIP via SAF (CreateDocument /
+  OpenDocument) containing the module registry, trusted developer keys,
+  privileged command audit log, and a backup meta marker. No storage
+  permission needed.
 
-- 12 NavHost routes registered in AstraVeilApp.kt (0 ComingSoonScreen
-  placeholders remain)
-- 12 SettingsScreen entries with matching routes
-- Notifications: 5 channel toggles persisted via SharedPreferences
-- Language: selection persisted + Activity.recreate() for immediate effect
+### Theme.kt
+- Added `ThemeMode` enum (DARK / LIGHT / SYSTEM) with `fromString()` /
+  `toPrefString()`.
+- Added `AstraVeilTheme(themeMode: ThemeMode, content)` overload that
+  delegates to the existing elaborate color schemes — the dark-first
+  violet/teal palette and status bar setup are preserved.
 
-### Liquid glass cleanup (all removed)
-The liquid glass rendering (refraction + specular + chromatic aberration)
-has been completely removed. Pure Material 3 throughout.
+### Deleted (4 files → 2 merged screens)
+- `AppearanceScreen.kt` → merged into `PreferencesScreen.kt`
+- `LanguageScreen.kt` → merged into `PreferencesScreen.kt`
+- `UpdateCenterScreen.kt` → merged into `UpdateBackupScreen.kt`
+- `BackupSettingsScreen.kt` → merged into `UpdateBackupScreen.kt`
 
-- `AstraCard.kt`: LIQUID tier now renders as ELEVATED with accent tint
-  (no LiquidGlassSurface). `SurfaceTier` enum preserved for source
-  compatibility — all `tier = SurfaceTier.LIQUID` calls still compile
-  and work, they just get an elevated card instead of liquid glass.
-- Replaced `LiquidGlass.AccentTeal` → `AstraTeal.copy(alpha=0.08f)` and
-  `LiquidGlass.AccentViolet` → `AstraAccent.copy(alpha=0.08f)` in 5 files
-- Deleted 9 dead design files: LiquidGlassSurface, LiquidGlass,
-  LiquidGlassNavigationBar, LiquidGlassDivider, LiquidGlassCard, GlassCard,
-  GlassSurface, AstraGlass, AstraElevation
-- Design system now: **2 files** (AstraCard.kt + AstraShapes.kt) — pure M3
-
-### Capability compatibility UI
-`SecurityReviewDialog` now accepts an optional `CompatibilityReport`
-parameter. When provided, a compatibility section appears in the pre-install
-dialog showing:
-- ✓ "Compatible with this device" (green) when all required capabilities
-  are satisfied
-- ⚠ "Missing required capabilities" (amber) with a list of what's missing
-  when the device cannot support the module
+### Settings entries: 12 → 10
+```
+Security · Provider · Modules · Daemon · Notifications · Preferences ·
+Update & Backup · Diagnostics · Developer · About
+```
+All 10 entries map to 10 NavHost routes (0 ComingSoonScreen placeholders).
 
 ## Verification
-- CI: all 5 checks green on PR #87 (build-and-test, daemon-build-and-test,
-  rust, rust-fuzz, cpp-fuzz)
-- 0 remaining `LiquidGlass` references in app code
-- 0 remaining `ComingSoonScreen` usages in NavHost routes
-- 12/12 settings entries map to 12/12 NavHost routes
+- CI: all 5 checks green on PR #89.
+- 10/10 entry routes ↔ 10/10 composable routes.
+- Theme preference read by MainActivity → drives AstraVeilTheme.
+- UpdateBackupScreen wired to real UpdateViewModel sealed-class state.
