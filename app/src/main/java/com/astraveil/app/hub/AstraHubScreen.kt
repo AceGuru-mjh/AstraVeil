@@ -20,8 +20,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,11 +36,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import com.astraveil.app.ui.design.AstraCard
+import com.astraveil.app.ui.design.LiquidGlass
+import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraWarning
@@ -241,15 +243,18 @@ private fun HubModuleCard(
     downloading: Boolean,
     onInstall: () -> Unit,
 ) {
-    Card(
+    // P2-17: list-item card is CONTENT by default; while a download is
+    // in flight it becomes ALIVE → LIQUID + violet accent (matches the
+    // downloadingId == module.id check done in the parent).
+    AstraCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
+        tier = if (downloading) SurfaceTier.LIQUID else SurfaceTier.CONTENT,
+        accent = if (downloading) LiquidGlass.AccentViolet else Color.Transparent,
+        cornerRadius = 20.dp,
+        contentPadding = 16.dp,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // ---- Title row ----

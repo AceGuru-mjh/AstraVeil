@@ -48,6 +48,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.astraveil.app.adb.AdbConsoleViewModel
 import com.astraveil.app.adb.AdbManager
 import com.astraveil.app.ui.design.AstraCard
+import com.astraveil.app.ui.design.LiquidGlass
+import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
 
@@ -68,7 +70,11 @@ fun AdbConsoleCard(
     var input by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
 
-    AstraCard(contentPadding = 14.dp) {
+    AstraCard(
+        tier = SurfaceTier.LIQUID,
+        accent = LiquidGlass.AccentViolet,
+        contentPadding = 14.dp,
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("ADB Shell", style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))

@@ -25,8 +25,6 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +41,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.StatusPill
 import com.astraveil.app.ui.design.AstraCard
+import com.astraveil.app.ui.design.LiquidGlass
+import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -126,17 +126,15 @@ private fun SectionLabel(text: String) {
 
 @Composable
 private fun NoProviderHint() {
-    Card(
+    // P2-17: static info card → CONTENT tier.
+    AstraCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        tier = SurfaceTier.CONTENT,
+        cornerRadius = 16.dp,
+        contentPadding = 16.dp,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -170,18 +168,17 @@ private fun ProviderCard(
     version: String?
 ) {
     val accent = if (active) AstraSuccess else MaterialTheme.colorScheme.onSurfaceVariant
-    Card(
+    // P2-17: the active/detected backend is ALIVE → LIQUID tier, violet accent.
+    // Inactive backends stay on the quiet CONTENT tier.
+    AstraCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        tier = if (active) SurfaceTier.LIQUID else SurfaceTier.CONTENT,
+        accent = if (active) LiquidGlass.AccentViolet else Color.Transparent,
+        cornerRadius = 18.dp,
+        contentPadding = 16.dp,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -274,17 +271,15 @@ private fun RootTestCard(
             }
 
             state.rootTestResult?.let { result ->
-                Card(
+                // P2-17: static test-result panel → CONTENT tier. Tier
+                // (not a custom containerColor) drives the surface tint now.
+                AstraCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (result.overallSuccess)
-                            AstraSuccess.copy(alpha = 0.1f)
-                        else
-                            AstraError.copy(alpha = 0.1f)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    tier = SurfaceTier.CONTENT,
+                    cornerRadius = 12.dp,
+                    contentPadding = 14.dp,
                 ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 if (result.overallSuccess) Icons.Filled.CheckCircle else Icons.Filled.Close,

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.astraveil.app.ui.design.AstraCard
+import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraWarning
@@ -241,23 +242,22 @@ private fun RecommendationRow(
 @Composable
 private fun ConsoleReportView(state: StatusViewModel.UiState) {
     val reportText = state.diagnosticReport ?: "No report generated yet. Run a scan."
-    Card(
+    // P2-17: static diagnostics report → CONTENT tier. The dark console
+    // background is preserved inside the content (Text color + Column).
+    AstraCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1E1E1E)
-        )
+        tier = SurfaceTier.CONTENT,
+        cornerRadius = 12.dp,
+        contentPadding = 14.dp,
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(
-                text = reportText,
-                color = Color(0xFF00FFCC),
-                fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-            )
-        }
+        Text(
+            text = reportText,
+            color = Color(0xFF00FFCC),
+            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+        )
     }
 }
