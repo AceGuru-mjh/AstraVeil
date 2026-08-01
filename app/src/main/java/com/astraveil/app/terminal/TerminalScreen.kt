@@ -59,6 +59,7 @@ import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraTeal
 import com.astraveil.app.ui.theme.AstraWarning
+import kotlinx.coroutines.launch
 
 private val TermBg = Color(0xFF0D1117)
 private val TermCommand = Color(0xFF7EE787)
