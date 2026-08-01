@@ -56,17 +56,15 @@ import com.astraveil.app.terminal.TerminalScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.SuperuserScreen
-import com.astraveil.app.ui.screens.settings.AppearanceScreen
-import com.astraveil.app.ui.screens.settings.BackupSettingsScreen
 import com.astraveil.app.ui.screens.settings.DaemonSettingsScreen
 import com.astraveil.app.ui.screens.settings.DeveloperSettingsScreen
-import com.astraveil.app.ui.screens.settings.LanguageScreen
 import com.astraveil.app.ui.screens.settings.ModulesSettingsScreen
 import com.astraveil.app.ui.screens.settings.NotificationsScreen
+import com.astraveil.app.ui.screens.settings.PreferencesScreen
 import com.astraveil.app.ui.screens.settings.ProviderSettingsScreen
 import com.astraveil.app.ui.screens.settings.SecuritySettingsScreen
+import com.astraveil.app.ui.screens.settings.UpdateBackupScreen
 import com.astraveil.app.ui.settings.SettingsScreen
-import com.astraveil.app.ui.screens.update.UpdateCenterScreen
 import com.astraveil.app.viewmodel.StatusViewModel
 
 /**
@@ -193,8 +191,8 @@ fun AstraVeilApp() {
             composable("settings_diagnostics") {
                 DiagnosticsScreen(viewModel = viewModel)
             }
-            composable("settings_updates") {
-                UpdateCenterScreen()
+            composable("settings_update_backup") {
+                UpdateBackupScreen()
             }
             // --- Settings sub-screens.
             //
@@ -204,8 +202,8 @@ fun AstraVeilApp() {
             // navController.navigate() to throw IllegalArgumentException
             // and crash the app on tap; ComingSoonScreen was the interim
             // safe target. Replaced with real screens.
-            composable("settings_general") {
-                AppearanceScreen()
+            composable("settings_preferences") {
+                PreferencesScreen()
             }
             composable("settings_security") {
                 SecuritySettingsScreen()
@@ -224,12 +222,6 @@ fun AstraVeilApp() {
             }
             composable("settings_notifications") {
                 NotificationsScreen()
-            }
-            composable("settings_language") {
-                LanguageScreen()
-            }
-            composable("settings_backup") {
-                BackupSettingsScreen()
             }
             composable("settings_about") {
                 AboutScreen()

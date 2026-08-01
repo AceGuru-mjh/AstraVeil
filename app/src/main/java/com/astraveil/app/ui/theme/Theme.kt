@@ -13,6 +13,26 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 /**
+ * Theme mode persisted in `SharedPreferences("astra_ui_prefs")` under
+ * the key `"theme_mode"`. The user picks one in [PreferencesScreen];
+ * [MainActivity] reads it at startup and passes it to [AstraVeilTheme].
+ */
+enum class ThemeMode {
+    DARK, LIGHT, SYSTEM;
+
+    companion object {
+        fun fromString(s: String?): ThemeMode = when (s?.lowercase()) {
+            "light" -> LIGHT
+            "system" -> SYSTEM
+            "dark" -> DARK
+            else -> DARK   // AstraVeil is dark-first
+        }
+    }
+
+    fun toPrefString(): String = name.lowercase()
+}
+
+/**
  * AstraVeil Material3 theme.
  *
  * Dark is the canonical aesthetic — the dark scheme is fully fleshed out
@@ -31,9 +51,6 @@ fun AstraVeilTheme(
 ) {
     val colorScheme = when {
         dynamicColor -> {
-            // Dynamic colour intentionally not wired (Android 12+ only and
-            // would override the AstraVeil brand). Fall through to the brand
-            // palette below.
             if (darkTheme) AstraDarkColorScheme else AstraLightColorScheme
         }
         darkTheme -> AstraDarkColorScheme
@@ -47,7 +64,6 @@ fun AstraVeilTheme(
             window.statusBarColor = Color.Transparent.toArgb()
             window.navigationBarColor = Color.Transparent.toArgb()
             val controller = WindowCompat.getInsetsController(window, view)
-            // Light icons on the deep dark background regardless of scheme.
             controller.isAppearanceLightStatusBars = !darkTheme
             controller.isAppearanceLightNavigationBars = !darkTheme
         }
@@ -58,6 +74,24 @@ fun AstraVeilTheme(
         typography = AstraTypography,
         content = content
     )
+}
+
+/**
+ * Theme overload accepting a [ThemeMode] — the one [MainActivity] uses
+ * so the user's preference from [PreferencesScreen] actually drives the
+ * color scheme. Delegates to the primary overload above.
+ */
+@Composable
+fun AstraVeilTheme(
+    themeMode: ThemeMode,
+    content: @Composable () -> Unit
+) {
+    val dark = when (themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
+    AstraVeilTheme(darkTheme = dark, content = content)
 }
 
 /** Deep-dark violet/teal palette — the canonical AstraVeil aesthetic. */
