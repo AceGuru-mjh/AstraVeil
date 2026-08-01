@@ -271,7 +271,7 @@ int main(int argc, char** argv) {
                 // Only ALLOW reaches here.
                 const auto result = executor.execute(req.command);
                 response_json = astra::ipc::make_exec_response(
-                    result.success, result.exit_code,
+                    result.exit_code == 0, result.exit_code,
                     result.stdout_, result.stderr_);
                 break;
             }
