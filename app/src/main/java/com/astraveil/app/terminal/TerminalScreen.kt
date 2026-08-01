@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,11 +27,13 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -50,9 +53,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.astraveil.app.adb.AdbManager
+import com.astraveil.app.ui.design.AstraCard
+import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
+import com.astraveil.app.ui.theme.AstraTeal
 import com.astraveil.app.ui.theme.AstraWarning
+import kotlinx.coroutines.launch
 
 private val TermBg = Color(0xFF0D1117)
 private val TermCommand = Color(0xFF7EE787)
@@ -61,8 +68,8 @@ private val TermError = Color(0xFFFF7B72)
 private val TermInfo = Color(0xFF8B949E)
 
 private val rootQuickCommands = listOf(
-    "id", "getenforce", "uname -a", "magisk -v",
-    "whoami", "df -h", "getprop ro.build.version.release",
+    "id", "pwd", "cd /data", "getenforce", "uname -a",
+    "magisk -v", "whoami", "df -h",
 )
 
 @Composable
@@ -75,6 +82,7 @@ fun TerminalScreen(
     val providerName by viewModel.providerName.collectAsStateWithLifecycle()
     val needsApproval by viewModel.needsApproval.collectAsStateWithLifecycle()
     val sessionApproved by viewModel.sessionApproved.collectAsStateWithLifecycle()
+    val cwd by viewModel.cwd.collectAsStateWithLifecycle()
 
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -83,9 +91,6 @@ fun TerminalScreen(
         if (lines.isNotEmpty()) { listState.animateScrollToItem(lines.size - 1) }
     }
 
-    // P1-12: strong acknowledgment gate before any privileged command
-    // can run. Surfaced the moment the user tries a ROOT/ADB command
-    // without an approved session.
     if (needsApproval) {
         TerminalApprovalDialog(
             backendName = providerName ?: "the active root backend",
@@ -96,7 +101,7 @@ fun TerminalScreen(
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // Header
         Row(
@@ -117,11 +122,10 @@ fun TerminalScreen(
                     style = MaterialTheme.typography.labelSmall, color = AstraOnSurfaceMuted)
             }
 
-            // Mode cycle button
             val modeColor = when (mode) {
-                TerminalViewModel.TerminalMode.ROOT -> AstraSuccess
-                TerminalViewModel.TerminalMode.ADB -> AstraWarning
-                TerminalViewModel.TerminalMode.SHELL -> AstraOnSurfaceMuted
+                TerminalMode.ROOT -> AstraSuccess
+                TerminalMode.ADB -> AstraWarning
+                TerminalMode.SHELL -> AstraOnSurfaceMuted
             }
             Box(
                 modifier = Modifier
@@ -140,6 +144,33 @@ fun TerminalScreen(
                 Icon(Icons.Filled.DeleteSweep, "Clear", tint = AstraOnSurfaceMuted)
             }
         }
+
+        // cwd status bar + interrupt button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(TermBg.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(cwd,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                color = AstraTeal,
+                modifier = Modifier.weight(1f),
+                maxLines = 1)
+            if (isRunning) {
+                TextButton(
+                    onClick = { viewModel.interrupt() },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Text("Interrupt", color = AstraWarning, fontSize = 11.sp)
+                }
+            }
+        }
+
+        // Self-test panel (Milestone 0 diagnostic)
+        SelfTestPanel(viewModel = viewModel)
 
         // Output area
         Box(
@@ -163,7 +194,7 @@ fun TerminalScreen(
 
         // Quick commands (mode-aware)
         val quickCmds = when (mode) {
-            TerminalViewModel.TerminalMode.ADB -> AdbManager.quickCommands
+            TerminalMode.ADB -> AdbManager.quickCommands
             else -> rootQuickCommands
         }
         Row(
@@ -193,9 +224,9 @@ fun TerminalScreen(
                 placeholder = {
                     Text(
                         when (mode) {
-                            TerminalViewModel.TerminalMode.ROOT -> "run as root (su)…"
-                            TerminalViewModel.TerminalMode.ADB -> "run as adb shell (uid 2000)…"
-                            TerminalViewModel.TerminalMode.SHELL -> "run in app shell…"
+                            TerminalMode.ROOT -> "run as root (su)…"
+                            TerminalMode.ADB -> "run as adb shell (uid 2000)…"
+                            TerminalMode.SHELL -> "run in app shell…"
                         },
                         fontFamily = FontFamily.Monospace)
                 },
@@ -217,6 +248,87 @@ fun TerminalScreen(
                 Icon(Icons.Filled.PlayArrow, "Run",
                     tint = MaterialTheme.colorScheme.onPrimary)
             }
+        }
+    }
+}
+
+@Composable
+private fun SelfTestPanel(viewModel: TerminalViewModel) {
+    val test = remember { RootChainSelfTest(viewModel.vmScope) }
+    val steps by test.steps.collectAsStateWithLifecycle()
+    val running by test.running.collectAsStateWithLifecycle()
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { expanded = !expanded }) {
+                Text(if (expanded) "Hide self-test" else "Root chain self-test")
+            }
+            Spacer(Modifier.weight(1f))
+            if (expanded) {
+                Button(
+                    onClick = { viewModel.vmScope.launch { test.run() } },
+                    enabled = !running,
+                ) { Text(if (running) "Testing…" else "Run") }
+            }
+        }
+
+        if (expanded) {
+            AstraCard(contentPadding = 12.dp) {
+                steps.forEachIndexed { i, step ->
+                    SelfTestStepRow(step)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelfTestStepRow(step: SelfTestStep) {
+    val color = when (step.status) {
+        StepStatus.PASS -> AstraSuccess
+        StepStatus.FAIL -> AstraError
+        StepStatus.RUNNING -> AstraTeal
+        StepStatus.SKIPPED -> AstraOnSurfaceMuted
+        StepStatus.PENDING -> AstraOnSurfaceMuted.copy(alpha = 0.5f)
+    }
+    val icon = when (step.status) {
+        StepStatus.PASS -> "✓"
+        StepStatus.FAIL -> "✗"
+        StepStatus.RUNNING -> "…"
+        StepStatus.SKIPPED -> "–"
+        StepStatus.PENDING -> "·"
+    }
+
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, color = color, fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.width(18.dp))
+            Text(step.name,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = if (step.status == StepStatus.PENDING)
+                    AstraOnSurfaceMuted else MaterialTheme.colorScheme.onSurface)
+            if (step.status == StepStatus.RUNNING) {
+                Spacer(Modifier.width(8.dp))
+                CircularProgressIndicator(modifier = Modifier.size(12.dp),
+                    strokeWidth = 2.dp, color = AstraTeal)
+            }
+        }
+        if (step.evidence.isNotBlank()) {
+            Text(step.evidence,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.5.sp,
+                color = color,
+                maxLines = 2,
+                modifier = Modifier.padding(start = 18.dp))
+        }
+        if (step.status == StepStatus.FAIL && step.hint.isNotBlank()) {
+            Text(step.hint,
+                fontSize = 10.5.sp,
+                color = AstraOnSurfaceMuted,
+                modifier = Modifier.padding(start = 18.dp))
         }
     }
 }
