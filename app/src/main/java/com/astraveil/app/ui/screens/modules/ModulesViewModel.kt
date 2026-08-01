@@ -143,7 +143,10 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _uiState.update { it.copy(installState = ModuleOperationState.Loading) }
             try {
-                val installed = repository.install(state.uri)
+                val installed = repository.install(
+                    uri = state.uri,
+                    expectedHash = state.report.packageHash,
+                )
                 _uiState.update {
                     it.copy(
                         installState = ModuleOperationState.Success(
