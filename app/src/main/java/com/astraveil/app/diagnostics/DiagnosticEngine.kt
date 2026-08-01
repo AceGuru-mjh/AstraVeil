@@ -1,11 +1,13 @@
-package com.astraveil.core.diagnostics
+package com.astraveil.app.diagnostics
 
 import android.app.Application
 import android.os.Build
+import com.astraveil.app.AstraVeilApplication
 import com.astraveil.core.ipc.DaemonState
 import com.astraveil.core.provenance.DataProvenance
 import com.astraveil.providers.ProviderCapability
 import com.astraveil.providers.ProviderRegistry
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -32,6 +34,9 @@ data class DiagnosticConclusion(
  * Each conclusion carries its [DataProvenance] so the UI can show a badge
  * (Verified / Detected / Reported / Inferred / Unavailable) AND a source
  * string so the user can see exactly how the value was obtained.
+ *
+ * Lives in `:app` (not `:core`) because it references [ProviderRegistry]
+ * from `:providers`, which `:core` cannot depend on.
  */
 class DiagnosticEngine(private val app: Application) {
 
@@ -65,7 +70,7 @@ class DiagnosticEngine(private val app: Application) {
     // ── Capabilities: PROBED/DETECTED from the active provider's advertised set ──
     private fun capabilities(): List<DiagnosticConclusion> {
         val provider = runCatching {
-            kotlinx.coroutines.runBlocking { ProviderRegistry.activeProvider() }
+            runBlocking { ProviderRegistry.activeProvider() }
         }.getOrNull()
         if (provider == null) {
             return listOf(DiagnosticConclusion("cap.none", "Capabilities",
@@ -73,7 +78,7 @@ class DiagnosticEngine(private val app: Application) {
                 "no root backend present"))
         }
         val caps = runCatching {
-            kotlinx.coroutines.runBlocking { provider.capabilities() }
+            runBlocking { provider.capabilities() }
         }.getOrDefault(emptySet())
         if (caps.isEmpty()) {
             return listOf(DiagnosticConclusion("cap.empty", "Capabilities",
@@ -92,7 +97,7 @@ class DiagnosticEngine(private val app: Application) {
     // ── Root backend: DETECTED ──
     private fun backend(): List<DiagnosticConclusion> {
         val active = runCatching {
-            kotlinx.coroutines.runBlocking { ProviderRegistry.detectActive() }
+            runBlocking { ProviderRegistry.detectActive() }
         }.getOrNull()
         return listOf(DiagnosticConclusion("backend.active", "Root backend",
             active?.displayName ?: "none",
@@ -102,10 +107,9 @@ class DiagnosticEngine(private val app: Application) {
 
     // ── Subsystems: HONEST about implementation state ──
     private fun subsystems(): List<DiagnosticConclusion> {
-        // DaemonManager lives in :app, but DiagnosticEngine is in :core.
-        // We read the daemon state reflectively from AstraVeilApplication
-        // if available, otherwise report "not wired".
-        val daemonState = readDaemonState()
+        val daemonState = runCatching {
+            AstraVeilApplication.daemonManager.state.value
+        }.getOrNull()
 
         return listOf(
             DiagnosticConclusion("sub.daemon", "AstraDaemon IPC",
@@ -137,26 +141,5 @@ class DiagnosticEngine(private val app: Application) {
                 ".te files exist but are not loaded by magiskpolicy",
                 implemented = false),
         )
-    }
-
-    /** Read DaemonState from AstraVeilApplication.daemonManager.client.state
-     *  reflectively — :core cannot import :app types. */
-    private fun readDaemonState(): DaemonState? {
-        return runCatching {
-            val appClass = Class.forName("com.astraveil.app.AstraVeilApplication")
-            val instanceField = appClass.getDeclaredField("instance")
-            instanceField.isAccessible = true
-            val instance = instanceField.get(null)
-            val dmField = appClass.getDeclaredField("daemonManager")
-            dmField.isAccessible = true
-            val dm = dmField.get(instance)
-            val clientField = dm.javaClass.getDeclaredField("client")
-            clientField.isAccessible = true
-            val client = clientField.get(dm)
-            val stateField = client.javaClass.getDeclaredField("state")
-            stateField.isAccessible = true
-            val stateFlow = stateField.get(client) as kotlinx.coroutines.flow.StateFlow<*>
-            stateFlow.value as? DaemonState
-        }.getOrNull()
     }
 }
