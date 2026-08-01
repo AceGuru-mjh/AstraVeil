@@ -87,6 +87,20 @@ std::string make_capability_response(const std::map<std::string, bool>& caps) {
     return j.dump();
 }
 
+std::string make_capability_response(const std::map<std::string, CapabilityInfo>& caps) {
+    json j;
+    json c = json::object();
+    for (const auto& [key, info] : caps) {
+        json entry;
+        entry["available"] = info.available;
+        entry["source"]    = info.source;
+        c[key] = entry;
+    }
+    j["capabilities"] = c;
+    j["count"]        = caps.size();
+    return j.dump();
+}
+
 std::string make_providers_response(const std::vector<ProviderInfo>& providers) {
     json j;
     json arr = json::array();
@@ -97,6 +111,7 @@ std::string make_providers_response(const std::vector<ProviderInfo>& providers) 
         pj["detected"]  = p.detected;
         pj["available"] = p.available;
         pj["version"]   = p.version;
+        pj["source"]    = p.source;
         arr.push_back(pj);
     }
     j["providers"] = arr;

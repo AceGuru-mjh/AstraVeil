@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@Suppress("DEPRECATION")
 class StatusViewModel(app: Application) : AndroidViewModel(app) {
 
     private val runtimeRepo = RuntimeRepository()

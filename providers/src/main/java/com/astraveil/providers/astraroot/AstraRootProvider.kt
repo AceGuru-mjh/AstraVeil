@@ -60,6 +60,7 @@ class AstraRootProvider : RootProvider {
     /**
      * Executes legacy v2 commands by routing them as the builtin shell caller.
      */
+    @Suppress("DEPRECATION")
     override suspend fun execute(command: String): ProviderExecResult =
         withContext(Dispatchers.IO) {
             val request = ExecutionRequest(

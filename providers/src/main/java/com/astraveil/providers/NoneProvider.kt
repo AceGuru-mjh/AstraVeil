@@ -18,6 +18,7 @@ class NoneProvider : RootProvider {
         displayName = "No Root",
     )
 
+    @Suppress("DEPRECATION")
     override suspend fun execute(command: String): ProviderExecResult =
         ProviderExecResult(
             exitCode = -1,

@@ -19,6 +19,7 @@ enum class RootAccessStatus {
  * the backend (Magisk / KernelSU / APatch) show its OWN superuser dialog
  * and record a per-app policy for AstraVeil.
  */
+@Suppress("DEPRECATION")
 object RootAccessManager {
 
     suspend fun requestAccess(provider: RootProvider): RootAccessStatus =

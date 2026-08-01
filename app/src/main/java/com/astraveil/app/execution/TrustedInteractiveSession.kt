@@ -29,6 +29,7 @@ import java.util.UUID
  * @param auditLogger   append-only audit sink
  * @param source        which feature opened this session (TERMINAL / ROOT_TEST / …)
  */
+@Suppress("DEPRECATION")
 class TrustedInteractiveSession(
     private val provider: RootProvider,
     private val auditLogger: CommandAuditLogger,

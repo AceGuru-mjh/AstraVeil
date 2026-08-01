@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
  * This is REAL: changing a policy here changes what happens when
  * Termux / adb shell / any app calls `su`.
  */
+@Suppress("DEPRECATION")
 class MagiskSuRepository(
     private val provider: RootProvider,
 ) {
