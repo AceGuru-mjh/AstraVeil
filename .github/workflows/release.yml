@@ -22,12 +22,47 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Decode signing keystore
+        env:
+          ASTRAVEIL_KEYSTORE_BASE64: ${{ secrets.ASTRAVEIL_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ASTRAVEIL_KEYSTORE_BASE64" ]; then
+            echo "WARNING: ASTRAVEIL_KEYSTORE_BASE64 secret is not set — APK will be unsigned"
+            exit 0
+          fi
+          echo "$ASTRAVEIL_KEYSTORE_BASE64" | base64 -d > app/astraveil.jks
+          echo "Keystore decoded: $(wc -c < app/astraveil.jks) bytes"
+          # Verify it's a valid keystore
+          keytool -list -keystore app/astraveil.jks \
+            -storepass "${{ secrets.ASTRAVEIL_KEYSTORE_PASSWORD }}" \
+            -alias "${{ secrets.ASTRAVEIL_KEY_ALIAS }}" 2>&1 | head -5
+
       - name: Build Release APK
         env:
           ASTRAVEIL_KEYSTORE_PASSWORD: ${{ secrets.ASTRAVEIL_KEYSTORE_PASSWORD }}
           ASTRAVEIL_KEY_ALIAS: ${{ secrets.ASTRAVEIL_KEY_ALIAS }}
           ASTRAVEIL_KEY_PASSWORD: ${{ secrets.ASTRAVEIL_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Verify APK is signed
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -z "$APK_PATH" ]; then echo "No APK found"; exit 1; fi
+          echo "APK found: $APK_PATH"
+          APK_NAME=$(basename "$APK_PATH")
+          echo "APK filename: $APK_NAME"
+          if [[ "$APK_NAME" == *unsigned* ]]; then
+            echo "ERROR: APK is UNSIGNED — signing failed"
+            echo "Checking signing config..."
+            grep -A10 "signingConfig" app/build.gradle.kts || true
+            exit 1
+          fi
+          echo "OK: APK is signed"
+          # Verify signature with apksigner (if available)
+          APKSIGNER=$(find $ANDROID_HOME -name apksigner 2>/dev/null | head -1)
+          if [ -n "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs "$APK_PATH" 2>&1 | head -10
+          fi
 
       - name: Generate SHA-256 checksum
         run: |
