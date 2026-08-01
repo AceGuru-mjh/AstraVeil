@@ -11,11 +11,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * The base frosted-glass surface. A rounded, semi-transparent white
- * layer with a subtle border that simulates glass edge highlight.
+ * The base frosted-glass surface — legacy container, unified into
+ * [AstraSurface] (P2-17).
  *
- * All higher-level glass components ([GlassCard]) compose on top of this.
+ * New code should use [AstraSurface] (or [AstraCard]) with an explicit
+ * [SurfaceTier]. This shim keeps the original flat-glass rendering for
+ * any remaining call site; it has no semantic tier and is retained
+ * only for source compatibility.
+ *
+ * @deprecated Use [AstraSurface] with an explicit [SurfaceTier].
  */
+@Deprecated(
+    "Unified into AstraSurface (P2-17). Use AstraSurface(tier = SurfaceTier.CONTENT).",
+    ReplaceWith("AstraSurface(modifier, tier = SurfaceTier.CONTENT, contentPadding = 0.dp) { content() }"),
+)
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,

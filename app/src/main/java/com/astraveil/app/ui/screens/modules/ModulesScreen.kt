@@ -41,12 +41,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.astraveil.app.ui.AstraStrings
+import com.astraveil.app.ui.design.AstraCard
+import com.astraveil.app.ui.design.LiquidGlass
+import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraTeal
@@ -331,126 +335,130 @@ private fun ModuleCard(
     onUninstall: () -> Unit,
     onClearOp: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(20.dp),
-            )
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    // P2-17: a running module is ALIVE → LIQUID tier with teal accent.
+    // Idle/installed/stopped/failed modules stay on the quiet CONTENT tier.
+    val isRunning = module.state == ModuleUiState.RUNNING
+    AstraCard(
+        modifier = Modifier.fillMaxWidth(),
+        tier = if (isRunning) SurfaceTier.LIQUID else SurfaceTier.CONTENT,
+        accent = if (isRunning) LiquidGlass.AccentTeal else Color.Transparent,
+        contentPadding = 16.dp,
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(
-                modifier = Modifier.size(40.dp).background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(12.dp),
-                ),
-                contentAlignment = Alignment.Center,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Icons.Filled.Extension,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = module.name,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = "v${module.version} · ${module.id}",
-                    color = AstraOnSurfaceMuted,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-            StatePill(module.state)
-        }
-
-        if (module.description.isNotBlank()) {
-            Text(
-                text = module.description,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        // Permission preview — risk is nullable; "Unknown" when undeclared.
-        ModulePermissionPreview(permissions = module.permissions)
-
-        // ---- Operation feedback (Patch 18.2.3) ----
-        OperationFeedbackRow(operation, onClearOp)
-
-        // Phase 0 honesty: module loaded in app process, not isolated/rooted
-        if (module.state == ModuleUiState.RUNNING) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Loaded in app process · Phase 0 (not isolated, not rooted)",
-                style = MaterialTheme.typography.labelSmall,
-                color = AstraWarning,
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val busy = operation is ModuleOperationState.Loading
-            when (module.state) {
-                ModuleUiState.RUNNING -> {
-                    OutlinedButton(onClick = onStop, enabled = !busy) {
-                        if (busy) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(Modifier.width(6.dp))
-                        } else {
-                            Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        Text(AstraStrings.actionStop)
-                    }
+                Box(
+                    modifier = Modifier.size(40.dp).background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(12.dp),
+                    ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.Extension,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
-                ModuleUiState.INSTALLED,
-                ModuleUiState.STOPPED -> {
-                    OutlinedButton(onClick = onStart, enabled = !busy) {
-                        if (busy) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(Modifier.width(6.dp))
-                        } else {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        Text(AstraStrings.actionStart)
-                    }
-                }
-                ModuleUiState.FAILED -> {
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = AstraStrings.modFailedReinstall,
-                        color = MaterialTheme.colorScheme.error,
+                        text = module.name,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "v${module.version} · ${module.id}",
+                        color = AstraOnSurfaceMuted,
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
+                StatePill(module.state)
             }
-            Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = onUninstall, enabled = !busy) {
-                Text(AstraStrings.actionUninstall)
+
+            if (module.description.isNotBlank()) {
+                Text(
+                    text = module.description,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            // Permission preview — risk is nullable; "Unknown" when undeclared.
+            ModulePermissionPreview(permissions = module.permissions)
+
+            // ---- Operation feedback (Patch 18.2.3) ----
+            OperationFeedbackRow(operation, onClearOp)
+
+            // Phase 0 honesty: module loaded in app process, not isolated/rooted
+            if (module.state == ModuleUiState.RUNNING) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Loaded in app process · Phase 0 (not isolated, not rooted)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AstraWarning,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val busy = operation is ModuleOperationState.Loading
+                when (module.state) {
+                    ModuleUiState.RUNNING -> {
+                        OutlinedButton(onClick = onStop, enabled = !busy) {
+                            if (busy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            } else {
+                                Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            Text(AstraStrings.actionStop)
+                        }
+                    }
+                    ModuleUiState.INSTALLED,
+                    ModuleUiState.STOPPED -> {
+                        OutlinedButton(onClick = onStart, enabled = !busy) {
+                            if (busy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            } else {
+                                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            Text(AstraStrings.actionStart)
+                        }
+                    }
+                    ModuleUiState.FAILED -> {
+                        Text(
+                            text = AstraStrings.modFailedReinstall,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                OutlinedButton(onClick = onUninstall, enabled = !busy) {
+                    Text(AstraStrings.actionUninstall)
+                }
             }
         }
     }

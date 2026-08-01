@@ -28,11 +28,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.astraveil.app.ui.design.AstraCard
+import com.astraveil.app.ui.design.LiquidGlass
+import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -77,7 +80,15 @@ private fun UpdateHeader(currentVersion: String) {
 
 @Composable
 private fun UpdateStatusCard(state: UpdateState, viewModel: UpdateViewModel) {
-    AstraCard {
+    // P2-17: live update activity (download / verify / install) → LIQUID,
+    // violet accent. Idle / available / latest / error → quiet CONTENT.
+    val isLive = state is UpdateState.Downloading ||
+        state is UpdateState.Verifying ||
+        state is UpdateState.Installing
+    AstraCard(
+        tier = if (isLive) SurfaceTier.LIQUID else SurfaceTier.CONTENT,
+        accent = if (isLive) LiquidGlass.AccentViolet else Color.Transparent,
+    ) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Astra Update", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface)
@@ -191,7 +202,12 @@ private fun ReleaseNotesCard(notes: String) {
 
 @Composable
 private fun DownloadProgressCard(progress: Int) {
-    AstraCard {
+    // P2-17: this card is only shown while a download is in flight —
+    // the live progress indicator makes it inherently ALIVE → LIQUID.
+    AstraCard(
+        tier = SurfaceTier.LIQUID,
+        accent = LiquidGlass.AccentViolet,
+    ) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Download", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 color = AstraTeal)

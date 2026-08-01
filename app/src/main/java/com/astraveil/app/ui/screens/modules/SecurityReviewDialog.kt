@@ -19,8 +19,6 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.InstallMobile
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Verified
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.astraveil.app.ui.AstraStrings
+import com.astraveil.app.ui.design.AstraCard
+import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraError
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
 import com.astraveil.app.ui.theme.AstraSuccess
@@ -91,17 +91,16 @@ fun SecurityReviewDialog(
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        // P2-17: dialog surface is static content → CONTENT tier.
+        AstraCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
+            tier = SurfaceTier.CONTENT,
+            cornerRadius = 24.dp,
+            contentPadding = 24.dp,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
