@@ -59,6 +59,7 @@ class APatchProvider : RootProvider {
 
     override suspend fun info(): RootInfo = cached
 
+    @Suppress("DEPRECATION")
     override suspend fun execute(command: String): ProviderExecResult =
         withContext(Dispatchers.IO) {
             runProcess(arrayOf("apd", "su", "-c", command))

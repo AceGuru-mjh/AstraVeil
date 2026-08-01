@@ -43,6 +43,8 @@ set(ASTRAD_SOURCES
     src/provider/provider_registry.cpp
     src/security_bridge/policy_bridge.cpp
     src/ipc/json_codec.cpp
+    src/capability/probe_detector.cpp
+    src/provider/provider_detector.cpp
     src/sandbox/sandbox_manager.cpp
     src/sandbox/namespace_manager.cpp
     src/sandbox/mount_isolation.cpp

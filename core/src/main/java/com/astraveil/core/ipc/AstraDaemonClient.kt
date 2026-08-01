@@ -163,13 +163,27 @@ class AstraDaemonClient(
 
     /**
      * Typed capability matrix from the daemon (ADVERTISED provenance).
+     * Each capability carries its detection source (audit P2-18).
      * Returns null if unreachable or malformed.
      */
     suspend fun getCapabilityMatrixTyped(): DaemonCapabilityResponse? {
-        val raw = request(TYPE_GET_CAPABILITY_MATRIX) ?: return null
+        val raw = request(TYPE_GET_CAPABILITY) ?: return null
         return runCatching {
             DaemonProtocol.json.decodeFromString(
                 DaemonCapabilityResponse.serializer(), raw)
+        }.getOrNull()
+    }
+
+    /**
+     * Typed provider list from the daemon (ADVERTISED provenance).
+     * Each provider carries its detection source (audit P2-18).
+     * Returns null if unreachable or malformed.
+     */
+    suspend fun getProviderListTyped(): DaemonProvidersResponse? {
+        val raw = request(TYPE_GET_PROVIDER) ?: return null
+        return runCatching {
+            DaemonProtocol.json.decodeFromString(
+                DaemonProvidersResponse.serializer(), raw)
         }.getOrNull()
     }
 

@@ -43,9 +43,21 @@ interface RootProvider {
     suspend fun detect(): RootInfo
 
     /**
-     * Run `command` through this backend's `su` path and return the captured
-     * output. Implementations must NOT echo secrets to logs.
+     * DIRECT EXECUTION — bypasses the unified daemon path.
+     *
+     * Module/programmatic execution MUST use
+     * [com.astraveil.app.execution.ExecutionRouter] (daemon, policy-enforced,
+     * audit P1-11). This method is retained ONLY for
+     * [com.astraveil.app.execution.TrustedInteractiveSession] (the interactive
+     * terminal, audit P1-12), which is human-approved and audited.
+     * Do NOT call this from new module/programmatic code.
      */
+    @Deprecated(
+        "Direct execution bypasses the unified daemon path (audit P1-11). " +
+            "Use ExecutionRouter for module/programmatic execution. " +
+            "Only TrustedInteractiveSession (interactive, P1-12) may use this.",
+        level = DeprecationLevel.WARNING,
+    )
     suspend fun execute(command: String): ProviderExecResult
 
     /** Return the cached / last-known [RootInfo] for this provider. */

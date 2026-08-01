@@ -27,6 +27,13 @@ struct ProviderInfo {
     bool detected = false;
     bool available = false;
     std::string version;
+    std::string source;   // HOW detected (provenance, audit P2-18)
+};
+
+/** One capability with its detection source (provenance). */
+struct CapabilityInfo {
+    bool available = false;
+    std::string source;
 };
 
 /**
@@ -52,8 +59,14 @@ std::string make_audit_array(const std::string& raw_lines);
 /** Ping response: {"status":"ok","version":...,"uptime_ms":...} */
 std::string make_ping_response(const std::string& version, long long uptime_ms);
 
-/** Capability matrix response: {"capabilities":{...},"count":N} */
+/** Capability matrix response (simple bool): {"capabilities":{...},"count":N} */
 std::string make_capability_response(const std::map<std::string, bool>& caps);
+
+/**
+ * Capability response WITH source per capability (audit P1-13/P2-18):
+ *   {"capabilities":{"root":{"available":true,"source":"getuid()==0"},...},"count":N}
+ */
+std::string make_capability_response(const std::map<std::string, CapabilityInfo>& caps);
 
 /** Provider list response: {"providers":[...],"count":N} */
 std::string make_providers_response(const std::vector<ProviderInfo>& providers);

@@ -25,6 +25,7 @@ data class AdbConsoleResult(
     val stderr: String,
 )
 
+@Suppress("DEPRECATION")
 class AdbConsoleViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _lines = MutableStateFlow<List<ConsoleLine>>(emptyList())

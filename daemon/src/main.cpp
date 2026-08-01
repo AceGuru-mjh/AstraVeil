@@ -22,6 +22,8 @@
 #include "astra/security/signature_verifier.hpp"
 #include "astra/security/policy_bridge.hpp"
 #include "astra/ipc/json_codec.h"
+#include "astra/capability/probe_detector.h"
+#include "astra/provider/provider_detector.h"
 #include <nlohmann/json.hpp>
 
 #include <getopt.h>
@@ -191,38 +193,37 @@ int main(int argc, char** argv) {
         std::string response_json;
         switch (type) {
             case RequestType::GetCapability: {
-                response_json = capability_service.get_capability_json();
+                // Real probes (read /proc, /sys, syscalls) — no placeholders.
+                const auto probes = astra::capability::detect_all();
+                std::map<std::string, astra::ipc::CapabilityInfo> caps;
+                for (const auto& [key, probe] : probes) {
+                    caps[key] = astra::ipc::CapabilityInfo{probe.available, probe.source};
+                }
+                response_json = astra::ipc::make_capability_response(caps);
                 break;
             }
             case RequestType::GetProvider: {
-                auto* rp = provider_manager.current();
-                const std::string pname = rp ? rp->name() : "none";
-                const int ptype = rp ? static_cast<int>(rp->type()) : 0;
-                const bool pavail = rp ? rp->available() : false;
-
-                // Build the capability matrix: every capability in the
-                // enum is emitted with a boolean indicating whether the
-                // active provider offers it. NoRoot reports none, so on
-                // an unrooted device every entry is false.
-                const auto caps = provider_manager.capabilities();
-                std::map<std::string, bool> cap_map;
-                for (const auto c : astra::capability::all_capabilities()) {
-                    const bool offered =
-                        std::find(caps.begin(), caps.end(), c) != caps.end();
-                    cap_map[astra::capability::capability_name(c)] = offered;
+                // Real provider detection (daemon runs as root, can read
+                // /data/adb/* which the App cannot — audit P1-11).
+                const auto detects = astra::provider::detect_all();
+                std::vector<astra::ipc::ProviderInfo> providers;
+                for (const auto& d : detects) {
+                    astra::ipc::ProviderInfo info;
+                    info.id        = d.id;
+                    info.name      = d.name;
+                    info.detected  = d.detected;
+                    info.available = d.available;
+                    info.version   = d.version;
+                    info.source    = d.source;
+                    providers.push_back(info);
                 }
-                // Build response with nlohmann (proper escaping)
-                nlohmann::json j;
-                j["root"]["provider"] = pname;
-                j["root"]["type"] = ptype;
-                j["root"]["available"] = pavail;
-                nlohmann::json cap_json = nlohmann::json::object();
-                for (const auto& [k, v] : cap_map) cap_json[k] = v;
-                j["capabilities"] = cap_json;
-                response_json = j.dump();
+                response_json = astra::ipc::make_providers_response(providers);
 
-                ctx.active_provider = pname;
-                ctx.provider_online.store(pname != "none");
+                // Update context with the first available provider
+                auto avail = std::find_if(detects.begin(), detects.end(),
+                    [](const auto& d) { return d.available; });
+                ctx.active_provider = (avail != detects.end()) ? avail->id : "none";
+                ctx.provider_online.store(ctx.active_provider != "none");
                 break;
             }
             case RequestType::Execute: {

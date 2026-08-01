@@ -3,15 +3,24 @@ package com.astraveil.core.ipc
 import kotlinx.serialization.Serializable
 
 /**
- * Parses daemon's make_capability_response():
- *   {"capabilities":{...},"count":N}
+ * One capability with its detection source (matches daemon CapabilityInfo).
+ */
+@Serializable
+data class DaemonCapabilityInfo(
+    val available: Boolean = false,
+    val source: String = "",
+)
+
+/**
+ * Parses daemon's make_capability_response() with source:
+ *   {"capabilities":{"root":{"available":true,"source":"getuid()==0"},...},"count":N}
  *
  * Provenance: ADVERTISED — this is what the daemon claims, not an
  * independent probe by the App.
  */
 @Serializable
 data class DaemonCapabilityResponse(
-    val capabilities: Map<String, Boolean> = emptyMap(),
+    val capabilities: Map<String, DaemonCapabilityInfo> = emptyMap(),
     val count: Int = 0,
 )
 
@@ -26,6 +35,7 @@ data class DaemonProviderInfo(
     val detected: Boolean = false,
     val available: Boolean = false,
     val version: String = "",
+    val source: String = "",
 )
 
 /**
