@@ -1,45 +1,66 @@
-# AstraVeil v1.8.0 — Release Notes
+# AstraVeil v1.9.0 — Release Notes
 
 ## Overview
 
-**Signed release fix.** All previous releases (v1.4.0–v1.7.0) shipped
-unsigned APKs because the signing keystore was not available in CI. This
-release fixes the signing pipeline: the keystore is stored as an encrypted
-GitHub secret (base64-encoded), decoded at build time, and the release
-workflow verifies the APK is signed before publishing.
+Three fixes in one release: **settings integration** (all 12 entries now
+open real functional screens), **liquid glass cleanup** (all liquid glass
+removed, pure Material 3), and **capability compatibility UI** (shown in
+the pre-install security review dialog).
 
-## What's new in v1.8.0
+## What's new in v1.9.0
 
-### Signed APK pipeline (fix)
-- New keystore generated with alias `mengjinghao`, RSA 2048, valid 100 years
-- Keystore stored as `ASTRAVEIL_KEYSTORE_BASE64` GitHub secret (NOT committed
-  to the public repo — security best practice for a public repository)
-- `release.yml` now decodes the keystore from the secret before building,
-  verifies the APK is signed (filename must NOT contain `unsigned`), and
-  fails the build if signing fails
-- Previous v1.4.0–v1.7.0 releases had `app-release-unsigned.apk`; from
-  v1.8.0 the asset is `app-release.apk` (signed)
+### Settings integration (root cause fix)
+All 9 settings sub-routes previously led to `ComingSoonScreen`. Now every
+entry opens a real functional screen:
 
-### Signing credentials
-- **Keystore alias:** `mengjinghao`
-- **Certificate CN:** `CN=mengjinghao, OU=AstraVeil, O=AstraVeil, C=CN`
-- **SHA-256 fingerprint:** `05:60:E4:95:27:98:2D:09:73:1C:4A:E6:12:41:55:7C:59:FE:C8:9D:61:78:C5:37:E7:AD:1E:53:51:7B:BE:C6`
-- **Validity:** Aug 1 2026 → Jul 8 2126 (100 years)
+| Entry | Screen | Wired to |
+|---|---|---|
+| Security | SecuritySettingsScreen | AstraConfig.dangerousApproval, DeveloperKeyStore, CommandAuditLogger |
+| Provider | ProviderSettingsScreen | ProviderRegistry.all() + detectActive() |
+| Daemon | DaemonSettingsScreen | AstraConfig.daemonEnabled |
+| Modules | ModulesSettingsScreen | AstraConfig.moduleAutoStart |
+| Appearance | AppearanceScreen | SharedPreferences (theme_mode) |
+| Language | LanguageScreen | AstraStrings.setLocaleOverride + Activity.recreate() |
+| Notifications | NotificationsScreen | SharedPreferences (5 channel toggles) |
+| Backup | BackupSettingsScreen | config.load(), DeveloperKeyStore, CommandAuditLogger.export() |
+| Developer | DeveloperSettingsScreen | AstraConfig.logLevel + AstraLogger.setMinLevel |
+| Diagnostics | DiagnosticsScreen | (already existed) |
+| Updates | UpdateCenterScreen | (already existed) |
+| About | AboutScreen | (already existed) |
 
-### Security improvement
-The keystore is no longer committed to the git repository (it was removed
-in a prior commit). It is injected into CI via an encrypted GitHub secret,
-so the private key is never exposed in the public repo history.
+- 12 NavHost routes registered in AstraVeilApp.kt (0 ComingSoonScreen
+  placeholders remain)
+- 12 SettingsScreen entries with matching routes
+- Notifications: 5 channel toggles persisted via SharedPreferences
+- Language: selection persisted + Activity.recreate() for immediate effect
+
+### Liquid glass cleanup (all removed)
+The liquid glass rendering (refraction + specular + chromatic aberration)
+has been completely removed. Pure Material 3 throughout.
+
+- `AstraCard.kt`: LIQUID tier now renders as ELEVATED with accent tint
+  (no LiquidGlassSurface). `SurfaceTier` enum preserved for source
+  compatibility — all `tier = SurfaceTier.LIQUID` calls still compile
+  and work, they just get an elevated card instead of liquid glass.
+- Replaced `LiquidGlass.AccentTeal` → `AstraTeal.copy(alpha=0.08f)` and
+  `LiquidGlass.AccentViolet` → `AstraAccent.copy(alpha=0.08f)` in 5 files
+- Deleted 9 dead design files: LiquidGlassSurface, LiquidGlass,
+  LiquidGlassNavigationBar, LiquidGlassDivider, LiquidGlassCard, GlassCard,
+  GlassSurface, AstraGlass, AstraElevation
+- Design system now: **2 files** (AstraCard.kt + AstraShapes.kt) — pure M3
+
+### Capability compatibility UI
+`SecurityReviewDialog` now accepts an optional `CompatibilityReport`
+parameter. When provided, a compatibility section appears in the pre-install
+dialog showing:
+- ✓ "Compatible with this device" (green) when all required capabilities
+  are satisfied
+- ⚠ "Missing required capabilities" (amber) with a list of what's missing
+  when the device cannot support the module
 
 ## Verification
-- CI: all 5 checks green on PR (build-and-test, daemon-build-and-test,
+- CI: all 5 checks green on PR #87 (build-and-test, daemon-build-and-test,
   rust, rust-fuzz, cpp-fuzz)
-- Release workflow: "Verify APK is signed" step confirms the output
-  filename is `app-release.apk` (not `app-release-unsigned.apk`)
-- The APK can be installed on Android 8.0+ (minSdk 26)
-
-## Note on updates
-This release uses a NEW signing certificate. It cannot be installed as an
-update over any previous release that was signed with a different key
-(the v1.1.1–v1.3.1 releases used an older `root8888` key; v1.4.0–v1.7.0
-were unsigned). Uninstall any previous version before installing v1.8.0.
+- 0 remaining `LiquidGlass` references in app code
+- 0 remaining `ComingSoonScreen` usages in NavHost routes
+- 12/12 settings entries map to 12/12 NavHost routes
