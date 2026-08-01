@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.astraveil.app.ui.AstraVeilApp
 import com.astraveil.app.ui.theme.AstraVeilTheme
+import com.astraveil.app.ui.theme.ThemeMode
 
 class MainActivity : ComponentActivity() {
 
@@ -32,9 +33,17 @@ class MainActivity : ComponentActivity() {
 
         requestNeededPermissions()
 
+        // Read the persisted theme mode so the user's PreferencesScreen
+        // choice actually drives the color scheme. Recreating the Activity
+        // (which PreferencesScreen does on theme change) re-reads this.
+        val themeMode = ThemeMode.fromString(
+            getSharedPreferences("astra_ui_prefs", MODE_PRIVATE)
+                .getString("theme_mode", "dark")
+        )
+
         try {
             setContent {
-                AstraVeilTheme {
+                AstraVeilTheme(themeMode = themeMode) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
