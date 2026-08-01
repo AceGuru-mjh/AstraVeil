@@ -33,12 +33,18 @@ interface ModuleRepository {
 
     /**
      * Install a `.avm` package from a content [uri].
-     * The file is copied to a temp location first because
-     * [ModuleManager.install] requires a [File].
      *
+     * The file is copied to a single staging location first (P0-5 TOCTOU:
+     * the URI is opened exactly ONCE, not twice as in the old preview→install
+     * flow). If [expectedHash] is non-null it is re-verified against the
+     * staged file immediately before installation — the bytes the user
+     * reviewed in the preview dialog MUST be the bytes that get installed.
+     *
+     * @param expectedHash SHA-256 computed during [preview], or null to
+     *                     skip the TOCTOU re-check (TrustGate still runs).
      * @return the installed [ModuleInfo], or throws on failure.
      */
-    suspend fun install(uri: Uri): ModuleInfo
+    suspend fun install(uri: Uri, expectedHash: String? = null): ModuleInfo
 
     /** Uninstall by module id. Returns true if the module existed. */
     suspend fun uninstall(id: String): Boolean
@@ -78,17 +84,28 @@ class ModuleRepositoryImpl(
             ModuleInspector.inspect(context, uri)
         }
 
-    override suspend fun install(uri: Uri): ModuleInfo = withContext(Dispatchers.IO) {
-        val tempFile = File(context.cacheDir, "install_${System.currentTimeMillis()}.avm")
+    override suspend fun install(uri: Uri, expectedHash: String?): ModuleInfo = withContext(Dispatchers.IO) {
+        // P0-5: single staging copy — the URI is opened exactly once.
+        val staging = File(context.cacheDir, "staged_${System.currentTimeMillis()}.avm")
         context.contentResolver.openInputStream(uri)?.use { input ->
-            tempFile.outputStream().use { output -> input.copyTo(output) }
+            staging.outputStream().use { output -> input.copyTo(output) }
         } ?: error("Cannot open input stream for $uri")
 
-        // P0-5: TOCTOU - verify hash if provided
-        // (For now, no expectedHash parameter; the TrustGate inside ModuleManager
-        //  computes and validates hash internally as part of evaluate())
         try {
-            val result = manager.install(tempFile)
+            // TOCTOU closure: if the caller passed the hash computed during
+            // preview, re-verify it on the staged file. The bytes the user
+            // reviewed MUST equal the bytes being installed.
+            if (expectedHash != null) {
+                val actual = com.astraveil.app.update.UpdateVerifier.computeSha256(staging)
+                if (actual == null || !actual.equals(expectedHash, ignoreCase = true)) {
+                    throw SecurityException(
+                        "Staged file changed since review (hash mismatch: " +
+                            "expected=$expectedHash, actual=$actual)"
+                    )
+                }
+            }
+            // TrustGate runs again inside ModuleManager.install as defense-in-depth.
+            val result = manager.install(staging)
             val module = result.getOrElse { throw it }
             val info = module.toModuleInfo()
             AstraNotificationManager.notifyModuleChange(
@@ -98,7 +115,7 @@ class ModuleRepositoryImpl(
             )
             info
         } finally {
-            tempFile.delete()
+            staging.delete()
         }
     }
 

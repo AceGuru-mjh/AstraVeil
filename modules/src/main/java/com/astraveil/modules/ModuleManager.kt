@@ -170,7 +170,7 @@ class ModuleManager(
                 apiVersion = manifest.api,
                 signatureStatus = signatureStatus,
             )
-            TrustGate.requireInstallable(trustReport, strict = false)
+            TrustGate.requireInstallable(trustReport, strict = true)
             val sourceHash = trustReport.sourceHash
 
             mutex.withLock {
