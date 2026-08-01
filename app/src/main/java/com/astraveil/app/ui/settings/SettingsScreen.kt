@@ -10,10 +10,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Security
@@ -40,17 +43,20 @@ data class SettingEntry(
 )
 
 object SettingEntries {
-    val General = SettingEntry(Icons.Filled.Palette, "General", "Theme, animations, glass effect", "settings_general")
-    val Security = SettingEntry(Icons.Filled.Security, "Security", "Permission mode, sandbox, audit", "settings_security")
+    val General = SettingEntry(Icons.Filled.Palette, "General", "Theme, color scheme", "settings_general")
+    val Notifications = SettingEntry(Icons.Filled.Notifications, "Notifications", "Channel toggles", "settings_notifications")
+    val Language = SettingEntry(Icons.Filled.Language, "Language", "Display language", "settings_language")
+    val Security = SettingEntry(Icons.Filled.Security, "Security", "Permission mode, trusted keys, audit", "settings_security")
     val Provider = SettingEntry(Icons.Filled.Power, "Provider", "Root backend selection", "settings_provider")
-    val Modules = SettingEntry(Icons.Filled.Extension, "Modules", "Install source, auto-start, sandbox", "settings_modules")
-    val Daemon = SettingEntry(Icons.Filled.Devices, "Daemon", "Service status, socket, logs", "settings_daemon")
+    val Modules = SettingEntry(Icons.Filled.Extension, "Modules", "Storage, trust, auto-start", "settings_modules")
+    val Daemon = SettingEntry(Icons.Filled.Devices, "Daemon", "Service status, enable toggle", "settings_daemon")
+    val Backup = SettingEntry(Icons.Filled.Backup, "Backup", "Export and import data", "settings_backup")
     val Diagnostics = SettingEntry(Icons.Filled.BugReport, "Diagnostics", "System health report, capabilities, warnings", "settings_diagnostics")
     val Updates = SettingEntry(Icons.Filled.SystemUpdate, "Updates", "Check for new versions, APK download", "settings_updates")
-    val Developer = SettingEntry(Icons.Filled.BugReport, "Developer", "Debug logs, IPC, unsafe capability", "settings_developer")
+    val Developer = SettingEntry(Icons.Filled.BugReport, "Developer", "Version, log level, diagnostic export", "settings_developer")
     val About = SettingEntry(Icons.Filled.Info, "About", "Version, architecture, license", "settings_about")
 
-    val list = listOf(General, Security, Provider, Modules, Daemon, Diagnostics, Updates, Developer, About)
+    val list = listOf(General, Notifications, Language, Security, Provider, Modules, Daemon, Backup, Diagnostics, Updates, Developer, About)
 }
 
 @Composable

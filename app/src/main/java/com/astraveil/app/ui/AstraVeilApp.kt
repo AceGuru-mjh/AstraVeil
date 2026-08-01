@@ -56,7 +56,15 @@ import com.astraveil.app.terminal.TerminalScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.SuperuserScreen
-import com.astraveil.app.ui.settings.ComingSoonScreen
+import com.astraveil.app.ui.screens.settings.AppearanceScreen
+import com.astraveil.app.ui.screens.settings.BackupSettingsScreen
+import com.astraveil.app.ui.screens.settings.DaemonSettingsScreen
+import com.astraveil.app.ui.screens.settings.DeveloperSettingsScreen
+import com.astraveil.app.ui.screens.settings.LanguageScreen
+import com.astraveil.app.ui.screens.settings.ModulesSettingsScreen
+import com.astraveil.app.ui.screens.settings.NotificationsScreen
+import com.astraveil.app.ui.screens.settings.ProviderSettingsScreen
+import com.astraveil.app.ui.screens.settings.SecuritySettingsScreen
 import com.astraveil.app.ui.settings.SettingsScreen
 import com.astraveil.app.ui.screens.update.UpdateCenterScreen
 import com.astraveil.app.viewmodel.StatusViewModel
@@ -188,29 +196,40 @@ fun AstraVeilApp() {
             composable("settings_updates") {
                 UpdateCenterScreen()
             }
-            // --- Placeholder targets for the remaining settings entries.
+            // --- Settings sub-screens.
             //
-            // These routes are referenced by SettingsScreen but were
-            // previously NOT registered, which caused
+            // Phase-1 wiring: every entry in SettingsScreen.SettingEntries
+            // now resolves to a real functional @Composable. Previously
+            // several of these routes were unregistered, which caused
             // navController.navigate() to throw IllegalArgumentException
-            // and crash the app on tap. ComingSoonScreen is a safe target.
+            // and crash the app on tap; ComingSoonScreen was the interim
+            // safe target. Replaced with real screens.
             composable("settings_general") {
-                ComingSoonScreen(title = "General")
+                AppearanceScreen()
             }
             composable("settings_security") {
-                ComingSoonScreen(title = "Security")
+                SecuritySettingsScreen()
             }
             composable("settings_provider") {
-                ComingSoonScreen(title = "Provider")
+                ProviderSettingsScreen()
             }
             composable("settings_modules") {
-                ComingSoonScreen(title = "Modules")
+                ModulesSettingsScreen()
             }
             composable("settings_daemon") {
-                ComingSoonScreen(title = "Daemon")
+                DaemonSettingsScreen()
             }
             composable("settings_developer") {
-                ComingSoonScreen(title = "Developer")
+                DeveloperSettingsScreen()
+            }
+            composable("settings_notifications") {
+                NotificationsScreen()
+            }
+            composable("settings_language") {
+                LanguageScreen()
+            }
+            composable("settings_backup") {
+                BackupSettingsScreen()
             }
             composable("settings_about") {
                 AboutScreen()

@@ -49,7 +49,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.design.AstraCard
-import com.astraveil.app.ui.design.LiquidGlass
 import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
@@ -341,7 +340,7 @@ private fun ModuleCard(
     AstraCard(
         modifier = Modifier.fillMaxWidth(),
         tier = if (isRunning) SurfaceTier.LIQUID else SurfaceTier.CONTENT,
-        accent = if (isRunning) LiquidGlass.AccentTeal else Color.Transparent,
+        accent = if (isRunning) AstraTeal.copy(alpha = 0.08f) else Color.Transparent,
         contentPadding = 16.dp,
     ) {
         Column(

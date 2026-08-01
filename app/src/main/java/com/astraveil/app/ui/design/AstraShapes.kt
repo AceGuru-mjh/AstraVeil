@@ -7,8 +7,8 @@ import androidx.compose.ui.unit.dp
  * Canonical corner-radius scale for all AstraVeil surfaces.
  *
  * The single source of truth for corner radii across the app. Every
- * container — [AstraSurface], the deprecated [GlassCard] /
- * [LiquidGlassCard] shims, the navigation bar, dialogs — should derive
+ * container — [AstraSurface], 
+ * the navigation bar, dialogs — should derive
  * its corner radius from these tokens so the visual rhythm stays
  * consistent.
  *

@@ -41,7 +41,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.components.StatusPill
 import com.astraveil.app.ui.design.AstraCard
-import com.astraveil.app.ui.design.LiquidGlass
 import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
@@ -173,7 +172,7 @@ private fun ProviderCard(
     AstraCard(
         modifier = Modifier.fillMaxWidth(),
         tier = if (active) SurfaceTier.LIQUID else SurfaceTier.CONTENT,
-        accent = if (active) LiquidGlass.AccentViolet else Color.Transparent,
+        accent = if (active) AstraAccent.copy(alpha = 0.08f) else Color.Transparent,
         cornerRadius = 18.dp,
         contentPadding = 16.dp,
     ) {

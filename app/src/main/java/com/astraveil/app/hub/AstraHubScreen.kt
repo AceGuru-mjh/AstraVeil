@@ -43,9 +43,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.astraveil.app.ui.design.AstraCard
-import com.astraveil.app.ui.design.LiquidGlass
 import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
+import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraWarning
 
@@ -249,7 +249,7 @@ private fun HubModuleCard(
     AstraCard(
         modifier = Modifier.fillMaxWidth(),
         tier = if (downloading) SurfaceTier.LIQUID else SurfaceTier.CONTENT,
-        accent = if (downloading) LiquidGlass.AccentViolet else Color.Transparent,
+        accent = if (downloading) AstraAccent.copy(alpha = 0.08f) else Color.Transparent,
         cornerRadius = 20.dp,
         contentPadding = 16.dp,
     ) {
