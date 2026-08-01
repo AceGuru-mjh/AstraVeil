@@ -1,60 +1,45 @@
-# AstraVeil v1.7.0 — Release Notes
+# AstraVeil v1.8.0 — Release Notes
 
 ## Overview
 
-**P2-17 closed**: the four-way container split (GlassCard / LiquidGlassCard /
-GlassSurface / bare M3 Card) is replaced by a single `AstraSurface` /
-`AstraCard` primitive carrying a declared `SurfaceTier`. Liquid glass is no
-longer decorative — it is reserved exclusively for live state, so it carries
-signal instead of noise.
+**Signed release fix.** All previous releases (v1.4.0–v1.7.0) shipped
+unsigned APKs because the signing keystore was not available in CI. This
+release fixes the signing pipeline: the keystore is stored as an encrypted
+GitHub secret (base64-encoded), decoded at build time, and the release
+workflow verifies the APK is signed before publishing.
 
-## What's new in v1.7.0
+## What's new in v1.8.0
 
-### Unified Surface API
-- `SurfaceTier` enum: `CONTENT` (quiet, readable, cheap) / `ELEVATED` (slight
-  emphasis) / `LIQUID` (alive — full refraction + specular + aberration).
-- `AstraSurface` / `AstraCard`: the single container primitive. The caller
-  declares *what kind* of surface it wants via `tier`; the platform picks the
-  rendering. No more guessing which of four containers to use.
-- `AstraShapes`: canonical corner-radius scale (sm=10 / md=16 / lg=22 / xl=28
-  / pill). `GlassShapes` kept as a `@Deprecated` alias.
+### Signed APK pipeline (fix)
+- New keystore generated with alias `mengjinghao`, RSA 2048, valid 100 years
+- Keystore stored as `ASTRAVEIL_KEYSTORE_BASE64` GitHub secret (NOT committed
+  to the public repo — security best practice for a public repository)
+- `release.yml` now decodes the keystore from the secret before building,
+  verifies the APK is signed (filename must NOT contain `unsigned`), and
+  fails the build if signing fails
+- Previous v1.4.0–v1.7.0 releases had `app-release-unsigned.apk`; from
+  v1.8.0 the asset is `app-release.apk` (signed)
 
-### Liquid = "alive" (design principle)
-Liquid glass now carries meaning. It is reserved exclusively for:
-- **Running module card** — LIQUID + AccentTeal when `state == RUNNING`
-- **ADB console** — always LIQUID + AccentViolet (live terminal)
-- **Download / install in progress** — LIQUID + AccentViolet
-- **Active provider card** — LIQUID + AccentViolet when active
-- **Hub module downloading** — LIQUID + AccentViolet when `downloadingId` matches
+### Signing credentials
+- **Keystore alias:** `mengjinghao`
+- **Certificate CN:** `CN=mengjinghao, OU=AstraVeil, O=AstraVeil, C=CN`
+- **SHA-256 fingerprint:** `05:60:E4:95:27:98:2D:09:73:1C:4A:E6:12:41:55:7C:59:FE:C8:9D:61:78:C5:37:E7:AD:1E:53:51:7B:BE:C6`
+- **Validity:** Aug 1 2026 → Jul 8 2126 (100 years)
 
-Static content (settings, policy cards, audit rows, diagnostics, about) uses
-the quiet CONTENT tier. Key summaries use ELEVATED. Aim for ≤ 6 liquid
-surfaces on screen at once — worst case currently is 2 (UpdateCenter during
-download).
-
-### Deprecated shims
-- `GlassCard` → `AstraCard(tier = CONTENT)`
-- `LiquidGlassCard` → `AstraCard(tier = LIQUID)`
-- `GlassSurface` → `AstraSurface(tier = CONTENT)`
-
-No real callers existed; the shims are retained for source compatibility and
-will be removed in a future release.
-
-### Bare M3 Card cleanup
-4 bare `Card(` usages migrated to `AstraCard(CONTENT)`:
-DiagnosticsScreen (console report), SecurityReviewDialog, SuRequestDialog,
-and ProviderScreen static info cards.
+### Security improvement
+The keystore is no longer committed to the git repository (it was removed
+in a prior commit). It is injected into CI via an encrypted GitHub secret,
+so the private key is never exposed in the public repo history.
 
 ## Verification
-- CI: all 5 checks green on PR #83 (build-and-test, daemon-build-and-test,
-  rust, rust-fuzz, cpp-fuzz).
-- 0 leftover bare `Card()` in migrated files.
-- 0 `AstraCard(containerColor=...)` usages (removed param — no caller used it).
-- Max LIQUID on any screen = 2 (well under the ≤6 budget).
-- All pre-existing `AstraCard` callers compile unchanged (modifier +
-  contentPadding + trailing lambda are all compatible with the new signature).
+- CI: all 5 checks green on PR (build-and-test, daemon-build-and-test,
+  rust, rust-fuzz, cpp-fuzz)
+- Release workflow: "Verify APK is signed" step confirms the output
+  filename is `app-release.apk` (not `app-release-unsigned.apk`)
+- The APK can be installed on Android 8.0+ (minSdk 26)
 
-## Audit status
-P2-17 closed. Remaining P2 item: P2-20 (multi-generation model convergence —
-ModuleManifest / ModuleState / ModuleRuntime etc.); the audit recommends
-this after P0/P1, which are now complete.
+## Note on updates
+This release uses a NEW signing certificate. It cannot be installed as an
+update over any previous release that was signed with a different key
+(the v1.1.1–v1.3.1 releases used an older `root8888` key; v1.4.0–v1.7.0
+were unsigned). Uninstall any previous version before installing v1.8.0.
