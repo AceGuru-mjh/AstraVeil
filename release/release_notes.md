@@ -1,56 +1,60 @@
-# AstraVeil v2.0.0 — Release Notes
+# AstraVeil v2.1.0 — Release Notes
 
 ## Overview
 
-Settings consolidation: 12 entries → 10. Two merged screens replace four
-separate ones, and the theme preference now actually drives the color scheme.
+Terminal upgraded from "command executor" to "persistent shell session".
+Root Chain Self-Test added so the terminal chain can be diagnosed on-device.
+P2-18 (diagnostics provenance) and P2-20 (canonical manifest) landed.
 
-## What's new in v2.0.0
+## What's new in v2.1.0
 
-### Preferences (Appearance + Language merged)
-- **Theme mode** (Dark / Light / System): persisted to
-  `SharedPreferences("astra_ui_prefs")/"theme_mode"`. `MainActivity` reads
-  this at startup and passes a `ThemeMode` to `AstraVeilTheme` — the
-  preference now actually controls the color scheme (previously it was
-  stored but never read by the theme).
-- **Language** (English / 中文): persisted + `AstraStrings.setLocaleOverride`
-  + `Activity.recreate()` — applies immediately.
-- Both settings call `recreate()` so the user sees the change instantly.
+### Terminal Phase 1 — Persistent Shell Session
+- **ShellSession.kt**: keeps ONE shell process alive, pipes commands to stdin.
+  `cd` / `export` persist across commands, no per-command su handshake, output
+  streams line-by-line. Completion detected via injected marker
+  (`___ASTRA_DONE_<exit>|<cwd>___`) which yields exit code + cwd and is
+  stripped from displayed output.
+- **TerminalViewModel**: rewritten to use ShellSession. ROOT/ADB/SHELL modes
+  start `listOf("su")` / `listOf("su","2000")` / `listOf("sh")`. Security
+  model preserved: TrustedInteractiveSession approval gate + CommandAuditLogger.
+  New: `cwd` StateFlow (live working directory), `interrupt()` (kill shell).
+- **TerminalScreen**: added cwd status bar (teal monospace), Interrupt button
+  (visible when running), Root Chain Self-Test panel.
 
-### Update & Backup (Update Center + Backup merged)
-- **Update card**: `when`-matches the `UpdateState` sealed class
-  (Idle / Checking / Available / Downloading / Verifying / Installing /
-  Success / Latest / Error) and renders the appropriate UI — check
-  button, download progress bar, verify spinner, install button, error
-  message. Wired to the real `UpdateViewModel` (`checkForUpdate()` /
-  `downloadAndInstall()`).
-- **Backup card**: export/import a ZIP via SAF (CreateDocument /
-  OpenDocument) containing the module registry, trusted developer keys,
-  privileged command audit log, and a backup meta marker. No storage
-  permission needed.
+### Milestone 0 — Root Chain Self-Test
+- **RootChainSelfTest.kt**: runs the 7 links of the terminal chain on-device:
+  ① backend detect → ② su binary → ③ one-shot su → ④ uid=0 → ⑤ authorized →
+  ⑥ persistent shell → ⑦ marker round-trip. Each step shows real command
+  output as evidence; each FAIL comes with a hint telling the user what to do.
+  **Step ④ PASS (uid=0) = Milestone 0 achieved.**
+- **SelfTestPanel**: expandable panel in TerminalScreen. 7 steps light up
+  PENDING → RUNNING → PASS/FAIL with evidence + hints.
 
-### Theme.kt
-- Added `ThemeMode` enum (DARK / LIGHT / SYSTEM) with `fromString()` /
-  `toPrefString()`.
-- Added `AstraVeilTheme(themeMode: ThemeMode, content)` overload that
-  delegates to the existing elaborate color schemes — the dark-first
-  violet/teal palette and status bar setup are preserved.
+### P2-18 — DiagnosticEngine with provenance
+- **DiagnosticEngine.kt** (app/diagnostics): produces `DiagnosticConclusion`
+  list with `DataProvenance` badge + source string + `implemented` flag.
+  Device facts = DETECTED (android.os.Build). Capabilities = PROBED/DETECTED
+  from active provider. Subsystems honestly marked: daemon IPC, module
+  isolation (Prototype), Rust policy (Inferred), SELinux (Unavailable).
+  Reads daemon state directly via `AstraVeilApplication.daemonManager.state`.
 
-### Deleted (4 files → 2 merged screens)
-- `AppearanceScreen.kt` → merged into `PreferencesScreen.kt`
-- `LanguageScreen.kt` → merged into `PreferencesScreen.kt`
-- `UpdateCenterScreen.kt` → merged into `UpdateBackupScreen.kt`
-- `BackupSettingsScreen.kt` → merged into `UpdateBackupScreen.kt`
+### P2-20 — Canonical ModuleManifest (incremental, safe)
+- **modules/model/ModuleManifest.kt**: canonical v3 manifest (id, name,
+  version, apiVersion, permissions: List<ModulePermission>, required/
+  optionalCapabilities, runtime, entry, minApi). `permissionNames` accessor
+  for Phase-0 compat.
+- **modules/model/LegacyManifestCompat.kt**: `legacyToCanonical()` converter
+  + `toCanonical()` extensions for both existing manifests (Phase-0
+  `modules.ModuleManifest` and v3 `modules.api.ModuleManifest`). Additive —
+  existing code unchanged, new install-path code converts to canonical.
 
-### Settings entries: 12 → 10
-```
-Security · Provider · Modules · Daemon · Notifications · Preferences ·
-Update & Backup · Diagnostics · Developer · About
-```
-All 10 entries map to 10 NavHost routes (0 ComingSoonScreen placeholders).
+## Honest boundaries (Phase 1)
+- Full-screen interactive programs (top/vi/less) and true SIGINT need a real
+  PTY (Phase 2, native). This pipe-based session covers 90% of root-management
+  commands (id/getprop/pm/dumpsys/magisk/ls/grep/mount).
+- The self-test is the key new capability: it tells you exactly which link of
+  the terminal chain breaks on YOUR device, with real evidence.
 
 ## Verification
-- CI: all 5 checks green on PR #89.
-- 10/10 entry routes ↔ 10/10 composable routes.
-- Theme preference read by MainActivity → drives AstraVeilTheme.
-- UpdateBackupScreen wired to real UpdateViewModel sealed-class state.
+- CI: all 5 checks green on PR #91.
+- 0 broken imports; DiagnosticEngine correctly placed in :app (not :core).
