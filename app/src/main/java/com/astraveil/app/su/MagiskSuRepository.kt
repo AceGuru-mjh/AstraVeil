@@ -112,6 +112,66 @@ class MagiskSuRepository(
     }
 
     /**
+     * Grant temporary root access that auto-expires at [until] (Unix epoch
+     * seconds). Uses Magisk's native `until` column — Magisk itself enforces
+     * the expiry, so the access is revoked even if AstraVeil is killed.
+     */
+    suspend fun grantTemporary(uid: Int, packageName: String, minutes: Int): Boolean {
+        val until = System.currentTimeMillis() / 1000 + minutes * 60L
+        return setPolicy(uid, packageName, SuPolicy.ALLOW, until = until)
+    }
+
+    /**
+     * Clear the `until` field so an existing ALLOW policy becomes permanent.
+     */
+    suspend fun makePermanent(uid: Int, packageName: String): Boolean =
+        setPolicy(uid, packageName, SuPolicy.ALLOW, until = 0)
+
+    /**
+     * Immediately revoke root access (set policy to DENY).
+     */
+    suspend fun revoke(uid: Int, packageName: String): Boolean =
+        setPolicy(uid, packageName, SuPolicy.DENY)
+
+    /**
+     * Snapshot of a policy for lockdown/restore.
+     */
+    data class PolicySnapshot(
+        val uid: Int,
+        val packageName: String,
+        val policy: SuPolicy,
+        val until: Long,
+    )
+
+    /**
+     * One-click lockdown: set ALL non-DENY policies to DENY.
+     * Returns (pre-lockdown snapshot, count of locked entries).
+     * The snapshot can be passed to [restorePolicies] to undo.
+     */
+    suspend fun lockdown(): Pair<List<PolicySnapshot>, Int> = withContext(Dispatchers.IO) {
+        val current = listPolicies()
+        val snapshot = current
+            .filter { it.policy != SuPolicy.DENY }
+            .map { PolicySnapshot(it.uid, it.packageName, it.policy, it.until) }
+        var n = 0
+        snapshot.forEach { s ->
+            if (setPolicy(s.uid, s.packageName, SuPolicy.DENY, until = 0)) n++
+        }
+        snapshot to n
+    }
+
+    /**
+     * Restore policies from a [lockdown] snapshot.
+     */
+    suspend fun restorePolicies(snapshot: List<PolicySnapshot>): Int {
+        var n = 0
+        snapshot.forEach { s ->
+            if (setPolicy(s.uid, s.packageName, s.policy, until = s.until)) n++
+        }
+        return n
+    }
+
+    /**
      * List recent su request logs.
      */
     suspend fun listLogs(limit: Int = 30): List<SuLogEntry> = withContext(Dispatchers.IO) {
