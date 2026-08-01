@@ -56,7 +56,7 @@ fun BackupSettingsScreen() {
     var status by remember { mutableStateOf<String?>(null) }
     var working by remember { mutableStateOf(false) }
 
-    fun export(what: String, block: () -> File) {
+    fun export(what: String, block: suspend () -> File) {
         working = true
         status = null
         scope.launch {
