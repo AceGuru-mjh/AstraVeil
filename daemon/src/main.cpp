@@ -20,6 +20,7 @@
 #include "astra/security/audit_logger.hpp"
 #include "astra/security/risk_engine.hpp"
 #include "astra/security/signature_verifier.hpp"
+#include "astra/security/policy_bridge.hpp"
 
 #include <getopt.h>
 
@@ -132,6 +133,10 @@ int main(int argc, char** argv) {
 
     astra::service::PermissionService permission_service(provider_manager);
 
+    // P0-2: PolicyBridge — all Execute requests must pass through the Rust
+    // policy engine before running. Fail-closed if Rust is not linked.
+    astra::PolicyBridge policy_bridge;
+
     // Build the device capability matrix once at startup from the active
     // provider + independent device probes. Re-detect on GetCapabilityMatrix
     // so a provider change or SELinux flip is reflected without a restart.
@@ -217,7 +222,35 @@ int main(int argc, char** argv) {
                     break;
                 }
 
-                // `body` is the shell command to run as the daemon's uid.
+                // P0-2: All execution MUST go through the Rust policy engine.
+                // The current IPC body is a bare command string; until the
+                // structured IPC protocol lands we treat every Execute as an
+                // "interactive" context with high risk and no pre-approval.
+                // Fail-closed: if Rust is not linked, policy_bridge.checkWith
+                // returns DENY and the command never runs.
+                const std::string exec_module_id = "interactive";
+                const std::string exec_capability = "shell";
+                const unsigned int exec_risk_level = 90;
+                const bool exec_approved = false;
+
+                const auto decision = policy_bridge.checkWith(
+                    exec_module_id, exec_capability,
+                    exec_risk_level, exec_approved);
+
+                if (decision == astra::PolicyResult::DENY) {
+                    response_json =
+                        "{\"error\":\"policy_denied\","
+                        "\"reason\":\"Rust policy denied execution\"}";
+                    break;
+                }
+                if (decision == astra::PolicyResult::APPROVAL) {
+                    response_json =
+                        "{\"error\":\"approval_required\","
+                        "\"reason\":\"execution requires user approval\"}";
+                    break;
+                }
+
+                // Only ALLOW reaches here.
                 const auto result = executor.execute(body);
                 std::ostringstream out;
                 out << "{\"exit_code\":" << result.exit_code

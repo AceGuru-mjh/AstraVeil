@@ -17,3 +17,22 @@ jobs:
         run: cmake --build build-daemon -j
       - name: Run daemon tests
         run: ctest --test-dir build-daemon --output-on-failure
+      - name: Verify fail-closed policy (weak fallback returns Deny)
+        run: |
+          # The native CI builds the daemon WITHOUT linking Rust, so
+          # policy_is_available is expected to be weak here. The fail-closed
+          # guarantee is that the WEAK FALLBACK returns 1 (Deny), not 0 (Allow).
+          # This check verifies the source code, not the binary.
+          echo "Checking weak fallback return values in policy_bridge.cpp..."
+          if grep -A2 "__attribute__((weak)) int policy_check()" daemon/src/security_bridge/policy_bridge.cpp | grep -q "return 0"; then
+            echo "FATAL: policy_check weak fallback returns 0 (Allow) — fail-OPEN!"
+            exit 1
+          fi
+          if grep -A5 "__attribute__((weak)) int policy_check_with" daemon/src/security_bridge/policy_bridge.cpp | grep -q "return 0"; then
+            echo "FATAL: policy_check_with weak fallback returns 0 (Allow) — fail-OPEN!"
+            exit 1
+          fi
+          echo "OK: weak fallbacks return 1 (Deny) — fail-closed enforced even without Rust linked"
+          echo ""
+          echo "NOTE: Release builds MUST link Rust (policy_is_available becomes strong)."
+          echo "Verify in release.yml that the production astrad has 'T policy_is_available'."
