@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.astraveil.app.ui.design.AstraCard
-import com.astraveil.app.ui.design.LiquidGlass
 import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraError
@@ -87,7 +86,7 @@ private fun UpdateStatusCard(state: UpdateState, viewModel: UpdateViewModel) {
         state is UpdateState.Installing
     AstraCard(
         tier = if (isLive) SurfaceTier.LIQUID else SurfaceTier.CONTENT,
-        accent = if (isLive) LiquidGlass.AccentViolet else Color.Transparent,
+        accent = if (isLive) AstraAccent.copy(alpha = 0.08f) else Color.Transparent,
     ) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Astra Update", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
@@ -206,7 +205,7 @@ private fun DownloadProgressCard(progress: Int) {
     // the live progress indicator makes it inherently ALIVE → LIQUID.
     AstraCard(
         tier = SurfaceTier.LIQUID,
-        accent = LiquidGlass.AccentViolet,
+        accent = AstraAccent.copy(alpha = 0.08f),
     ) {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Download", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,

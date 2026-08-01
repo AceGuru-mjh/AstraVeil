@@ -48,9 +48,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.astraveil.app.adb.AdbConsoleViewModel
 import com.astraveil.app.adb.AdbManager
 import com.astraveil.app.ui.design.AstraCard
-import com.astraveil.app.ui.design.LiquidGlass
 import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
+import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraSuccess
 
 private val ConsoleBg = Color(0xFF0D1117)
@@ -72,7 +72,7 @@ fun AdbConsoleCard(
 
     AstraCard(
         tier = SurfaceTier.LIQUID,
-        accent = LiquidGlass.AccentViolet,
+        accent = AstraAccent.copy(alpha = 0.08f),
         contentPadding = 14.dp,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

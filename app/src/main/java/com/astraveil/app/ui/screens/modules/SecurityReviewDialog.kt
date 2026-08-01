@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.InstallMobile
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +46,7 @@ import com.astraveil.core.modules.security.RiskLevel
 import com.astraveil.core.modules.security.RiskSource
 import com.astraveil.core.modules.security.SignatureStatus
 import com.astraveil.core.modules.security.TrustReport
+import com.astraveil.modules.compatibility.CompatibilityReport
 
 /**
  * Pre-install Security Review dialog (PR18.3).
@@ -89,6 +91,7 @@ fun SecurityReviewDialog(
     installState: ModuleOperationState,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    compatibilityReport: CompatibilityReport? = null,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         // P2-17: dialog surface is static content → CONTENT tier.
@@ -178,6 +181,11 @@ fun SecurityReviewDialog(
                 // ---- Trust summary block ----
                 TrustSummary(report)
 
+                // ---- Capability compatibility (if computed) ----
+                if (compatibilityReport != null) {
+                    CompatibilitySection(compatibilityReport)
+                }
+
                 // ---- Install error (if any) ----
                 if (installState is ModuleOperationState.Error) {
                     Text(
@@ -225,6 +233,51 @@ fun SecurityReviewDialog(
 }
 
 // ---- Sub-components ------------------------------------------------------
+
+@Composable
+private fun CompatibilitySection(report: CompatibilityReport) {
+    val icon = if (report.compatible) Icons.Filled.Verified else Icons.Filled.Warning
+    val tint = if (report.compatible) AstraSuccess else AstraWarning
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = if (report.compatible) "Compatible with this device"
+                       else "Missing required capabilities",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = tint,
+            )
+        }
+
+        if (!report.compatible && report.missing.isNotEmpty()) {
+            report.missing.forEach { cap ->
+                Text(
+                    text = "✗ $cap — not available on this device",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AstraError,
+                    modifier = Modifier.padding(start = 22.dp),
+                )
+            }
+        }
+
+        if (report.optionalMissing.isNotEmpty()) {
+            Text(
+                text = "Optional (not required): ${report.optionalMissing.joinToString(", ")}",
+                style = MaterialTheme.typography.labelSmall,
+                color = AstraOnSurfaceMuted,
+                modifier = Modifier.padding(start = 22.dp),
+            )
+        }
+    }
+}
 
 @Composable
 private fun FingerprintRow(hash: String) {
