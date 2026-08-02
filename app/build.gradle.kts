@@ -128,6 +128,9 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
+    // Haze — real background blur for liquid glass (RenderEffect, API 31+)
+    implementation("dev.chrisbanes.haze:haze:1.6.2")
+
     // Kotlinx
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
