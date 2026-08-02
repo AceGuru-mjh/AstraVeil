@@ -103,6 +103,27 @@ target_include_directories(astrad PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
+# ---- Security hardening flags ----------------------------------------------
+# Stack smashing protection, FORTIFY_SOURCE, position-independent code, full
+# RELRO (read-only GOT after relocation), and a non-executable stack. These
+# are baseline exploit-mitigation flags expected of any privileged daemon.
+#
+# They are applied unconditionally for the host (Linux/glibc) build. When
+# cross-compiling for Android/Bionic the flags are still valid (Bionic honours
+# -fstack-protector-strong, -D_FORTIFY_SOURCE, -fPIE/-pie, -Wl,-z,relro,now,
+# and -Wl,-z,noexecstack).
+target_compile_options(astrad PRIVATE
+    -fstack-protector-strong
+    -D_FORTIFY_SOURCE=2
+    -fPIE
+    -fno-strict-overflow
+)
+target_link_options(astrad PRIVATE
+    -pie
+    -Wl,-z,relro,-z,now
+    -Wl,-z,noexecstack
+)
+
 # ---- Threads ----------------------------------------------------------------
 find_package(Threads REQUIRED)
 target_link_libraries(astrad PRIVATE Threads::Threads)

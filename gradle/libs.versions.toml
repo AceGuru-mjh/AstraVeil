@@ -18,6 +18,8 @@ haze = "1.6.2"
 # ── P3: protobuf ──
 protobuf = "4.29.3"
 protobufPlugin = "0.9.4"
+# ── Code quality ──
+detekt = "1.23.7"
 
 [libraries]
 # AndroidX core
@@ -64,3 +66,4 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

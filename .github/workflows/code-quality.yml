@@ -1,0 +1,77 @@
+name: Code Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  detekt:
+    name: detekt (Kotlin static analysis)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Run detekt
+        run: ./gradlew detekt --stacktrace
+      - name: Upload SARIF report
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: '**/detekt.sarif'
+
+  clippy:
+    name: clippy (Rust lints)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Run clippy
+        working-directory: rust
+        run: cargo clippy --all-targets -- -D warnings
+
+  editorconfig:
+    name: .editorconfig compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install editorconfig-checker
+        run: |
+          VERSION=2.7.2
+          curl -sSL "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/${VERSION}/ec-linux-amd64.tar.gz" | tar xz
+          chmod +x bin/ec-linux-amd64
+      - name: Run editorconfig-checker
+        run: ./bin/ec-linux-amd64 -exclude '\.git'
+
+  clang-tidy:
+    name: clang-tidy (C++ lints, best-effort)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-tidy + CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy cmake
+      - name: Generate compile_commands.json
+        working-directory: daemon
+        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || echo "CMake configure failed (expected without cross-toolchain) — skipping"
+      - name: Run clang-tidy
+        working-directory: daemon
+        run: |
+          if [ -f build/compile_commands.json ]; then
+            run-clang-tidy -p build 'src/.*\.cpp$' -quiet 2>&1 | tee clang-tidy.log
+          else
+            echo "No compile_commands.json — clang-tidy skipped"
+          fi

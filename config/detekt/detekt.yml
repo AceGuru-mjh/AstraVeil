@@ -1,0 +1,114 @@
+# detekt configuration for AstraVeil
+#
+# Builds upon detekt's default config (buildUponDefaultConfig = true in root
+# build.gradle.kts). Only overrides / tightenings are listed here.
+# Run: ./gradlew detekt
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    threshold: 80
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 10
+    ignoreDefaultParameters: true
+    ignoreAnnotated: ['Composable', 'Inject']
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 30
+    thresholdInClasses: 25
+  TooManyProperties:
+    active: true
+    threshold: 20
+  LargeClass:
+    active: true
+    threshold: 200
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*'
+    # Compose composable functions are PascalCase
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][A-Za-z0-9]*'
+  VariableNaming:
+    active: true
+    variablePattern: '[a-z][a-zA-Z0-9]*'
+
+style:
+  active: true
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreLocalVariableDeclaration: true
+    ignoreAnnotated: ['Composable']
+  WildcardImport:
+    active: true
+  UnusedImports:
+    active: true
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: 'TODO must reference an issue (TODO(#123))'
+        value: 'TODO(?!#\d)'
+  ReturnCount:
+    active: true
+    max: 4
+  LoopWithTooManyJumpStatements:
+    active: true
+    maxJumpCount: 2
+
+potential-bugs:
+  active: true
+  UnsafeCallOnNullableType:
+    active: true
+  UnreachableCode:
+    active: true
+  IteratorNotThrowingNoSuchElementException:
+    active: true
+  EqualsAlwaysReturnsTrueOrFalse:
+    active: true
+
+exceptions:
+  active: true
+  SwallowedException:
+    active: true
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - ArrayIndexOutOfBoundsException
+      - Error
+      - IllegalMonitorStateException
+      - NullPointerException
+      - IndexOutOfBoundsException
+      - RuntimeException
+      - Throwable
+
+empty-blocks:
+  active: true
+  EmptyFunctionBlock:
+    active: true
+    ignoreOverridden: true
+
+performance:
+  active: true
+  ForEachOnRange:
+    active: true
+  SpreadOperator:
+    active: true
