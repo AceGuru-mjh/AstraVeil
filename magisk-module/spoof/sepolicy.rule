@@ -1,0 +1,3 @@
+# 允许 Zygisk 模块读取配置目录
+allow zygisk_exec astraveil_data_file dir { open read search }
+allow zygisk_exec astraveil_data_file file { open read getattr }
