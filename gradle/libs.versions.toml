@@ -11,7 +11,7 @@ kotlinxSerialization = "1.7.3"
 kotlinxCoroutines = "1.9.0"
 junit = "4.13.2"
 junitExt = "1.2.1"
-espresso = "3.6.1"
+espresso = "3.7.0"
 # ── P1: centralized previously-hardcoded deps ──
 mockk = "1.13.13"
 haze = "1.6.2"
