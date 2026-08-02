@@ -1,0 +1,6 @@
+<resources>
+    <string-array name="xposed_scope">
+        <item>android</item>
+        <!-- LSPosed 允许用户动态选择作用域，此处仅声明默认 -->
+    </string-array>
+</resources>
