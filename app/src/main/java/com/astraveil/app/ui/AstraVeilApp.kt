@@ -2,31 +2,25 @@ package com.astraveil.app.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SettingsInputComponent
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SettingsInputComponent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
@@ -38,27 +32,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.astraveil.app.BuildConfig
 import com.astraveil.app.hub.AstraHubScreen
+import com.astraveil.app.terminal.TerminalScreen
 import com.astraveil.app.ui.design.AstraGlassStyle
+import com.astraveil.app.ui.design.AstraShapes
 import com.astraveil.app.ui.screens.AboutScreen
 import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
-import com.astraveil.app.ui.screens.modules.ModulesScreen
-import com.astraveil.app.terminal.TerminalScreen
+import com.astraveil.app.ui.screens.DeviceSpoofScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.SuperuserScreen
+import com.astraveil.app.ui.screens.modules.ModulesScreen
 import com.astraveil.app.ui.screens.settings.DaemonSettingsScreen
 import com.astraveil.app.ui.screens.settings.DeveloperSettingsScreen
 import com.astraveil.app.ui.screens.settings.ModulesSettingsScreen
@@ -76,14 +73,6 @@ import dev.chrisbanes.haze.hazeChild
 /** Bottom bar height for pages to add bottom content padding. */
 val LocalBottomBarInset = staticCompositionLocalOf { 0.dp }
 
-/**
- * Top-level AstraUI composable with Haze liquid glass navigation.
- *
- * The content (NavHost) is the Haze blur source; the bottom NavigationBar
- * is a hazeChild that blurs the content behind it in real-time. The
- * container is transparent so the blur shows through — no more opaque
- * white block.
- */
 @Composable
 fun AstraVeilApp() {
     val navController = rememberNavController()
@@ -108,17 +97,26 @@ fun AstraVeilApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Destinations.Dashboard.route
 
-    // Fix: map sub-routes to their parent nav tab so the correct item highlights
+    // ── 修复 #4：子页面路由正确映射到父级 tab ──
     val selectedIndex = remember(currentRoute) {
-        val idx = Destinations.list.indexOfFirst { it.route == currentRoute }
-        if (idx >= 0) idx
-        else when {
-            currentRoute.startsWith("settings") ->
-                Destinations.list.indexOfFirst { it.route == "settings" }
-            currentRoute == "terminal" || currentRoute == "astrahub" ->
-                Destinations.list.indexOfFirst { it.route == "superuser" }
-            else -> 0
-        }.coerceAtLeast(0)
+        val directIndex = Destinations.list.indexOfFirst { it.route == currentRoute }
+        if (directIndex >= 0) {
+            directIndex
+        } else {
+            when {
+                currentRoute.startsWith("settings") ->
+                    Destinations.list.indexOfFirst { it.route == "settings" }
+                currentRoute == "terminal" || currentRoute == "astrahub" ->
+                    Destinations.list.indexOfFirst { it.route == "dashboard" }
+                currentRoute == "device_spoof" ->
+                    Destinations.list.indexOfFirst { it.route == "dashboard" }
+                currentRoute == "capability" ->
+                    Destinations.list.indexOfFirst { it.route == "dashboard" }
+                currentRoute == "provider" ->
+                    Destinations.list.indexOfFirst { it.route == "settings" }
+                else -> 0
+            }
+        }
     }
 
     val hazeState = remember { HazeState() }
@@ -127,27 +125,57 @@ fun AstraVeilApp() {
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.Transparent,
         bottomBar = {
-            // Pill-shaped liquid glass navigation bar
+            // ── 修复 #1：Pill 长条导航栏 ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .hazeChild(
-                        state = hazeState,
-                        style = AstraGlassStyle,
+                    .clip(RoundedCornerShape(AstraShapes.xl))   // 28.dp
+                    .hazeChild(state = hazeState, style = AstraGlassStyle)
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.22f),
+                                Color.White.copy(alpha = 0.04f),
+                            ),
+                        ),
+                        shape = RoundedCornerShape(AstraShapes.xl),
                     ),
+                contentAlignment = Alignment.Center,
             ) {
-                NavigationBar(
-                    containerColor = Color.Transparent,
-                    tonalElevation = 0.dp,
+                // 顶部折射高光线
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .padding(horizontal = 24.dp)
+                        .border(
+                            width = 0.5.dp,
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.30f),
+                                    Color.Transparent,
+                                ),
+                            ),
+                            shape = RoundedCornerShape(28.dp),
+                        ),
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Destinations.list.forEachIndexed { index, dest ->
                         NavigationBarItem(
+                            modifier = Modifier.weight(1f),
                             selected = index == selectedIndex,
                             onClick = {
-                                // Always navigate — removes the guard so tapping
-                                // the current tab from a sub-page returns home
+                                // ── 修复 #2：去掉 route != currentRoute 守卫 ──
                                 navController.navigate(dest.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
@@ -158,23 +186,30 @@ fun AstraVeilApp() {
                             },
                             icon = {
                                 Icon(
-                                    imageVector = if (index == selectedIndex) dest.iconSelected else dest.icon,
+                                    imageVector = if (index == selectedIndex) {
+                                        dest.iconSelected
+                                    } else {
+                                        dest.icon
+                                    },
                                     contentDescription = dest.label,
                                 )
                             },
-                            label = { Text(text = dest.label) },
+                            label = {
+                                Text(text = dest.label, fontSize = 11.sp)
+                            },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.primary,
                                 selectedTextColor = MaterialTheme.colorScheme.primary,
                                 unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                indicatorColor = MaterialTheme.colorScheme.primary
+                                    .copy(alpha = 0.15f),
                             ),
                         )
                     }
                 }
             }
-        }
+        },
     ) { innerPadding ->
         androidx.compose.runtime.CompositionLocalProvider(
             LocalBottomBarInset provides innerPadding.calculateBottomPadding(),
@@ -187,81 +222,58 @@ fun AstraVeilApp() {
                     .padding(top = innerPadding.calculateTopPadding())
                     .haze(state = hazeState),
             ) {
+                // ── 4 个主 tab ──
                 composable(Destinations.Dashboard.route) {
                     DashboardScreen(
                         viewModel = viewModel,
                         onNavigate = { route -> navController.navigate(route) },
                     )
                 }
-                composable(Destinations.Capability.route) {
-                    CapabilityScreen(viewModel = viewModel)
-                }
-                composable(Destinations.Provider.route) {
-                    ProviderScreen(viewModel = viewModel)
-                }
                 composable(Destinations.Superuser.route) {
                     SuperuserScreen(navController = navController)
-                }
-                composable("terminal") {
-                    TerminalScreen()
-                }
-                composable("astrahub") {
-                    AstraHubScreen()
                 }
                 composable(Destinations.Modules.route) {
                     ModulesScreen()
                 }
-                composable(Destinations.About.route) {
-                    AboutScreen()
-                }
                 composable(Destinations.Settings.route) {
                     SettingsScreen(onNavigate = { route -> navController.navigate(route) })
                 }
+
+                // ── 功能子页面（不在导航栏，但路由保留） ──
+                composable("terminal") { TerminalScreen() }
+                composable("astrahub") { AstraHubScreen() }
+                composable("device_spoof") {
+                    DeviceSpoofScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                    )
+                }
+                // Capability/Provider 保留为可编程访问的子页面
+                composable("capability") {
+                    CapabilityScreen(viewModel = viewModel)
+                }
+                composable("provider") {
+                    ProviderScreen(viewModel = viewModel)
+                }
+
+                // ── Settings 子页面 ──
                 composable("settings_diagnostics") {
                     DiagnosticsScreen(viewModel = viewModel)
                 }
-                composable("settings_update_backup") {
-                    UpdateBackupScreen()
-                }
-                composable("settings_preferences") {
-                    PreferencesScreen()
-                }
-                composable("settings_security") {
-                    SecuritySettingsScreen()
-                }
-                composable("settings_provider") {
-                    ProviderSettingsScreen()
-                }
-                composable("settings_modules") {
-                    ModulesSettingsScreen()
-                }
-                composable("settings_daemon") {
-                    DaemonSettingsScreen()
-                }
-                composable("settings_developer") {
-                    DeveloperSettingsScreen()
-                }
-                composable("settings_notifications") {
-                    NotificationsScreen()
-                }
-                composable("settings_about") {
-                    AboutScreen()
-                }
+                composable("settings_update_backup") { UpdateBackupScreen() }
+                composable("settings_preferences") { PreferencesScreen() }
+                composable("settings_security") { SecuritySettingsScreen() }
+                composable("settings_provider") { ProviderSettingsScreen() }
+                composable("settings_modules") { ModulesSettingsScreen() }
+                composable("settings_daemon") { DaemonSettingsScreen() }
+                composable("settings_developer") { DeveloperSettingsScreen() }
+                composable("settings_notifications") { NotificationsScreen() }
+                composable("settings_about") { AboutScreen() }
             }
         }
     }
 }
 
-
-/**
- * Navigation destinations for AstraUI Phase 0.
- *
- * Uses a plain list of data class instances instead of sealed-class
- * data objects. The previous sealed-class + companion-object pattern
- * caused a NullPointerException at runtime: the companion object's
- * `list` was initialized before the nested `data object` singletons
- * were fully constructed, so `destination.route` threw NPE.
- */
+// ── 修复 #3：导航栏只保留 4 个 tab ──
 data class Destination(
     val route: String,
     val label: String,
@@ -276,15 +288,9 @@ object Destinations {
         icon = Icons.Outlined.Dashboard,
         iconSelected = Icons.Filled.Dashboard,
     )
-    val Capability = Destination(
-        route = "capability",
-        label = AstraStrings.navCapability,
-        icon = Icons.Outlined.SettingsInputComponent,
-        iconSelected = Icons.Filled.SettingsInputComponent,
-    )
-    val Provider = Destination(
-        route = "provider",
-        label = AstraStrings.navProvider,
+    val Superuser = Destination(
+        route = "superuser",
+        label = AstraStrings.navSuperuser,
         icon = Icons.Outlined.Security,
         iconSelected = Icons.Filled.Security,
     )
@@ -294,18 +300,6 @@ object Destinations {
         icon = Icons.Outlined.Apps,
         iconSelected = Icons.Filled.Apps,
     )
-    val Superuser = Destination(
-        route = "superuser",
-        label = AstraStrings.navSuperuser,
-        icon = Icons.Outlined.Security,
-        iconSelected = Icons.Filled.Security,
-    )
-    val About = Destination(
-        route = "about",
-        label = AstraStrings.navAbout,
-        icon = Icons.Outlined.Info,
-        iconSelected = Icons.Filled.Info,
-    )
     val Settings = Destination(
         route = "settings",
         label = AstraStrings.navSettings,
@@ -313,5 +307,6 @@ object Destinations {
         iconSelected = Icons.Filled.Settings,
     )
 
+    // 只保留 4 个（删除 Capability、Provider、About）
     val list = listOf(Dashboard, Superuser, Modules, Settings)
 }
