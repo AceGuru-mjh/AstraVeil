@@ -201,16 +201,6 @@ fun SuperuserScreen(navController: NavController) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = {
-                    scope.launch {
-                        loading = true
-                        errorMessage = null
-                        loadData()
-                    }
-                }) {
-                    Icon(Icons.Filled.Refresh, "Refresh",
-                        tint = MaterialTheme.colorScheme.primary)
-                }
             }
         }
 

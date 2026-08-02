@@ -99,7 +99,7 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         // 1. Device header
-        item { DeviceHeaderCard(state) { viewModel.refresh() } }
+        item { DeviceHeaderCard(state) }
 
         // 2. Quick actions
         item { QuickActionsRow(onNavigate) }
@@ -117,9 +117,6 @@ fun DashboardScreen(
 
         // 6. Capabilities
         item { CapabilitiesCard(state) }
-
-        // 7. Root test
-        item { RootTestCard(viewModel) }
     }
 }
 
@@ -128,7 +125,7 @@ fun DashboardScreen(
 // ================================================================
 
 @Composable
-private fun DeviceHeaderCard(state: StatusViewModel.UiState, onRefresh: () -> Unit) {
+private fun DeviceHeaderCard(state: StatusViewModel.UiState) {
     val manufacturer = Build.MANUFACTURER.replaceFirstChar { it.uppercase() }
     val model = Build.MODEL
     val release = Build.VERSION.RELEASE
@@ -170,24 +167,12 @@ private fun DeviceHeaderCard(state: StatusViewModel.UiState, onRefresh: () -> Un
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(
-                onClick = onRefresh,
-                enabled = !state.scanning,
-                modifier = Modifier.size(40.dp),
-            ) {
-                if (state.scanning) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.Refresh,
-                        contentDescription = "Refresh",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+            // Show scanning indicator inline instead of a refresh button
+            if (state.scanning) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
             }
         }
     }

@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dashboard
@@ -105,8 +107,18 @@ fun AstraVeilApp() {
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Destinations.Dashboard.route
+
+    // Fix: map sub-routes to their parent nav tab so the correct item highlights
     val selectedIndex = remember(currentRoute) {
-        Destinations.list.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+        val idx = Destinations.list.indexOfFirst { it.route == currentRoute }
+        if (idx >= 0) idx
+        else when {
+            currentRoute.startsWith("settings") ->
+                Destinations.list.indexOfFirst { it.route == "settings" }
+            currentRoute == "terminal" || currentRoute == "astrahub" ->
+                Destinations.list.indexOfFirst { it.route == "superuser" }
+            else -> 0
+        }.coerceAtLeast(0)
     }
 
     val hazeState = remember { HazeState() }
@@ -115,44 +127,51 @@ fun AstraVeilApp() {
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.Transparent,
         bottomBar = {
-            NavigationBar(
-                modifier = Modifier.hazeChild(
-                    state = hazeState,
-                    style = AstraGlassStyle,
-                ),
-                containerColor = Color.Transparent,
-                tonalElevation = 0.dp,
+            // Pill-shaped liquid glass navigation bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .hazeChild(
+                        state = hazeState,
+                        style = AstraGlassStyle,
+                    ),
             ) {
-                Destinations.list.forEachIndexed { index, dest ->
-                    NavigationBarItem(
-                        selected = index == selectedIndex,
-                        onClick = {
-                            val route = dest.route
-                            if (route != currentRoute) {
-                                navController.navigate(route) {
+                NavigationBar(
+                    containerColor = Color.Transparent,
+                    tonalElevation = 0.dp,
+                ) {
+                    Destinations.list.forEachIndexed { index, dest ->
+                        NavigationBarItem(
+                            selected = index == selectedIndex,
+                            onClick = {
+                                // Always navigate — removes the guard so tapping
+                                // the current tab from a sub-page returns home
+                                navController.navigate(dest.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
                                     }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = if (index == selectedIndex) dest.iconSelected else dest.icon,
-                                contentDescription = dest.label,
-                            )
-                        },
-                        label = { Text(text = dest.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        ),
-                    )
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = if (index == selectedIndex) dest.iconSelected else dest.icon,
+                                    contentDescription = dest.label,
+                                )
+                            },
+                            label = { Text(text = dest.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            ),
+                        )
+                    }
                 }
             }
         }
@@ -294,5 +313,5 @@ object Destinations {
         iconSelected = Icons.Filled.Settings,
     )
 
-    val list = listOf(Dashboard, Capability, Provider, Superuser, Modules, Settings)
+    val list = listOf(Dashboard, Superuser, Modules, Settings)
 }
