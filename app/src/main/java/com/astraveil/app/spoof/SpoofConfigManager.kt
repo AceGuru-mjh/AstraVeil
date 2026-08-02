@@ -31,7 +31,7 @@ object SpoofConfigManager {
         profile: SpoofProfile,
         options: SpoofOptions,
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        runCatching<Unit> {
             val provider = ProviderRegistry.detectActive()?.let {
                 ProviderRegistry.byId(it.providerName)
             } ?: error("No root provider")
@@ -69,7 +69,7 @@ object SpoofConfigManager {
         profile: SpoofProfile,
         options: SpoofOptions,
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        runCatching<Unit> {
             val provider = ProviderRegistry.detectActive()?.let {
                 ProviderRegistry.byId(it.providerName)
             } ?: error("No root provider")
@@ -99,7 +99,7 @@ object SpoofConfigManager {
         context: Context,
         packageName: String,
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        runCatching<Unit> {
             val provider = ProviderRegistry.detectActive()?.let {
                 ProviderRegistry.byId(it.providerName)
             } ?: error("No root provider")
@@ -110,7 +110,7 @@ object SpoofConfigManager {
     /** 清除所有配置 */
     suspend fun clearAll(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = ProviderRegistry.detectActive()?.let {
                     ProviderRegistry.byId(it.providerName)
                 } ?: error("No root provider")
@@ -123,7 +123,7 @@ object SpoofConfigManager {
         context: Context,
         packageName: String,
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        runCatching<Unit> {
             val provider = ProviderRegistry.detectActive()?.let {
                 ProviderRegistry.byId(it.providerName)
             } ?: error("No root provider")

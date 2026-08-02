@@ -27,7 +27,7 @@ object SpoofModuleInstaller {
 
     suspend fun getStatus(context: Context): ModuleStatus =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider() ?: return@withContext ModuleStatus.UNKNOWN
                 val exists = provider.execute(
                     "[ -f $MODULE_PATH/module.prop ] && echo yes || echo no"
@@ -53,7 +53,7 @@ object SpoofModuleInstaller {
      */
     suspend fun install(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider()
                     ?: error("No root provider available")
 
@@ -91,7 +91,7 @@ object SpoofModuleInstaller {
 
     suspend fun enable(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider() ?: error("No root")
                 provider.execute("rm -f $MODULE_PATH/disable")
             }
@@ -99,7 +99,7 @@ object SpoofModuleInstaller {
 
     suspend fun disable(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider() ?: error("No root")
                 provider.execute("touch $MODULE_PATH/disable")
             }
@@ -107,14 +107,14 @@ object SpoofModuleInstaller {
 
     suspend fun uninstall(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider() ?: error("No root")
                 provider.execute("rm -rf $MODULE_PATH")
                 provider.execute("rm -rf /data/adb/astraveil/spoof")
             }
         }
 
-    private suspend fun activeProvider() = runCatching {
+    private suspend fun activeProvider() = runCatching<Unit> {
         ProviderRegistry.activeProvider()
     }.getOrNull()
 }
