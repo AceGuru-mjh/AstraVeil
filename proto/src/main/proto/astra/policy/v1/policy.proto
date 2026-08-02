@@ -1,4 +1,7 @@
 // AstraVeil — 策略引擎协议
+
+import "astra/ipc/v1/ipc.proto";
+
 // 定义策略规则的序列化格式，用于：
 //   1. App → Daemon: 下发策略配置
 //   2. Daemon → Rust Engine: 加载策略
@@ -13,6 +16,7 @@ option java_multiple_files = true;
 option java_outer_classname = "PolicyProto";
 
 import "astra/common/v1/types.proto";
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 策略包（顶层容器）
