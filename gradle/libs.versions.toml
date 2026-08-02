@@ -9,14 +9,12 @@ composeBom = "2024.11.00"
 navigationCompose = "2.8.4"
 kotlinxSerialization = "1.7.3"
 kotlinxCoroutines = "1.9.0"
-# NOTE: protobuf was declared (3.25.5 + gradle plugin 0.9.4) but never
-# integrated — no module applied the plugin, no code was generated.
-# Phase 0 IPC is JSON over length-prefixed frames (AstraDaemonClient +
-# daemon nlohmann::json). protobuf migration is a Phase 1 task; the
-# declarations were removed to stop claiming a capability we don't ship.
 junit = "4.13.2"
 junitExt = "1.2.1"
 espresso = "3.6.1"
+# ── P1: centralized previously-hardcoded deps ──
+mockk = "1.13.13"
+haze = "1.6.2"
 
 [libraries]
 # AndroidX core
@@ -36,14 +34,20 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
-# Kotlin
+# KotlinX
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+
+# Third-party UI
+haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
