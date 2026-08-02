@@ -31,7 +31,9 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r27
+          # NDK r27's clang is too strict for Dobby's arm64 assembly
+          # (ADRP relocation errors). r26c is known to work.
+          ndk-version: r26c
           add-to-path: false
 
       - name: Install CMake + Ninja
