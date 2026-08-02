@@ -89,4 +89,3 @@ message ResourceQuota {
   int32 max_fds = 5;              // 最大文件描述符数
 }
 
----
