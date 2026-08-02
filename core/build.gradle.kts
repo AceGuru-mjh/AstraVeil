@@ -81,7 +81,7 @@ dependencies {
 
     // JVM-only tests.
     testImplementation(libs.junit)
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
     testImplementation("org.jetbrains.kotlin:kotlin-test:2.0.21")
 }
