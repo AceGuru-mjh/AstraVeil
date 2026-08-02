@@ -4,9 +4,10 @@ obj-m += astra_root.o
 KDIR ?= /opt/gki-headers
 
 all:
-	make -C $(KDIR) M=$(PWD) modules \
-		ARCH=arm64 \
-		CROSS_COMPILE=aarch64-linux-gnu-
+        make -C $(KDIR) M=$(PWD) modules \
+                ARCH=arm64 \
+                CROSS_COMPILE=aarch64-linux-gnu- \
+                KBUILD_MODPOST_WARN=1
 
 clean:
-	make -C $(KDIR) M=$(PWD) clean
+        make -C $(KDIR) M=$(PWD) clean

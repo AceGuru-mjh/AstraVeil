@@ -70,10 +70,15 @@ jobs:
       - name: Build astra_root.ko
         run: |
           cd kernel
+          # KBUILD_MODPOST_WARN=1 turns undefined-symbol errors into warnings.
+          # This is normal for out-of-tree modules built without a full kernel
+          # build (no Module.symvers). The symbols (misc_register, commit_creds,
+          # etc.) are exported kernel symbols resolved at insmod time.
           make -C ~/kernel-src \
             M=$(pwd) \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
+            KBUILD_MODPOST_WARN=1 \
             modules
 
       - name: Verify module

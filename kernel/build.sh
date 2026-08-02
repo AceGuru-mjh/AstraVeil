@@ -47,7 +47,8 @@ echo ""
 echo "> Compiling..."
 make -C "${HEADERS_DIR}" M="${SCRIPT_DIR}" modules \
     ARCH=arm64 \
-    CROSS_COMPILE=aarch64-linux-gnu-
+    CROSS_COMPILE=aarch64-linux-gnu- \
+    KBUILD_MODPOST_WARN=1
 
 # -- Step 3: verify --
 echo ""
