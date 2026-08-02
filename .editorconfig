@@ -29,6 +29,18 @@ indent_size = 2
 [*.proto]
 indent_size = 2
 
+# Markdown — lists use 2-space indentation
+[*.md]
+indent_size = 2
+
+# License file (Apache 2.0 uses 2-space indent for copyright line)
+[LICENSE]
+indent_size = 2
+
+# Plain text
+[*.txt]
+indent_size = 2
+
 # C++ / headers (daemon + native + module-spoof)
 [*.{cpp,cc,cxx,h,hpp,hxx}]
 indent_size = 4

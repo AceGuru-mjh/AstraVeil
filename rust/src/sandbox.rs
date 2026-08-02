@@ -180,7 +180,6 @@ mod tests {
             write_paths: vec!["/data/data/com.example".into()],
             network: true,
             max_level: Permission::Shell,
-            ..SandboxConfig::default()
         });
         assert!(s.validate().is_ok());
         assert!(s.describe().contains("net=true"));

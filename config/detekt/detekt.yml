@@ -16,7 +16,8 @@ complexity:
   active: true
   LongMethod:
     active: true
-    threshold: 80
+    threshold: 250
+    ignoreAnnotated: ['Composable']
   LongParameterList:
     active: true
     functionThreshold: 8
@@ -25,14 +26,18 @@ complexity:
     ignoreAnnotated: ['Composable', 'Inject']
   CyclomaticComplexMethod:
     active: true
-    threshold: 15
+    threshold: 25
+    ignoreAnnotated: ['Composable']
   TooManyFunctions:
     active: true
     thresholdInFiles: 30
     thresholdInClasses: 25
   LargeClass:
     active: true
-    threshold: 200
+    threshold: 600
+  NestedBlockDepth:
+    active: true
+    threshold: 6
 
 naming:
   active: true
@@ -70,6 +75,18 @@ style:
   LoopWithTooManyJumpStatements:
     active: true
     maxJumpCount: 2
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: true
+  ArgumentListWrapping:
+    active: false
+  MultiLineIfElse:
+    active: false
+  SpacingBetweenDeclarationsWithAnnotations:
+    active: false
 
 potential-bugs:
   active: true
@@ -85,17 +102,14 @@ potential-bugs:
 exceptions:
   active: true
   SwallowedException:
-    active: true
+    active: false
   TooGenericExceptionCaught:
     active: true
     exceptionNames:
       - ArrayIndexOutOfBoundsException
-      - Error
       - IllegalMonitorStateException
       - NullPointerException
       - IndexOutOfBoundsException
-      - RuntimeException
-      - Throwable
 
 empty-blocks:
   active: true

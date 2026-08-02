@@ -15,8 +15,9 @@ use std::collections::{HashMap, HashSet};
 
 /// Coarse capability ladder. Lower variants are strictly weaker than
 /// higher variants; see [`Permission::as_level`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum Permission {
+    #[default]
     None,
     Shell,
     Root,
@@ -32,12 +33,6 @@ impl Permission {
             Permission::Root => 2,
             Permission::Kernel => 3,
         }
-    }
-}
-
-impl Default for Permission {
-    fn default() -> Self {
-        Permission::None
     }
 }
 
