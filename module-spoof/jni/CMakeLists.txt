@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(DOBBY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/Dobby)
 set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
+# Disable assembly trampoline bridge — Dobby's arm64 asm is incompatible
+# with modern NDK clang (ADRP relocation errors). The C fallback works.
+set(BUILD_WITH_TRAMPOLINE_ASM OFF CACHE BOOL "" FORCE)
 add_subdirectory(${DOBBY_DIR} dobby_build)
 
 add_library(astraveil_spoof SHARED
