@@ -45,6 +45,9 @@ set(ASTRAD_SOURCES
     src/ipc/json_codec.cpp
     src/capability/probe_detector.cpp
     src/provider/provider_detector.cpp
+    src/security/lease_tracker.cpp
+    src/security/capability_tree.cpp
+    src/ipc/module_bus.cpp
     src/sandbox/sandbox_manager.cpp
     src/sandbox/namespace_manager.cpp
     src/sandbox/mount_isolation.cpp
