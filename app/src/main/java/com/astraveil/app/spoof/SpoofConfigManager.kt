@@ -21,6 +21,7 @@ import org.json.JSONObject
  *   2. 文件读取是同步的，无竞态（preAppSpecialize 时读一次）
  *   3. root 写入 + 0644 权限 = 所有进程可读
  */
+@Suppress("DEPRECATION")
 object SpoofConfigManager {
 
     private const val CONFIG_DIR = "/data/adb/astraveil/spoof"
@@ -32,9 +33,7 @@ object SpoofConfigManager {
         options: SpoofOptions,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching<Unit> {
-            val provider = ProviderRegistry.detectActive()?.let {
-                ProviderRegistry.byId(it.providerName)
-            } ?: error("No root provider")
+            val provider = ProviderRegistry.activeProvider() ?: error("No root provider")
 
             val ops = SpoofPropertyEngine.buildOps(profile, options)
             val propsJson = JSONObject()
@@ -70,9 +69,7 @@ object SpoofConfigManager {
         options: SpoofOptions,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching<Unit> {
-            val provider = ProviderRegistry.detectActive()?.let {
-                ProviderRegistry.byId(it.providerName)
-            } ?: error("No root provider")
+            val provider = ProviderRegistry.activeProvider() ?: error("No root provider")
 
             val ops = SpoofPropertyEngine.buildOps(profile, options)
             val propsJson = JSONObject()
@@ -100,9 +97,7 @@ object SpoofConfigManager {
         packageName: String,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching<Unit> {
-            val provider = ProviderRegistry.detectActive()?.let {
-                ProviderRegistry.byId(it.providerName)
-            } ?: error("No root provider")
+            val provider = ProviderRegistry.activeProvider() ?: error("No root provider")
             provider.execute("rm -f $CONFIG_DIR/$packageName.json")
         }
     }
@@ -111,9 +106,7 @@ object SpoofConfigManager {
     suspend fun clearAll(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching<Unit> {
-                val provider = ProviderRegistry.detectActive()?.let {
-                    ProviderRegistry.byId(it.providerName)
-                } ?: error("No root provider")
+                val provider = ProviderRegistry.activeProvider() ?: error("No root provider")
                 provider.execute("rm -f $CONFIG_DIR/*.json")
             }
         }
@@ -124,9 +117,7 @@ object SpoofConfigManager {
         packageName: String,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching<Unit> {
-            val provider = ProviderRegistry.detectActive()?.let {
-                ProviderRegistry.byId(it.providerName)
-            } ?: error("No root provider")
+            val provider = ProviderRegistry.activeProvider() ?: error("No root provider")
             provider.execute("am force-stop $packageName")
             // 推理：force-stop 后应用下次启动时 Zygote fork 新进程，
             // preAppSpecialize 读取最新配置 → 免重启生效
