@@ -19,7 +19,7 @@ haze = "1.6.2"
 protobuf = "4.29.3"
 protobufPlugin = "0.9.4"
 # ── Code quality ──
-detekt = "1.23.7"
+detekt = "1.23.8"
 
 [libraries]
 # AndroidX core
