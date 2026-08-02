@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dashboard
@@ -126,13 +127,11 @@ fun AstraVeilApp() {
         containerColor = Color.Transparent,
         bottomBar = {
             // Pill-shaped liquid glass navigation bar
-            androidx.compose.foundation.layout.Box(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .androidx.compose.foundation.layout.padding(
-                        horizontal = 16.dp, vertical = 12.dp)
-                    .androidx.compose.ui.draw.clip(
-                        androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(28.dp))
                     .hazeChild(
                         state = hazeState,
                         style = AstraGlassStyle,
