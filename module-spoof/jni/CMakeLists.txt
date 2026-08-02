@@ -13,6 +13,7 @@ add_library(astraveil_spoof SHARED
     src/property_hook.cpp
     src/gl_spoof.cpp
     src/config_reader.cpp
+    src/env_shield.cpp
 )
 
 target_include_directories(astraveil_spoof PRIVATE

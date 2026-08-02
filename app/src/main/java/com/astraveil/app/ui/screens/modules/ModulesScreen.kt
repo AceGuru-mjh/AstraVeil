@@ -25,8 +25,11 @@ import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -34,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,14 +48,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.astraveil.app.modules.BuiltinModule
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.ui.design.AstraCard
 import com.astraveil.app.ui.design.SurfaceTier
 import com.astraveil.app.ui.theme.AstraAccent
 import com.astraveil.app.ui.theme.AstraOnSurfaceMuted
+import com.astraveil.app.ui.theme.AstraSuccess
 import com.astraveil.app.ui.theme.AstraTeal
 import com.astraveil.app.ui.theme.AstraWarning
 import com.astraveil.core.modules.model.ModuleInfo
@@ -111,6 +118,14 @@ fun ModulesScreen(
         }
     }
 
+    // ---- Reboot-required notice for built-in bypass modules ----
+    LaunchedEffect(state.rebootRequired) {
+        if (state.rebootRequired) {
+            snackbarHostState.showSnackbar("Bypass module toggled - reboot to take effect")
+            modulesViewModel.clearRebootFlag()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -133,6 +148,19 @@ fun ModulesScreen(
                             strokeWidth = 2.5.dp,
                         )
                     }
+                }
+            }
+
+            // == BUILT-IN MODULES (Environment Shield) ==
+            if (!state.loading && state.builtinModules.isNotEmpty()) {
+                item { SectionTitle("BUILT-IN", state.builtinModules.size) }
+                items(items = state.builtinModules, key = { "builtin_${it.id}" }) { module ->
+                    BuiltinModuleCard(
+                        module = module,
+                        onToggle = { enabled ->
+                            modulesViewModel.toggleBuiltin(module, enabled)
+                        },
+                    )
                 }
             }
 
@@ -619,6 +647,83 @@ private fun FormatEntry(icon: ImageVector, name: String, description: String) {
                 text = description,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+// == Built-in module card (Environment Shield toggles) ==
+
+@Composable
+private fun BuiltinModuleCard(
+    module: BuiltinModule,
+    onToggle: (Boolean) -> Unit,
+) {
+    val accentColor = when (module.category) {
+        BuiltinModule.Category.CORE -> AstraAccent
+        BuiltinModule.Category.SPOOF -> AstraTeal
+        BuiltinModule.Category.BYPASS -> AstraWarning
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (module.enabled) {
+                accentColor.copy(alpha = 0.08f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            },
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Icon
+            Icon(
+                imageVector = module.icon,
+                contentDescription = null,
+                tint = if (module.enabled) accentColor else AstraOnSurfaceMuted,
+                modifier = Modifier.size(28.dp),
+            )
+            Spacer(Modifier.width(14.dp))
+
+            // Text
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = module.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (module.requiresReboot) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Filled.RestartAlt,
+                            contentDescription = "Requires reboot",
+                            tint = AstraWarning,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
+                Text(
+                    text = module.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Toggle
+            Switch(
+                checked = module.enabled,
+                onCheckedChange = onToggle,
             )
         }
     }

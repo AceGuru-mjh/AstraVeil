@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +65,11 @@ object SettingEntries {
         Icons.Filled.PhoneAndroid, "Device Spoof",
         "Change device identity (model, brand, fingerprint)", "device_spoof",
     )
+    // ── Environment Shield 入口 ──
+    val EnvShield = SettingEntry(
+        Icons.Filled.Shield, "Environment Shield",
+        "Hide Root/Magisk/Xposed · MOMO/Ruru/chunqiu/Hunter bypass", "env_shield",
+    )
     val Notifications = SettingEntry(
         Icons.Filled.Notifications, "Notifications",
         "Channel toggles", "settings_notifications",
@@ -91,7 +97,7 @@ object SettingEntries {
 
     val list = listOf(
         Security, Provider, Modules, Daemon,
-        DeviceSpoof,  // ← 新增
+        DeviceSpoof, EnvShield,
         Notifications, Preferences, UpdateBackup,
         Diagnostics, Developer, About,
     )

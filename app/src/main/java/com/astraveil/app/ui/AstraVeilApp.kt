@@ -53,6 +53,7 @@ import com.astraveil.app.ui.screens.CapabilityScreen
 import com.astraveil.app.ui.screens.DashboardScreen
 import com.astraveil.app.ui.screens.DeviceSpoofScreen
 import com.astraveil.app.ui.screens.DiagnosticsScreen
+import com.astraveil.app.ui.screens.EnvShieldScreen
 import com.astraveil.app.ui.screens.ProviderScreen
 import com.astraveil.app.ui.screens.SuperuserScreen
 import com.astraveil.app.ui.screens.modules.ModulesScreen
@@ -109,6 +110,8 @@ fun AstraVeilApp() {
                 currentRoute == "terminal" || currentRoute == "astrahub" ->
                     Destinations.list.indexOfFirst { it.route == "dashboard" }
                 currentRoute == "device_spoof" ->
+                    Destinations.list.indexOfFirst { it.route == "dashboard" }
+                currentRoute == "env_shield" ->
                     Destinations.list.indexOfFirst { it.route == "dashboard" }
                 currentRoute == "capability" ->
                     Destinations.list.indexOfFirst { it.route == "dashboard" }
@@ -244,6 +247,11 @@ fun AstraVeilApp() {
                 composable("astrahub") { AstraHubScreen() }
                 composable("device_spoof") {
                     DeviceSpoofScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                    )
+                }
+                composable("env_shield") {
+                    EnvShieldScreen(
                         onNavigateBack = { navController.popBackStack() },
                     )
                 }

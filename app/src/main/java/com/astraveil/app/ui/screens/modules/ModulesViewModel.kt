@@ -4,6 +4,9 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.astraveil.app.modules.BuiltinModule
+import com.astraveil.app.modules.BuiltinModuleManager
+import com.astraveil.app.modules.BuiltinModuleRegistry
 import com.astraveil.app.repository.ModuleRepositoryProvider
 import com.astraveil.app.ui.AstraStrings
 import com.astraveil.app.repository.ScanResult
@@ -31,9 +34,11 @@ sealed class ModuleOperationState {
  */
 data class ModulesUiState(
     val modules: List<ModuleInfo> = emptyList(),
+    val builtinModules: List<BuiltinModule> = emptyList(),
     val loading: Boolean = false,
     val installState: ModuleOperationState = ModuleOperationState.Idle,
     val moduleOperations: Map<String, ModuleOperationState> = emptyMap(),
+    val rebootRequired: Boolean = false,
 )
 
 /**
@@ -87,13 +92,19 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
         refresh()
     }
 
-    /** Reload the module list from the repository. */
+    /** Reload the module list and built-in module states. */
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true) }
             try {
                 val modules = repository.listModules()
-                _uiState.update { it.copy(loading = false, modules = modules) }
+                val builtinStates = BuiltinModuleManager.loadStates()
+                val builtins = BuiltinModuleRegistry.modules.map { m ->
+                    m.copy(enabled = builtinStates[m.id] ?: m.enabled)
+                }
+                _uiState.update {
+                    it.copy(loading = false, modules = modules, builtinModules = builtins)
+                }
             } catch (t: Throwable) {
                 _uiState.update {
                     it.copy(
@@ -105,6 +116,28 @@ class ModulesViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    /** Toggle a built-in module (Environment Shield feature switch). */
+    fun toggleBuiltin(module: BuiltinModule, enabled: Boolean) {
+        viewModelScope.launch {
+            // Update UI immediately
+            _uiState.update {
+                it.copy(
+                    builtinModules = it.builtinModules.map { m ->
+                        if (m.id == module.id) m.copy(enabled = enabled) else m
+                    },
+                    rebootRequired = it.rebootRequired || module.requiresReboot,
+                )
+            }
+            // Persist to shield.json
+            BuiltinModuleManager.setEnabled(getApplication(), module.id, enabled)
+        }
+    }
+
+    /** Clear the reboot-required flag after the snackbar is shown. */
+    fun clearRebootFlag() {
+        _uiState.update { it.copy(rebootRequired = false) }
     }
 
     /**
