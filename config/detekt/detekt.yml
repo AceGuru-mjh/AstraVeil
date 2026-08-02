@@ -81,6 +81,9 @@ style:
     excludePackageStatements: true
     excludeImportStatements: true
     excludeCommentStatements: true
+
+formatting:
+  active: true
   ArgumentListWrapping:
     active: false
   MultiLineIfElse:
