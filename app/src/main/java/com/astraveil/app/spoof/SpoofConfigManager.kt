@@ -1,9 +1,6 @@
 package com.astraveil.app.spoof
 
 import android.content.Context
-import com.astraveil.app.viewmodel.SpoofOptions
-import com.astraveil.app.viewmodel.SpoofProfile
-import com.astraveil.app.viewmodel.SpoofPropertyEngine
 import com.astraveil.providers.ProviderRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
