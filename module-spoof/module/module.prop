@@ -1,0 +1,6 @@
+id=astraveil-spoof
+name=AstraVeil Spoof Engine
+version=v1.0.0
+versionCode=1
+author=AstraVeil
+description=Per-app device identity spoofing via Zygisk property/GL hooking

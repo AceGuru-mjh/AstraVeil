@@ -6,7 +6,6 @@ plugins {
 android {
     namespace = "com.astraveil.xposed"
     compileSdk = 35
-
     defaultConfig {
         applicationId = "com.astraveil.xposed"
         minSdk = 26
@@ -14,15 +13,11 @@ android {
         versionCode = 1
         versionName = "1.0.0"
     }
-
     buildTypes {
-        release {
-            isMinifyEnabled = false  // Xposed 模块不能混淆入口类
-        }
+        release { isMinifyEnabled = false }
     }
 }
 
 dependencies {
-    // Xposed API — compileOnly，运行时由 LSPosed 框架提供
     compileOnly("de.robv.android.xposed:api:82")
 }

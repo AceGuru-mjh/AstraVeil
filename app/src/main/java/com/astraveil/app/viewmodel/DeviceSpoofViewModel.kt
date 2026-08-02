@@ -3,315 +3,356 @@ package com.astraveil.app.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.astraveil.app.data.SpoofDatabase
+import com.astraveil.app.data.SpoofProfileEntity
+import com.astraveil.app.spoof.IntegrityReport
+import com.astraveil.app.spoof.SPOOF_PROFILES
+import com.astraveil.app.spoof.SpoofAuditLogger
 import com.astraveil.app.spoof.SpoofConfigManager
+import com.astraveil.app.spoof.SpoofIntegrityChecker
 import com.astraveil.app.spoof.SpoofModuleInstaller
+import com.astraveil.app.spoof.SpoofOptions
+import com.astraveil.app.spoof.SpoofProfile
+import com.astraveil.app.spoof.SpoofProfileMapper
+import com.astraveil.app.spoof.SpoofPropertyEngine
 import com.astraveil.providers.ProviderRegistry
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class SpoofProfile(
-    val name: String,
-    val model: String,
-    val brand: String,
-    val manufacturer: String,
-    val device: String,
-    val fingerprint: String,
-    val displayId: String,
-    val platform: String = "",
-)
-
 /**
- * v3: Spoofing tunables consumed by [SpoofConfigManager] when
- * materialising a profile into the on-disk JSON config consumed by
- * the Zygisk + LSPosed layers.
+ * v3 Spoof UI state — 配合 [com.astraveil.app.ui.screens.DeviceSpoofScreen]
+ * 的 48 档案库 + 完整性校验 + 选项卡 UI。
  *
- * @property persistent  If `true`, the resulting `global.json` is
- *                       stamped with `resetprop_on_boot:true` so the
- *                       Magisk `service.sh` re-applies the props on
- *                       every boot (survives reboots).
- * @property androidId   If `true`, a fresh random `android_id` is
- *                       generated and written into the config — the
- *                       LSPosed `SettingsHook` will return this value
- *                       to any `Settings.Secure.getString("android_id")`
- *                       query inside a hooked process.
+ * @property currentPlatform  当前设备 ro.board.platform（用于 GPU 风险评估）
+ * @property currentProps     当前设备 ro.* 快照（用于 DiffRow 对比）
+ * @property activeProfileName 当前已应用档案名（null = 未伪装）
+ * @property applying         是否正在应用中（按钮禁用 + spinner）
+ * @property options          伪装深度选项
+ * @property report           最近一次完整性校验报告（null = 未校验）
+ * @property verifying        是否正在校验
+ * @property isSpoofed        是否已伪装（控制 reset 按钮可见性）
+ * @property notice           成功消息（绿色卡片）
+ * @property error            错误消息（红色卡片）
  */
-data class SpoofOptions(
-    val persistent: Boolean = true,
-    val androidId: Boolean = false,
-)
-
-/**
- * v3: Builds the canonical list of `ro.*` property operations that
- * realise a [SpoofProfile] on the device. Consumed by
- * [com.astraveil.app.spoof.SpoofConfigManager] when serialising the
- * JSON config shared with the Zygisk + LSPosed layers, and by the
- * legacy `applySpoof` resetprop path.
- *
- * The list intentionally covers the cross-validated property set that
- * anti-cheat / risk SDKs read in concert (`ro.product.*.model` family
- * across all partition variants) — leaving any of these unspoofed
- * produces a detectable contradiction.
- */
-object SpoofPropertyEngine {
-
-    data class PropOp(val key: String, val value: String)
-
-    fun buildOps(profile: SpoofProfile, options: SpoofOptions): List<PropOp> = buildList {
-        add(PropOp("ro.product.model", profile.model))
-        add(PropOp("ro.product.brand", profile.brand))
-        add(PropOp("ro.product.manufacturer", profile.manufacturer))
-        add(PropOp("ro.product.device", profile.device))
-        add(PropOp("ro.product.name", profile.device))
-        add(PropOp("ro.build.fingerprint", profile.fingerprint))
-        add(PropOp("ro.build.display.id", profile.displayId))
-        add(PropOp("ro.build.product", profile.device))
-        if (profile.platform.isNotEmpty()) {
-            add(PropOp("ro.board.platform", profile.platform))
-            add(PropOp("ro.product.board", profile.platform))
-            add(PropOp("ro.hardware", profile.platform))
-        }
-        // 子属性（很多 app 读这些进行交叉验证）
-        add(PropOp("ro.product.odm.model", profile.model))
-        add(PropOp("ro.product.system.model", profile.model))
-        add(PropOp("ro.product.vendor.model", profile.model))
-        add(PropOp("ro.product.product.model", profile.model))
-        add(PropOp("ro.product.system_ext.model", profile.model))
-    }
-
-    /**
-     * 生成 16 字符十六进制的 ANDROID_ID。推理：真实 ANDROID_ID
-     * 在首次刷机时由系统随机生成，格式为 16 个十六进制字符。
-     */
-    fun generateAndroidId(): String {
-        val chars = "0123456789abcdef"
-        return buildString {
-            repeat(16) { append(chars.random()) }
-        }
-    }
-}
-
 data class SpoofUiState(
-    val currentModel: String = "",
-    val currentBrand: String = "",
-    val currentManufacturer: String = "",
-    val currentDevice: String = "",
-    val currentFingerprint: String = "",
+    val currentPlatform: String = "",
+    val currentProps: Map<String, String> = emptyMap(),
+    val activeProfileName: String? = null,
+    val applying: Boolean = false,
+    val options: SpoofOptions = SpoofOptions(),
+    val report: IntegrityReport? = null,
+    val verifying: Boolean = false,
     val isSpoofed: Boolean = false,
-    val activeProfile: String? = null,
-    val isApplying: Boolean = false,
-    val errorMessage: String? = null,
-    val successMessage: String? = null,
-    // ── v3 三层编排新增字段 ──
+    val notice: String? = null,
+    val error: String? = null,
+    // ── v3 三层编排附加状态 ──
     val moduleStatus: SpoofModuleInstaller.ModuleStatus =
         SpoofModuleInstaller.ModuleStatus.UNKNOWN,
-    val perAppConfigs: Map<String, String> = emptyMap(),  // pkg → profile name
+    val perAppConfigs: Map<String, String> = emptyMap(),
     val installingModule: Boolean = false,
-    val options: SpoofOptions = SpoofOptions(),
 )
 
-val PRESET_PROFILES = listOf(
-    SpoofProfile(
-        name = "Pixel 9 Pro",
-        model = "Pixel 9 Pro",
-        brand = "google",
-        manufacturer = "Google",
-        device = "caiman",
-        fingerprint = "google/caiman/caiman:15/AP3A.250605.015/12345678:user/release-keys",
-        displayId = "AP3A.250605.015",
-        platform = "zuma",
-    ),
-    SpoofProfile(
-        name = "Samsung Galaxy S25 Ultra",
-        model = "SM-S938B",
-        brand = "samsung",
-        manufacturer = "samsung",
-        device = "e3q",
-        fingerprint = "samsung/e3qxxx/e3q:15/AP3A.250605.015/S938BXXU1AXA1:user/release-keys",
-        displayId = "TP1A.220624.014.S938BXXU1AXA1",
-        platform = "sun",
-    ),
-    SpoofProfile(
-        name = "OnePlus 13",
-        model = "CPH2651",
-        brand = "OnePlus",
-        manufacturer = "OnePlus",
-        device = "OP5913L1",
-        fingerprint = "OnePlus/CPH2651/OP5913L1:15/AP3A.250605.015/1735028400000:user/release-keys",
-        displayId = "CPH2651_15.0.0.200(EX01)",
-        platform = "sun",
-    ),
-    SpoofProfile(
-        name = "Xiaomi 15 Pro",
-        model = "2501DPN30G",
-        brand = "Xiaomi",
-        manufacturer = "Xiaomi",
-        device = "haotian",
-        fingerprint = "Xiaomi/haotian/haotian:15/AP3A.250605.015/V816.0.3.0.VBOCNXM:user/release-keys",
-        displayId = "V816.0.3.0.VBOCNXM",
-        platform = "sun",
-    ),
-)
-
+/**
+ * v3: 48 档案库 ViewModel — 驱动 [DeviceSpoofScreen]。
+ *
+ * 与 v2 的差异：
+ *   1. 档案库从 [SPOOF_PROFILES] (48 台) 加载，UI 通过 [profilesFlow] 订阅
+ *   2. 完整性报告由 [SpoofIntegrityChecker.buildReport] 生成
+ *   3. 选项改为 [SpoofOptions]（4 个开关）
+ *   4. 重命名 isApplying → applying，activeProfile → activeProfileName
+ *      errorMessage → error，successMessage → notice
+ */
 @Suppress("DEPRECATION")
 class DeviceSpoofViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(SpoofUiState())
     val uiState: StateFlow<SpoofUiState> = _uiState.asStateFlow()
 
-    // 最近一次使用的 Context，供私有 helper（applyProfile/verify）复用
     private var lastContext: Context? = null
 
+    // ── 档案库 ────────────────────────────────────────────────
+
+    /**
+     * 暴露档案库为 Flow<List<SpoofProfileEntity>>。
+     *
+     * 推理：UI 通过 [SpoofProfileMapper.toDomain] 转 [SpoofProfile]，
+     * 这样持久化层（Room）变更不影响 UI。
+     *
+     * 实现：优先用 [SpoofDatabase]；若 Room 不可用（首次启动或迁移失败），
+     * 回退到内存中的 [SPOOF_PROFILES]。
+     */
+    fun profilesFlow(context: Context): Flow<List<SpoofProfileEntity>> = flow {
+        runCatching {
+            SpoofDatabase.get(context).profileDao().observeAll()
+        }.getOrElse {
+            // 回退：从内存预设档案构造 Entity 列表（单次发射）
+            kotlinx.coroutines.flow.flowOf(
+                SPOOF_PROFILES.map(SpoofProfileMapper::toEntity)
+            )
+        }.collect { emit(it) }
+    }
+
+    /** 暴露品牌去重列表为 Flow<List<String>>。 */
+    fun brandsFlow(context: Context): Flow<List<String>> = flow {
+        runCatching {
+            SpoofDatabase.get(context).profileDao().observeBrands()
+        }.getOrElse {
+            kotlinx.coroutines.flow.flowOf(
+                SPOOF_PROFILES.map { it.brand }.distinct().sorted()
+            )
+        }.collect { emit(it) }
+    }
+
+    // ── 选项 ────────────────────────────────────────────────
+
+    /** 更新伪装深度选项。 */
+    fun updateOptions(options: SpoofOptions) {
+        _uiState.value = _uiState.value.copy(options = options)
+    }
+
+    // ── 当前身份 ────────────────────────────────────────────
+
+    /** 读取当前设备 ro.* 属性快照。无参数版（UI 用 LaunchedEffect 调用）。 */
+    fun loadCurrentIdentity() {
+        val ctx = lastContext ?: return
+        loadCurrentIdentity(ctx)
+    }
+
+    /** 读取当前设备 ro.* 属性快照（带 Context）。 */
     fun loadCurrentIdentity(context: Context) {
         lastContext = context
         viewModelScope.launch {
             try {
                 val provider = ProviderRegistry.activeProvider()
-
                 if (provider == null || !provider.available()) {
                     _uiState.value = _uiState.value.copy(
-                        errorMessage = "No root backend available. Cannot read device properties.",
+                        error = "未检测到 root 后端，无法读取设备属性。",
                     )
                     return@launch
                 }
-
+                val keys = listOf(
+                    "ro.product.model",
+                    "ro.product.brand",
+                    "ro.product.manufacturer",
+                    "ro.product.device",
+                    "ro.product.name",
+                    "ro.product.odm.model",
+                    "ro.product.system.model",
+                    "ro.product.vendor.model",
+                    "ro.product.product.model",
+                    "ro.product.system_ext.model",
+                    "ro.build.fingerprint",
+                    "ro.build.display.id",
+                    "ro.build.id",
+                    "ro.build.version.incremental",
+                    "ro.build.version.security_patch",
+                    "ro.build.version.release",
+                    "ro.build.product",
+                    "ro.build.characteristics",
+                    "ro.board.platform",
+                    "ro.product.board",
+                    "ro.hardware",
+                    "ro.soc.model",
+                    "ro.soc.manufacturer",
+                )
                 val props = withContext(Dispatchers.IO) {
-                    mapOf(
-                        "model" to provider.execute("getprop ro.product.model").stdout.trim(),
-                        "brand" to provider.execute("getprop ro.product.brand").stdout.trim(),
-                        "manufacturer" to provider.execute("getprop ro.product.manufacturer").stdout.trim(),
-                        "device" to provider.execute("getprop ro.product.device").stdout.trim(),
-                        "fingerprint" to provider.execute("getprop ro.build.fingerprint").stdout.trim(),
-                    )
+                    keys.associateWith { k ->
+                        provider.execute("getprop $k").stdout.trim()
+                    }
                 }
+                val platform = props["ro.board.platform"] ?: ""
+                val fingerprint = props["ro.build.fingerprint"] ?: ""
+
+                // 推理：通过对比 fingerprint 是否在 SPOOF_PROFILES 中
+                // 判断当前是否处于已伪装状态。
+                val active = SPOOF_PROFILES.firstOrNull { it.fingerprint == fingerprint }
+
                 _uiState.value = _uiState.value.copy(
-                    currentModel = props["model"] ?: "",
-                    currentBrand = props["brand"] ?: "",
-                    currentManufacturer = props["manufacturer"] ?: "",
-                    currentDevice = props["device"] ?: "",
-                    currentFingerprint = props["fingerprint"] ?: "",
-                    errorMessage = null,
+                    currentPlatform = platform,
+                    currentProps = props,
+                    activeProfileName = active?.name,
+                    isSpoofed = active != null,
+                    error = null,
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    errorMessage = "Root required: ${e.message}",
+                    error = "读取设备属性失败：${e.message}",
                 )
             }
         }
     }
 
-    fun applySpoof(context: Context, profile: SpoofProfile, persistent: Boolean) {
+    // ── 应用伪装 ────────────────────────────────────────────
+
+    /**
+     * 应用伪装 — 三层同时部署。
+     *
+     * 层 1+2: 写入 /data/adb/astraveil/spoof/global.json（Zygisk + LSPosed 读取）
+     * 层 3:   全局 resetprop（立即生效，无需重启）
+     *
+     * 应用完成后触发 [verify] 生成完整性报告。
+     */
+    fun applyProfile(context: Context, profile: SpoofProfile) {
         lastContext = context
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                isApplying = true, errorMessage = null, successMessage = null,
+                applying = true, error = null, notice = null,
             )
             try {
                 val provider = ProviderRegistry.activeProvider() ?: run {
                     _uiState.value = _uiState.value.copy(
-                        isApplying = false,
-                        errorMessage = "No root backend detected.",
+                        applying = false,
+                        error = "未检测到 root 后端。",
                     )
                     return@launch
                 }
 
+                // 层 1+2：写入配置文件（Zygisk + LSPosed 读取）
+                SpoofConfigManager.writeGlobalConfig(
+                    context, profile, _uiState.value.options
+                ).onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        applying = false,
+                        error = "配置写入失败：${e.message}",
+                    )
+                    return@launch
+                }
+
+                // 层 3：全局 resetprop（立即生效）
+                val ops = SpoofPropertyEngine.buildOps(profile, _uiState.value.options)
                 val setPropCmd = buildSetPropCommand(
-                    provider.displayName, persistent,
+                    provider.displayName, _uiState.value.options.persistent,
                 )
-
-                val commands = listOf(
-                    "${setPropCmd}ro.product.model \"${profile.model}\"",
-                    "${setPropCmd}ro.product.brand \"${profile.brand}\"",
-                    "${setPropCmd}ro.product.manufacturer \"${profile.manufacturer}\"",
-                    "${setPropCmd}ro.product.device \"${profile.device}\"",
-                    "${setPropCmd}ro.product.name \"${profile.device}\"",
-                    "${setPropCmd}ro.build.fingerprint \"${profile.fingerprint}\"",
-                    "${setPropCmd}ro.build.display.id \"${profile.displayId}\"",
-                    "${setPropCmd}ro.build.product \"${profile.device}\"",
-                    // 子属性（很多 app 读这些）
-                    "${setPropCmd}ro.product.odm.model \"${profile.model}\"",
-                    "${setPropCmd}ro.product.system.model \"${profile.model}\"",
-                    "${setPropCmd}ro.product.vendor.model \"${profile.model}\"",
-                )
-
                 withContext(Dispatchers.IO) {
-                    commands.forEach { cmd ->
-                        provider.execute(cmd)
+                    ops.forEach { op ->
+                        provider.execute("${setPropCmd}${op.key} \"${op.value}\"")
                     }
                 }
 
-                _uiState.value = _uiState.value.copy(
-                    isApplying = false,
-                    isSpoofed = true,
-                    activeProfile = profile.name,
-                    currentModel = profile.model,
-                    currentBrand = profile.brand,
-                    currentManufacturer = profile.manufacturer,
-                    currentDevice = profile.device,
-                    currentFingerprint = profile.fingerprint,
-                    successMessage = "Device identity spoofed as ${profile.name}",
+                // 审计日志
+                SpoofAuditLogger.logApply(
+                    context = context,
+                    profileName = profile.name,
+                    providerName = provider.displayName,
+                    persistent = _uiState.value.options.persistent,
                 )
+
+                _uiState.value = _uiState.value.copy(
+                    applying = false,
+                    isSpoofed = true,
+                    activeProfileName = profile.name,
+                    notice = buildString {
+                        append("已伪装为 ${profile.name}。")
+                        if (_uiState.value.moduleStatus ==
+                            SpoofModuleInstaller.ModuleStatus.INSTALLED_ENABLED
+                        ) {
+                            append(" Zygisk/LSPosed 对新启动的应用生效。")
+                        } else {
+                            append(" 安装 Zygisk 模块以获得完整覆盖。")
+                        }
+                    },
+                )
+                // 重新读取属性 + 校验完整性
+                loadCurrentIdentity(context)
+                verify(context, profile)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    isApplying = false,
-                    errorMessage = "Spoof failed: ${e.message}",
+                    applying = false,
+                    error = "伪装失败：${e.message}",
                 )
             }
         }
     }
 
+    /** Per-app 伪装（仅作用于指定包名） */
+    fun applyPerApp(context: Context, packageName: String, profile: SpoofProfile) {
+        viewModelScope.launch {
+            SpoofConfigManager.writePerAppConfig(
+                context, packageName, profile, _uiState.value.options
+            ).onSuccess {
+                SpoofConfigManager.forceRestartApp(context, packageName)
+                _uiState.value = _uiState.value.copy(
+                    perAppConfigs = _uiState.value.perAppConfigs +
+                        (packageName to profile.name),
+                    notice = "$packageName 已伪装为 ${profile.name}，应用已重启。",
+                )
+                SpoofAuditLogger.logPerApp(context, packageName, profile.name)
+            }.onFailure { e ->
+                _uiState.value = _uiState.value.copy(
+                    error = "Per-app 配置失败：${e.message}",
+                )
+            }
+        }
+    }
+
+    // ── 恢复 ────────────────────────────────────────────────
+
+    /** 恢复真实身份 — 删除全局配置 + resetprop --delete 关键属性。 */
     fun resetIdentity(context: Context) {
         lastContext = context
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                isApplying = true, successMessage = null,
+                applying = true, notice = null,
             )
             try {
                 val provider = ProviderRegistry.activeProvider() ?: run {
                     _uiState.value = _uiState.value.copy(
-                        isApplying = false,
-                        errorMessage = "No root backend detected.",
+                        applying = false,
+                        error = "未检测到 root 后端。",
                     )
                     return@launch
                 }
 
-                val resetCmd = when {
-                    provider.displayName.contains("Magisk", ignoreCase = true) ->
-                        "resetprop --delete ro.product.model; " +
-                        "resetprop --delete ro.product.brand; " +
-                        "resetprop --delete ro.product.manufacturer; " +
-                        "resetprop --delete ro.product.device; " +
-                        "resetprop --delete ro.build.fingerprint; " +
-                        "resetprop --delete ro.build.display.id"
-                    else ->
-                        // 非 Magisk 后端：重启恢复（非持久化模式下）
-                        "echo 'Reboot to restore original identity'"
+                // 清除配置文件
+                SpoofConfigManager.clearAll(context)
+
+                // resetprop --delete 关键属性（仅 Magisk 后端支持）
+                if (provider.displayName.contains("magisk", ignoreCase = true)) {
+                    val keysToDelete = listOf(
+                        "ro.product.model",
+                        "ro.product.brand",
+                        "ro.product.manufacturer",
+                        "ro.product.device",
+                        "ro.product.name",
+                        "ro.build.fingerprint",
+                        "ro.build.display.id",
+                        "ro.build.id",
+                        "ro.board.platform",
+                    )
+                    val cmd = keysToDelete.joinToString("; ") {
+                        "resetprop --delete $it"
+                    }
+                    withContext(Dispatchers.IO) {
+                        provider.execute(cmd)
+                    }
                 }
 
-                withContext(Dispatchers.IO) {
-                    provider.execute(resetCmd)
-                }
+                SpoofAuditLogger.logReset(context, provider.displayName)
 
                 _uiState.value = _uiState.value.copy(
-                    isApplying = false,
+                    applying = false,
                     isSpoofed = false,
-                    activeProfile = null,
-                    successMessage = "Device identity reset. Reboot to fully restore.",
+                    activeProfileName = null,
+                    report = null,
+                    notice = "已恢复真实身份。重启以完全清理残留属性。",
                 )
                 loadCurrentIdentity(context)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    isApplying = false,
-                    errorMessage = "Reset failed: ${e.message}",
+                    applying = false,
+                    error = "恢复失败：${e.message}",
                 )
             }
         }
     }
 
-    // ──────────────────────────────────────────────── v3 三层编排 ──
+    // ── Zygisk 模块 ────────────────────────────────────────
 
     /** 检查 Zygisk 模块安装状态（层 1+2 前置条件） */
     fun checkModuleStatus(context: Context) {
@@ -330,96 +371,60 @@ class DeviceSpoofViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         installingModule = false,
                         moduleStatus = SpoofModuleInstaller.ModuleStatus.INSTALLED_ENABLED,
-                        successMessage = "Zygisk 模块已安装。重启后生效。",
+                        notice = "Zygisk 模块已安装。重启后生效。",
                     )
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         installingModule = false,
-                        errorMessage = "模块安装失败：${e.message}",
+                        error = "模块安装失败：${e.message}",
                     )
                 }
         }
     }
 
-    /**
-     * 应用伪装 — 三层同时部署。
-     *
-     * 层 1+2: 写入 /data/adb/astraveil/spoof/global.json（Zygisk + LSPosed 读取）
-     * 层 3:   全局 resetprop（立即生效，无需重启）
-     */
-    fun applyProfileFull(context: Context, profile: SpoofProfile) {
-        lastContext = context
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isApplying = true, errorMessage = null,
-            )
-
-            // 层 1+2：写入配置文件（Zygisk + LSPosed 读取）
-            SpoofConfigManager.writeGlobalConfig(
-                context, profile, _uiState.value.options
-            ).onFailure { e ->
-                _uiState.value = _uiState.value.copy(
-                    isApplying = false,
-                    errorMessage = "配置写入失败：${e.message}",
-                )
-                return@launch
-            }
-
-            // 层 3：全局 resetprop（立即生效，无需重启）
-            applyProfile(profile)  // 上一版的 resetprop 逻辑
-
-            _uiState.value = _uiState.value.copy(
-                isApplying = false,
-                isSpoofed = true,
-                activeProfile = profile.name,
-                successMessage = buildString {
-                    append("已伪装为 ${profile.name}。")
-                    if (_uiState.value.moduleStatus ==
-                        SpoofModuleInstaller.ModuleStatus.INSTALLED_ENABLED
-                    ) {
-                        append(" Zygisk/LSPosed 对新启动的应用生效。")
-                    } else {
-                        append(" 安装 Zygisk 模块以获得完整覆盖。")
-                    }
-                },
-            )
-            verify()
-        }
-    }
-
-    /** Per-app 伪装（仅作用于指定包名） */
-    fun applyPerApp(context: Context, packageName: String, profile: SpoofProfile) {
-        viewModelScope.launch {
-            SpoofConfigManager.writePerAppConfig(
-                context, packageName, profile, _uiState.value.options
-            ).onSuccess {
-                // 强制重启目标应用使配置立即生效
-                SpoofConfigManager.forceRestartApp(context, packageName)
-                _uiState.value = _uiState.value.copy(
-                    perAppConfigs = _uiState.value.perAppConfigs +
-                        (packageName to profile.name),
-                    successMessage = "$packageName 已伪装为 ${profile.name}，应用已重启。",
-                )
-            }.onFailure { e ->
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Per-app 配置失败：${e.message}",
-                )
-            }
-        }
-    }
-
     // ── Private helpers ──
 
-    /** 上一版的 resetprop 逻辑（v3 入口，复用最近的 Context） */
-    private fun applyProfile(profile: SpoofProfile) {
-        val ctx = lastContext ?: return
-        applySpoof(ctx, profile, _uiState.value.options.persistent)
-    }
-
-    /** 验证伪装是否生效：重新读取当前设备属性以反映伪装后的状态 */
-    private fun verify() {
-        lastContext?.let { loadCurrentIdentity(it) }
+    /** 校验伪装完整性 — 重新读取属性并对比 [profile] 生成报告。 */
+    private fun verify(context: Context, profile: SpoofProfile) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(verifying = true)
+            try {
+                // 等待 resetprop 在系统中生效（异步）
+                kotlinx.coroutines.delay(200)
+                val provider = ProviderRegistry.activeProvider()
+                if (provider == null) {
+                    _uiState.value = _uiState.value.copy(verifying = false)
+                    return@launch
+                }
+                // 重新读取属性快照
+                val keys = listOf(
+                    "ro.product.model", "ro.product.brand", "ro.product.device",
+                    "ro.build.fingerprint", "ro.build.id",
+                    "ro.build.version.security_patch", "ro.board.platform",
+                    "ro.product.odm.model",
+                )
+                val freshProps = withContext(Dispatchers.IO) {
+                    keys.associateWith { k ->
+                        provider.execute("getprop $k").stdout.trim()
+                    }
+                }
+                val currentPlatform = freshProps["ro.board.platform"] ?: ""
+                val report = SpoofIntegrityChecker.buildReport(
+                    profile = profile,
+                    currentProps = freshProps,
+                    currentPlatform = currentPlatform,
+                )
+                _uiState.value = _uiState.value.copy(
+                    report = report,
+                    verifying = false,
+                    currentProps = _uiState.value.currentProps + freshProps,
+                    currentPlatform = currentPlatform,
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(verifying = false)
+            }
+        }
     }
 
     /**

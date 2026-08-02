@@ -1,0 +1,2 @@
+allow zygisk_exec astraveil_data_file dir { open read search }
+allow zygisk_exec astraveil_data_file file { open read getattr }
