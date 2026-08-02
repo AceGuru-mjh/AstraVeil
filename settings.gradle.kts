@@ -40,5 +40,8 @@ include(":modules")
 // Native C++ JNI bridge module
 include(":native")
 
+// Protobuf protocol definitions
+include(":proto")
+
 // Rust security component (built via cargo and linked as static lib)
 // include(":rust") // Rust is built out-of-band via Cargo, linked in :native
