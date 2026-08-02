@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://astraveil.com/schemas/repo-manifest/v1",
+  "title": "AstraHub Repository Manifest",
+  "description": "仓库级清单，定义仓库元数据和信任锚。",
+  "type": "object",
+  "required": ["manifest_version", "repository_id", "trust_anchors"],
+  "additionalProperties": false,
+  "properties": {
+    "manifest_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "repository_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,63}$"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "base_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "trust_anchors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["key_id", "algorithm", "public_key"],
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "description": "密钥标识（SHA-256 指纹前 16 字符）"
+          },
+          "algorithm": {
+            "type": "string",
+            "enum": ["ed25519", "rsa-pss-sha256"]
+          },
+          "public_key": {
+            "type": "string",
+            "description": "Base64 编码公钥"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revoked": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    "index_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "checksum"],
+        "properties": {
+          "path": { "type": "string" },
+          "checksum": {
+            "type": "object",
+            "required": ["algorithm", "value"],
+            "properties": {
+              "algorithm": { "type": "string", "enum": ["sha256", "blake3"] },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "refresh_interval_seconds": {
+      "type": "integer",
+      "minimum": 300,
+      "default": 3600,
+      "description": "客户端刷新间隔（最小 5 分钟）"
+    },
+    "max_package_size_bytes": {
+      "type": "integer",
+      "minimum": 1048576,
+      "maximum": 104857600,
+      "default": 52428800,
+      "description": "允许的最大包大小"
+    }
+  }
+}

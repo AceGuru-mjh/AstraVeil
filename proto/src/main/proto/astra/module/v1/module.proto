@@ -1,0 +1,121 @@
+// AstraVeil — 模块生命周期协议
+// 定义模块注册、配置、状态上报的消息格式。
+
+syntax = "proto3";
+
+package astra.module.v1;
+
+option java_package = "com.astraveil.proto.module.v1";
+option java_multiple_files = true;
+option java_outer_classname = "ModuleProto";
+
+import "astra/common/v1/types.proto";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 模块注册
+// ─────────────────────────────────────────────────────────────────────────────
+
+message ModuleManifest {
+  string module_id = 1;           // 唯一标识: "com.astraveil.module.firewall"
+  string name = 2;
+  string description = 3;
+  string version = 4;             // SemVer
+  string author = 5;
+
+  // 兼容性
+  int32 min_sdk_version = 6;      // 最低 Android API
+  int32 min_daemon_version = 7;   // 最低 daemon 版本
+  repeated string required_capabilities = 8;
+
+  // 资源需求
+  astra.common.v1.ResourceQuota resource_quota = 9;
+
+  // 权限声明
+  repeated string permissions = 10;
+
+  // 依赖的其他模块
+  repeated string dependencies = 11;
+
+  // 配置 schema（JSON Schema 格式）
+  string config_schema = 12;
+
+  // 入口点
+  ModuleEntryPoint entry_point = 13;
+}
+
+message ModuleEntryPoint {
+  EntryPointType type = 1;
+  string path = 2;                // .so 路径 / 类名 / 脚本路径
+  string init_function = 3;       // C 入口函数名（native 模块）
+}
+
+enum EntryPointType {
+  ENTRY_POINT_TYPE_UNSPECIFIED = 0;
+  ENTRY_POINT_TYPE_NATIVE = 1;    // .so (JNI)
+  ENTRY_POINT_TYPE_DEX = 2;       // .dex / .jar
+  ENTRY_POINT_TYPE_SCRIPT = 3;    // 脚本
+  ENTRY_POINT_TYPE_WASM = 4;      // WebAssembly (未来)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 模块配置
+// ─────────────────────────────────────────────────────────────────────────────
+
+message ModuleConfig {
+  string module_id = 1;
+  bool enabled = 2;
+  astra.common.v1.SecurityLevel security_level = 3;
+
+  // 配置数据（JSON 格式，由模块自行解析）
+  string config_json = 4;
+
+  // 配置版本（用于增量更新）
+  int64 config_version = 5;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 模块状态上报
+// ─────────────────────────────────────────────────────────────────────────────
+
+message ModuleStateReport {
+  string module_id = 1;
+  astra.common.v1.ModuleState state = 2;
+  astra.common.v1.AstraTimestamp timestamp = 3;
+
+  // 资源使用
+  int64 memory_bytes = 4;
+  int32 thread_count = 5;
+  int64 cpu_time_ms = 6;
+
+  // 统计
+  int64 total_operations = 7;
+  int64 failed_operations = 8;
+
+  // 错误信息（state == ERROR 时）
+  string error_message = 9;
+  string error_stack = 10;
+
+  // 自定义指标
+  map<string, double> metrics = 11;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 模块间通信
+// ─────────────────────────────────────────────────────────────────────────────
+
+message ModuleMessage {
+  string source_module = 1;
+  string target_module = 2;
+  string message_type = 3;
+  bytes payload = 4;
+  bool require_ack = 5;
+  int64 timeout_ms = 6;
+}
+
+message ModuleMessageAck {
+  string original_message_id = 1;
+  astra.common.v1.StatusCode status = 2;
+  bytes response_payload = 3;
+}
+
+---

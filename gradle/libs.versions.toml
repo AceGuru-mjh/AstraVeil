@@ -15,6 +15,9 @@ espresso = "3.6.1"
 # ── P1: centralized previously-hardcoded deps ──
 mockk = "1.13.13"
 haze = "1.6.2"
+# ── P3: protobuf ──
+protobuf = "4.29.3"
+protobufPlugin = "0.9.4"
 
 [libraries]
 # AndroidX core
@@ -42,6 +45,11 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 # Third-party UI
 haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 
+# Protobuf
+protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }
+protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
+protobuf-protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protobuf" }
+
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
@@ -55,3 +63,4 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }

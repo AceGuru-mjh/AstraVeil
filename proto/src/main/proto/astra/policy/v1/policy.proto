@@ -1,0 +1,152 @@
+// AstraVeil — 策略引擎协议
+// 定义策略规则的序列化格式，用于：
+//   1. App → Daemon: 下发策略配置
+//   2. Daemon → Rust Engine: 加载策略
+//   3. AstraHub: 策略包分发
+
+syntax = "proto3";
+
+package astra.policy.v1;
+
+option java_package = "com.astraveil.proto.policy.v1";
+option java_multiple_files = true;
+option java_outer_classname = "PolicyProto";
+
+import "astra/common/v1/types.proto";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 策略包（顶层容器）
+// ─────────────────────────────────────────────────────────────────────────────
+
+message PolicyBundle {
+  // 元数据
+  PolicyMetadata metadata = 1;
+
+  // 规则列表（按优先级排序，先匹配先生效）
+  repeated PolicyRule rules = 2;
+
+  // 默认决策（无规则匹配时）
+  astra.ipc.v1.PolicyDecision default_decision = 3;
+
+  // 签名（用于验证策略包完整性）
+  PolicySignature signature = 4;
+}
+
+message PolicyMetadata {
+  string bundle_id = 1;           // UUID
+  string name = 2;
+  string description = 3;
+  string version = 4;             // SemVer
+  string author = 5;
+  astra.common.v1.AstraTimestamp created_at = 6;
+  astra.common.v1.AstraTimestamp updated_at = 7;
+  int32 schema_version = 8;       // 协议 schema 版本
+  map<string, string> labels = 9; // 自定义标签
+}
+
+message PolicySignature {
+  string algorithm = 1;           // e.g. "Ed25519"
+  bytes public_key = 2;
+  bytes signature = 3;
+  string signer_identity = 4;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 策略规则
+// ─────────────────────────────────────────────────────────────────────────────
+
+message PolicyRule {
+  string rule_id = 1;             // UUID
+  string name = 2;
+  int32 priority = 3;             // 越小越优先
+  bool enabled = 4;
+
+  // 匹配条件（所有条件 AND 关系）
+  RuleCondition condition = 5;
+
+  // 匹配后的动作
+  RuleAction action = 6;
+
+  // 审计配置
+  AuditConfig audit = 7;
+}
+
+message RuleCondition {
+  // 进程匹配
+  ProcessMatcher process = 1;
+
+  // 操作匹配
+  repeated string actions = 2;    // 支持通配符: "file.*", "network.connect"
+
+  // 资源匹配
+  ResourceMatcher resource = 3;
+
+  // 时间窗口（可选）
+  TimeWindow time_window = 4;
+
+  // 速率条件（可选）
+  RateCondition rate = 5;
+}
+
+message ProcessMatcher {
+  repeated string package_names = 1;   // 支持通配符: "com.example.*"
+  repeated int32 uids = 2;
+  repeated string process_names = 3;
+  astra.common.v1.SecurityLevel min_security_level = 4;
+  astra.common.v1.SecurityLevel max_security_level = 5;
+}
+
+message ResourceMatcher {
+  repeated string paths = 1;      // 文件路径，支持 glob: "/data/data/*/cache/**"
+  repeated string network_hosts = 2; // 主机名/IP，支持 CIDR: "192.168.0.0/16"
+  repeated int32 network_ports = 3;
+  repeated string ipc_channels = 4;
+}
+
+message TimeWindow {
+  // 一天中的时间范围（分钟，0-1439）
+  int32 start_minute = 1;
+  int32 end_minute = 2;
+
+  // 星期几（1=Monday, 7=Sunday），空 = 每天
+  repeated int32 days_of_week = 3;
+}
+
+message RateCondition {
+  int32 max_count = 1;            // 最大次数
+  int64 window_seconds = 2;       // 时间窗口
+  string scope = 3;               // "process" | "global" | "resource"
+}
+
+message RuleAction {
+  astra.ipc.v1.PolicyDecision decision = 1;
+
+  // 附加动作
+  repeated SideEffect side_effects = 2;
+}
+
+enum SideEffect {
+  SIDE_EFFECT_UNSPECIFIED = 0;
+  SIDE_EFFECT_LOG = 1;            // 记录日志
+  SIDE_EFFECT_NOTIFY_USER = 2;    // 通知用户
+  SIDE_EFFECT_KILL_PROCESS = 3;   // 终止进程
+  SIDE_EFFECT_REVOKE_PERMISSION = 4; // 撤销权限
+  SIDE_EFFECT_QUARANTINE = 5;     // 隔离资源
+  SIDE_EFFECT_THROTTLE = 6;       // 降速
+}
+
+message AuditConfig {
+  bool enabled = 1;
+  AuditLevel level = 2;
+  int64 retention_days = 3;       // 日志保留天数
+}
+
+enum AuditLevel {
+  AUDIT_LEVEL_UNSPECIFIED = 0;
+  AUDIT_LEVEL_NONE = 1;
+  AUDIT_LEVEL_DECISIONS_ONLY = 2; // 仅记录决策
+  AUDIT_LEVEL_FULL_CONTEXT = 3;   // 记录完整上下文
+  AUDIT_LEVEL_PAYLOAD = 4;        // 记录载荷（调试用）
+}
+
+---

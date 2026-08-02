@@ -1,40 +1,210 @@
 {
-  "schemaVersion": 1,
-  "updatedAt": "2026-07-31T00:00:00Z",
-  "modules": [
+  "schema_version": 1,
+  "repository": {
+    "id": "com.astraveil.hub.official",
+    "name": "AstraVeil Official Module Repository",
+    "description": "AstraVeil 官方模块仓库，包含经过审核的安全模块。",
+    "base_url": "https://hub.astraveil.com/packages/",
+    "public_key": "MCowBQYDK2VwAyEAEXAMPLEKEYBASE64ENCODEDVALUEHERE000000000000",
+    "maintainers": [
+      {
+        "name": "AstraVeil Team",
+        "email": "hub@astraveil.com",
+        "url": "https://github.com/AceGuru-mjh/AstraVeil"
+      }
+    ]
+  },
+  "updated_at": "2026-08-02T00:00:00Z",
+  "categories": [
     {
-      "id": "com.astraveil.fontmod",
-      "name": "Font Replacer",
-      "version": "1.2.0",
-      "apiVersion": 3,
-      "author": "AstraVeil Team",
-      "description": "Systemless font replacement via overlayfs.",
-      "requiredCapabilities": ["overlayfs", "mount_namespace"],
-      "optionalCapabilities": [],
-      "trustLevel": "OFFICIAL",
-      "signatureFingerprint": "ab:cd:ef:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff",
-      "downloadUrl": "https://github.com/AceGuru-mjh/AstraVeil/releases/download/hub/fontmod-1.2.0.avm",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "sizeBytes": 184320,
-      "publishedAt": "2026-07-30T12:00:00Z",
-      "minAstraVeilVersion": "1.1.0"
+      "id": "network",
+      "name": "网络安全",
+      "description": "防火墙、流量监控、DNS 过滤"
     },
     {
-      "id": "com.astraveil.builtin.diags",
-      "name": "Diagnostics Probe",
-      "version": "0.9.0",
-      "apiVersion": 3,
-      "author": "AstraVeil Team",
-      "description": "Built-in diagnostic probes. Reference AVM module.",
-      "requiredCapabilities": [],
-      "optionalCapabilities": [],
-      "trustLevel": "OFFICIAL",
-      "signatureFingerprint": "ab:cd:ef:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff",
-      "downloadUrl": "https://github.com/AceGuru-mjh/AstraVeil/releases/download/hub/diags-0.9.0.avm",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "sizeBytes": 65536,
-      "publishedAt": "2026-07-29T10:00:00Z",
-      "minAstraVeilVersion": "1.1.0"
+      "id": "privacy",
+      "name": "隐私保护",
+      "description": "权限管控、数据隔离、追踪拦截"
+    },
+    {
+      "id": "system",
+      "name": "系统增强",
+      "description": "进程管理、资源控制、审计日志"
+    },
+    {
+      "id": "developer",
+      "name": "开发工具",
+      "description": "调试、测试、性能分析"
+    }
+  ],
+  "modules": [
+    {
+      "module_id": "com.astraveil.module.firewall",
+      "name": "AstraFirewall",
+      "description": "基于 eBPF 的应用级网络防火墙，支持按应用/域名/端口规则过滤。",
+      "version": "1.2.0",
+      "version_code": 12,
+      "author": {
+        "name": "AstraVeil Team",
+        "email": "dev@astraveil.com",
+        "url": "https://github.com/AceGuru-mjh/AstraVeil",
+        "verified": true
+      },
+      "category": "network",
+      "tags": ["firewall", "ebpf", "network", "filter"],
+      "icon_url": "icons/com.astraveil.module.firewall.png",
+      "license": "Apache-2.0",
+      "source_url": "https://github.com/AceGuru-mjh/AstraVeil/tree/main/modules/firewall",
+      "min_sdk_version": 28,
+      "max_sdk_version": 35,
+      "min_daemon_version": "1.0.0",
+      "min_app_version": "1.0.0",
+      "required_capabilities": ["network.filter", "ebpf.load"],
+      "permissions": ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"],
+      "dependencies": [],
+      "package": {
+        "url": "com.astraveil.module.firewall/1.2.0/module.astra",
+        "format": "astra",
+        "size_bytes": 2457600,
+        "entry_point": {
+          "type": "native",
+          "path": "lib/arm64-v8a/libfirewall.so",
+          "init_function": "astra_module_init"
+        }
+      },
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "signature": {
+        "algorithm": "ed25519",
+        "value": "dGVzdHNpZ25hdHVyZWJhc2U2NA==",
+        "signer": "com.astraveil.hub.official",
+        "public_key_fingerprint": "a1b2c3d4e5f6a7b8"
+      },
+      "published_at": "2026-07-15T10:30:00Z",
+      "updated_at": "2026-08-01T14:00:00Z",
+      "deprecated": false,
+      "downloads": 15420,
+      "rating": {
+        "average": 4.7,
+        "count": 328
+      },
+      "versions": [
+        {
+          "version": "1.1.0",
+          "version_code": 11,
+          "package": {
+            "url": "com.astraveil.module.firewall/1.1.0/module.astra",
+            "format": "astra",
+            "size_bytes": 2310144
+          },
+          "checksum": {
+            "algorithm": "sha256",
+            "value": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+          },
+          "published_at": "2026-06-01T08:00:00Z",
+          "changelog": "修复 IPv6 规则匹配问题"
+        }
+      ]
+    },
+    {
+      "module_id": "com.astraveil.module.permission",
+      "name": "AstraPermissionGuard",
+      "description": "动态权限管控模块，支持按时间/位置/应用状态自动授予/撤销权限。",
+      "version": "1.0.3",
+      "version_code": 4,
+      "author": {
+        "name": "AstraVeil Team",
+        "email": "dev@astraveil.com",
+        "verified": true
+      },
+      "category": "privacy",
+      "tags": ["permission", "privacy", "automation"],
+      "license": "Apache-2.0",
+      "min_sdk_version": 26,
+      "max_sdk_version": 35,
+      "min_daemon_version": "1.0.0",
+      "min_app_version": "1.0.0",
+      "required_capabilities": ["permission.grant", "permission.revoke"],
+      "permissions": ["android.permission.GRANT_RUNTIME_PERMISSIONS"],
+      "dependencies": [],
+      "package": {
+        "url": "com.astraveil.module.permission/1.0.3/module.astra",
+        "format": "astra",
+        "size_bytes": 1048576,
+        "entry_point": {
+          "type": "dex",
+          "path": "classes.dex"
+        }
+      },
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"
+      },
+      "signature": {
+        "algorithm": "ed25519",
+        "value": "cGVybWlzc2lvbnNpZw==",
+        "signer": "com.astraveil.hub.official",
+        "public_key_fingerprint": "a1b2c3d4e5f6a7b8"
+      },
+      "published_at": "2026-05-20T12:00:00Z",
+      "updated_at": "2026-07-28T09:30:00Z",
+      "deprecated": false,
+      "downloads": 8930,
+      "rating": {
+        "average": 4.5,
+        "count": 156
+      }
+    },
+    {
+      "module_id": "com.astraveil.module.audit",
+      "name": "AstraAuditLog",
+      "description": "安全审计日志模块，记录所有策略决策、权限变更、网络访问，支持导出和告警。",
+      "version": "1.1.0",
+      "version_code": 7,
+      "author": {
+        "name": "AstraVeil Team",
+        "email": "dev@astraveil.com",
+        "verified": true
+      },
+      "category": "system",
+      "tags": ["audit", "logging", "security", "compliance"],
+      "license": "Apache-2.0",
+      "min_sdk_version": 26,
+      "max_sdk_version": 35,
+      "min_daemon_version": "1.0.0",
+      "min_app_version": "1.0.0",
+      "required_capabilities": ["audit.write", "file.write.sandbox"],
+      "permissions": [],
+      "dependencies": [],
+      "package": {
+        "url": "com.astraveil.module.audit/1.1.0/module.astra",
+        "format": "astra",
+        "size_bytes": 819200,
+        "entry_point": {
+          "type": "dex",
+          "path": "classes.dex"
+        }
+      },
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+      },
+      "signature": {
+        "algorithm": "ed25519",
+        "value": "YXVkaXRzaWc=",
+        "signer": "com.astraveil.hub.official",
+        "public_key_fingerprint": "a1b2c3d4e5f6a7b8"
+      },
+      "published_at": "2026-06-10T16:00:00Z",
+      "updated_at": "2026-07-30T11:00:00Z",
+      "deprecated": false,
+      "downloads": 12100,
+      "rating": {
+        "average": 4.8,
+        "count": 245
+      }
     }
   ]
 }
