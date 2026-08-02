@@ -99,11 +99,11 @@ class DeviceSpoofViewModel : ViewModel() {
 
                 val props = withContext(Dispatchers.IO) {
                     mapOf(
-                        "model" to provider.execute("getprop ro.product.model").trim(),
-                        "brand" to provider.execute("getprop ro.product.brand").trim(),
-                        "manufacturer" to provider.execute("getprop ro.product.manufacturer").trim(),
-                        "device" to provider.execute("getprop ro.product.device").trim(),
-                        "fingerprint" to provider.execute("getprop ro.build.fingerprint").trim(),
+                        "model" to provider.execute("getprop ro.product.model").stdout.trim(),
+                        "brand" to provider.execute("getprop ro.product.brand").stdout.trim(),
+                        "manufacturer" to provider.execute("getprop ro.product.manufacturer").stdout.trim(),
+                        "device" to provider.execute("getprop ro.product.device").stdout.trim(),
+                        "fingerprint" to provider.execute("getprop ro.build.fingerprint").stdout.trim(),
                     )
                 }
                 _uiState.value = _uiState.value.copy(

@@ -160,6 +160,7 @@ fun AstraVeilApp() {
                                     Color.Transparent,
                                 ),
                             ),
+                            shape = RoundedCornerShape(28.dp),
                         ),
                 )
 
