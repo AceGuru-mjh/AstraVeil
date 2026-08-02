@@ -1,15 +1,15 @@
 // AstraVeil — 策略引擎协议
 
+syntax = "proto3";
+
+package astra.policy.v1;
+
 import "astra/ipc/v1/ipc.proto";
 
 // 定义策略规则的序列化格式，用于：
 //   1. App → Daemon: 下发策略配置
 //   2. Daemon → Rust Engine: 加载策略
 //   3. AstraHub: 策略包分发
-
-syntax = "proto3";
-
-package astra.policy.v1;
 
 option java_package = "com.astraveil.proto.policy.v1";
 option java_multiple_files = true;
