@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'kernel/**'
+      - 'native/**'
       - '.github/workflows/kernel.yml'
   pull_request:
     paths:
       - 'kernel/**'
+      - 'native/**'
       - '.github/workflows/kernel.yml'
   workflow_dispatch:
 
@@ -47,7 +49,7 @@ jobs:
         id: kernel-cache
         with:
           path: ~/kernel-src
-          key: gki-${{ matrix.gki }}-v1
+          key: gki-${{ matrix.gki }}-v2
 
       - name: Clone Android Common Kernel
         if: steps.kernel-cache.outputs.cache-hit != 'true'
@@ -62,6 +64,10 @@ jobs:
           cd ~/kernel-src
           # GKI default config for arm64
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
+          # Disable module signing and BTF (avoid needing zstd/pahole host tools)
+          sed -i 's/CONFIG_MODULE_SIG=y/CONFIG_MODULE_SIG=n/' .config
+          sed -i 's/CONFIG_MODULE_SIG_ALL=y/CONFIG_MODULE_SIG_ALL=n/' .config
+          sed -i 's/CONFIG_DEBUG_INFO_BTF=y/CONFIG_DEBUG_INFO_BTF=n/' .config
           # Set up the build infrastructure for out-of-tree modules.
           # modules_prepare generates scripts, Kbuild, and compiled helpers
           # needed by the kbuild system when building external modules.
@@ -98,5 +104,40 @@ jobs:
         with:
           name: astra_root-${{ matrix.gki }}
           path: kernel/astra_root.ko
+          if-no-files-found: error
+          retention-days: 30
+
+  build-native-tools:
+    name: Build native tools (test_root + astra_su)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install aarch64 cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      - name: Build test_root
+        run: |
+          cd native
+          aarch64-linux-gnu-gcc -static -O2 -o test_root test_root.c
+          file test_root
+          ls -lh test_root
+
+      - name: Build astra_su
+        run: |
+          cd native
+          aarch64-linux-gnu-gcc -static -O2 -o astra_su astra_su.c
+          file astra_su
+          ls -lh astra_su
+
+      - name: Upload native tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: astra-native-tools
+          path: |
+            native/test_root
+            native/astra_su
           if-no-files-found: error
           retention-days: 30

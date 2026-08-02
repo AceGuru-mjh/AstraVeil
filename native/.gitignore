@@ -1,0 +1,4 @@
+# Build artifacts
+test_root
+astra_su
+*.o
