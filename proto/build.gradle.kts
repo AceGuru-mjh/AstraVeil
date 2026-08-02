@@ -80,8 +80,10 @@ dependencies {
 androidComponents {
     onVariants { variant ->
         val variantName = variant.name.replaceFirstChar { it.uppercase() }
-        tasks.named("ksp${variantName}Kotlin") {
-            dependsOn("generate${variantName}Proto")
+        // KSP task may not exist in this module; use afterEvaluate to safely
+        // wire the dependency only if the task is present.
+        project.afterEvaluate {
+            tasks.findByName("ksp${variantName}Kotlin")?.dependsOn("generate${variantName}Proto")
         }
     }
 }
