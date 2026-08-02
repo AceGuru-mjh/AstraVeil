@@ -1,4 +1,4 @@
-package com.astraveil.core.execution
+package com.astraveil.app.execution
 
 import com.astraveil.app.AstraVeilApplication
 import com.astraveil.core.ipc.DaemonState
