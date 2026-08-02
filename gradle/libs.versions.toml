@@ -16,7 +16,7 @@ espresso = "3.6.1"
 mockk = "1.13.13"
 haze = "1.6.2"
 # ── P3: protobuf ──
-protobuf = "4.29.3"
+protobuf = "4.35.1"
 protobufPlugin = "0.9.4"
 # ── Code quality ──
 detekt = "1.23.7"
