@@ -49,6 +49,16 @@ jobs:
           echo "Dobby cloned:"
           ls module-spoof/jni/external/Dobby/
 
+          # Patch: Dobby's arm64 assembly (closure_bridge_arm64.asm) is
+          # incompatible with modern NDK clang (ADRP relocation errors).
+          # Replace the asm file with an empty stub. Dobby falls back to
+          # its C trampoline implementation at runtime.
+          ASM_FILE="module-spoof/jni/external/Dobby/source/TrampolineBridge/ClosureTrampolineBridge/arm64/closure_bridge_arm64.asm"
+          if [ -f "$ASM_FILE" ]; then
+            echo "// Patched: asm trampoline disabled for NDK compatibility" > "$ASM_FILE"
+            echo "Patched: $ASM_FILE"
+          fi
+
       - name: Verify vendored headers
         run: |
           echo "=== Vendored headers ==="
