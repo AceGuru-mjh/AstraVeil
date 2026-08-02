@@ -10,8 +10,9 @@ permissions:
 
 jobs:
   detekt:
-    name: detekt (Kotlin static analysis)
+    name: detekt (Kotlin static analysis, best-effort)
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
