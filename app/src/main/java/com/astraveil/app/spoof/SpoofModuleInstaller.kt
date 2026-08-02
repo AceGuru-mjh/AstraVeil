@@ -1,7 +1,5 @@
 package com.astraveil.app.spoof
 
-@Suppress("DEPRECATION")
-
 import android.content.Context
 import com.astraveil.providers.ProviderRegistry
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +13,7 @@ import kotlinx.coroutines.withContext
  * 管理器可以通过 root shell 直接完成这个过程，
  * 无需用户手动在 Magisk 中刷入 zip。
  */
+@Suppress("DEPRECATION")
 object SpoofModuleInstaller {
 
     private const val MODULE_ID = "astraveil-spoof"
@@ -55,7 +54,7 @@ object SpoofModuleInstaller {
      */
     suspend fun install(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider()
                     ?: error("No root provider available")
 
@@ -93,7 +92,7 @@ object SpoofModuleInstaller {
 
     suspend fun enable(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider() ?: error("No root")
                 provider.execute("rm -f $MODULE_PATH/disable")
             }
@@ -101,7 +100,7 @@ object SpoofModuleInstaller {
 
     suspend fun disable(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider() ?: error("No root")
                 provider.execute("touch $MODULE_PATH/disable")
             }
@@ -109,7 +108,7 @@ object SpoofModuleInstaller {
 
     suspend fun uninstall(context: Context): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatching<Unit> {
                 val provider = activeProvider() ?: error("No root")
                 provider.execute("rm -rf $MODULE_PATH")
                 provider.execute("rm -rf /data/adb/astraveil/spoof")
