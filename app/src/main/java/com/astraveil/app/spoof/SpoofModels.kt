@@ -47,6 +47,21 @@ data class SpoofProfile(
     val displayId: String,
     val characteristics: String = "default",
     val confidence: DataConfidence = DataConfidence.HIGH,
+    val bootloader: String = "",
+    val baseband: String = "",
+    val buildHost: String = "",
+    val buildUser: String = "",
+    val hardwareName: String = "",
+    val hardwareRevision: String = "",
+    val kernelVersion: String = "",
+    val openGlesVersion: String = "",
+    val cpuAbiList: String = "",
+    val cpuAbiList64: String = "",
+    val vbmetaState: String = "",
+    val verifiedBootState: String = "",
+    val flashLocked: String = "",
+    val verityMode: String = "",
+    val vndkVersion: String = "",
 ) {
     val description: String
         get() = "$productName-user $release $buildId $incremental release-keys"
@@ -654,6 +669,58 @@ object SpoofPropertyEngine {
             add(PropOp("ro.build.version.sdk", profile.firstApi.toString(), SpoofTier.DANGEROUS))
             add(PropOp("ro.build.version.first_api", profile.firstApi.toString(), SpoofTier.DANGEROUS))
         }
+
+        // ── T6 系统环境（新增，默认开启）──
+        val d = SpoofSystemDeriver.derive(profile)
+
+        // 版本详情
+        add(PropOp("ro.build.version.codename", d.codename, SpoofTier.BUILD))
+        add(PropOp("ro.build.version.preview_sdk", d.previewSdk, SpoofTier.BUILD))
+        add(PropOp("ro.build.version.all_codenames", d.allCodenames, SpoofTier.BUILD))
+        add(PropOp("ro.build.version.release_or_codename", profile.release, SpoofTier.BUILD))
+
+        // 构建环境
+        add(PropOp("ro.build.host", d.buildHost, SpoofTier.BUILD))
+        add(PropOp("ro.build.user", d.buildUser, SpoofTier.BUILD))
+        add(PropOp("ro.build.date.utc", d.buildDateUtc, SpoofTier.BUILD))
+
+        // 引导链
+        add(PropOp("ro.bootloader", d.bootloader, SpoofTier.BUILD))
+        add(PropOp("ro.boot.vbmeta.device_state", d.vbmetaState, SpoofTier.BUILD))
+        add(PropOp("ro.boot.verifiedbootstate", d.verifiedBootState, SpoofTier.BUILD))
+        add(PropOp("ro.boot.flash.locked", d.flashLocked, SpoofTier.BUILD))
+        add(PropOp("ro.boot.veritymode", d.verityMode, SpoofTier.BUILD))
+
+        // 基带
+        add(PropOp("gsm.version.baseband", d.baseband, SpoofTier.BUILD))
+        add(PropOp("gsm.sim.operator.numeric", d.simOperatorNumeric, SpoofTier.BUILD))
+        add(PropOp("gsm.sim.operator.alpha", d.simOperatorAlpha, SpoofTier.BUILD))
+        add(PropOp("gsm.operator.alpha", d.simOperatorAlpha, SpoofTier.BUILD))
+
+        // 硬件
+        add(PropOp("ro.hardware", d.hardwareName, SpoofTier.SOC))
+        add(PropOp("ro.hardware.chipname", d.hardwareName, SpoofTier.SOC))
+        add(PropOp("ro.revision", d.hardwareRevision, SpoofTier.SOC))
+        add(PropOp("ro.boot.hardware.revision", d.hardwareRevision, SpoofTier.SOC))
+
+        // 图形
+        add(PropOp("ro.opengles.version", d.openGlesVersion, SpoofTier.SOC))
+        add(PropOp("ro.hardware.egl", d.eglImpl, SpoofTier.SOC))
+        add(PropOp("ro.hardware.vulkan", d.vulkanImpl, SpoofTier.SOC))
+
+        // CPU
+        add(PropOp("ro.product.cpu.abilist", d.cpuAbiList, SpoofTier.SOC))
+        add(PropOp("ro.product.cpu.abilist64", d.cpuAbiList64, SpoofTier.SOC))
+        add(PropOp("ro.product.cpu.abilist32", d.cpuAbiList32, SpoofTier.SOC))
+        add(PropOp("ro.bionic.arch", d.bionicArch, SpoofTier.SOC))
+        add(PropOp("ro.bionic.cpu_variant", d.bionicCpuVariant, SpoofTier.SOC))
+
+        // 安全标志
+        add(PropOp("ro.treble.enabled", d.trebleEnabled, SpoofTier.BUILD))
+        add(PropOp("ro.vndk.version", d.vndkVersion, SpoofTier.BUILD))
+        add(PropOp("ro.debuggable", d.debuggable, SpoofTier.BUILD))
+        add(PropOp("ro.secure", d.secure, SpoofTier.BUILD))
+        add(PropOp("ro.adb.secure", d.adbSecure, SpoofTier.BUILD))
     }
 
     /**
@@ -799,6 +866,36 @@ object SpoofIntegrityChecker {
                 name = "Security patch",
                 detail = "ro.build.version.security_patch 已应用",
                 passed = currentProps["ro.build.version.security_patch"] == profile.securityPatch,
+                weight = 1,
+            ))
+
+            // ── 系统环境检查（新增）──
+            val d = SpoofSystemDeriver.derive(profile)
+
+            add(IntegrityCheck(
+                name = "Build host",
+                detail = "ro.build.host=${d.buildHost} 应匹配 ${profile.brand} 格式",
+                passed = when {
+                    profile.brand.equals("google", true) -> d.buildHost.startsWith("abfarm")
+                    profile.brand.equals("samsung", true) -> d.buildHost.matches(Regex("^[0-9A-Z]{8}$"))
+                    else -> true
+                },
+                weight = 1,
+            ))
+            add(IntegrityCheck(
+                name = "EGL consistency",
+                detail = "ro.hardware.egl=${d.eglImpl} 应匹配 ${profile.platform}",
+                passed = when {
+                    d.eglImpl == "adreno" -> profile.platform in listOf("sun", "pineapple", "kalama", "taro", "lahaina", "crow", "parrot")
+                    d.eglImpl == "mali" -> profile.platform !in listOf("sun", "pineapple", "kalama", "taro", "lahaina", "crow", "parrot")
+                    else -> true
+                },
+                weight = 1,
+            ))
+            add(IntegrityCheck(
+                name = "Verified boot",
+                detail = "vbmeta=${d.vbmetaState} verified=${d.verifiedBootState} locked=${d.flashLocked}",
+                passed = d.vbmetaState == "green" && d.verifiedBootState == "green" && d.flashLocked == "1",
                 weight = 1,
             ))
         }
