@@ -117,5 +117,3 @@ message ModuleMessageAck {
   astra.common.v1.StatusCode status = 2;
   bytes response_payload = 3;
 }
-
----

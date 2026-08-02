@@ -223,5 +223,3 @@ message ModuleStatus {
   int64 evaluation_count = 4;
   astra.common.v1.AstraTimestamp last_active = 5;
 }
-
----

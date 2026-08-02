@@ -148,5 +148,3 @@ enum AuditLevel {
   AUDIT_LEVEL_FULL_CONTEXT = 3;   // 记录完整上下文
   AUDIT_LEVEL_PAYLOAD = 4;        // 记录载荷（调试用）
 }
-
----
