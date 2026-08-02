@@ -25,6 +25,10 @@ indent_size = 4
 [*.{json,yaml,yml,toml}]
 indent_size = 2
 
+# editorconfig-checker config (JSON format, 2-space indent)
+[.ecrc]
+indent_size = 2
+
 # Protobuf
 [*.proto]
 indent_size = 2

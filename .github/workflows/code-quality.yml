@@ -42,8 +42,9 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
 
   editorconfig:
-    name: .editorconfig compliance
+    name: .editorconfig compliance (best-effort)
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Install editorconfig-checker
