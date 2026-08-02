@@ -1,0 +1,147 @@
+# ═══════════════════════════════════════════════════════
+#  Zygisk Spoof Module — NDK Cross-Compile + Magisk Zip
+#
+#  Builds the AstraVeil Zygisk spoof module (arm64-v8a + armeabi-v7a)
+#  and packages it as a flashable Magisk module zip.
+#
+#  Output: AstraVeil-Spoof-<short-sha>.zip
+# ═══════════════════════════════════════════════════════
+name: Zygisk Module Build
+
+on:
+  push:
+    paths:
+      - 'module-spoof/**'
+      - '.github/workflows/zygisk-module.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Zygisk spoof module
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27
+          add-to-path: false
+
+      - name: Install CMake + Ninja
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
+
+      - name: Clone Dobby (inline hook library)
+        run: |
+          # Dobby is referenced by CMakeLists.txt as external/Dobby
+          # but is not committed to the repo (it's a large submodule).
+          # Clone it fresh on each build.
+          git clone --depth=1 https://github.com/jmpews/Dobby \
+            module-spoof/jni/external/Dobby
+          echo "Dobby cloned:"
+          ls module-spoof/jni/external/Dobby/
+
+      - name: Verify vendored headers
+        run: |
+          echo "=== Vendored headers ==="
+          ls -la module-spoof/jni/include/
+          # zygisk.hpp and json.hpp should already be vendored
+          test -f module-spoof/jni/include/zygisk.hpp || {
+            echo "ERROR: zygisk.hpp missing"
+            exit 1
+          }
+          test -f module-spoof/jni/include/json.hpp || {
+            echo "ERROR: json.hpp missing"
+            exit 1
+          }
+          echo "All vendored headers present"
+
+      - name: Build arm64-v8a
+        run: |
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          CMAKE_TOOLCHAIN="$NDK/build/cmake/android.toolchain.cmake"
+
+          cd module-spoof
+          rm -rf build/arm64-v8a
+          mkdir -p build/arm64-v8a
+
+          cmake -B build/arm64-v8a -S jni \
+            -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-26 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -GNinja
+
+          cmake --build build/arm64-v8a -j$(nproc)
+
+          mkdir -p module/zygisk
+          cp build/arm64-v8a/libastraveil_spoof.so module/zygisk/arm64-v8a.so
+          echo "=== arm64-v8a built ==="
+          file module/zygisk/arm64-v8a.so
+
+      - name: Build armeabi-v7a
+        run: |
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          CMAKE_TOOLCHAIN="$NDK/build/cmake/android.toolchain.cmake"
+
+          cd module-spoof
+          rm -rf build/armeabi-v7a
+          mkdir -p build/armeabi-v7a
+
+          cmake -B build/armeabi-v7a -S jni \
+            -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN" \
+            -DANDROID_ABI=armeabi-v7a \
+            -DANDROID_PLATFORM=android-26 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -GNinja
+
+          cmake --build build/armeabi-v7a -j$(nproc)
+
+          cp build/armeabi-v7a/libastraveil_spoof.so module/zygisk/armeabi-v7a.so
+          echo "=== armeabi-v7a built ==="
+          file module/zygisk/armeabi-v7a.so
+
+      - name: Package Magisk module zip
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          ZIP_NAME="AstraVeil-Spoof-${SHORT_SHA}.zip"
+
+          cd module-spoof/module
+
+          echo "=== Module contents ==="
+          find . -type f | sort
+          echo ""
+          echo "=== zygisk dir ==="
+          ls -la zygisk/
+
+          # Ensure module.prop exists
+          test -f module.prop || {
+            echo "ERROR: module.prop missing"
+            exit 1
+          }
+          cat module.prop
+
+          # Package (Magisk zips must not have top-level directory)
+          zip -r9 "../../${ZIP_NAME}" . -x '*.DS_Store' -x '*/.*'
+          cd ../..
+
+          echo ""
+          echo "=== Final package ==="
+          ls -la "${ZIP_NAME}"
+          unzip -l "${ZIP_NAME}"
+
+          echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AstraVeil-Zygisk-Spoof
+          path: ${{ env.ZIP_NAME }}
+          if-no-files-found: error
+          retention-days: 90

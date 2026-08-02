@@ -1,0 +1,79 @@
+# ═══════════════════════════════════════════════════════
+#  LSPosed Spoof Module — Android APK Build
+#
+#  Builds the AstraVeil LSPosed module APK (Xposed hooks for
+#  device identity spoofing + environment shield).
+#
+#  Output: AstraVeil-LSPosed-<short-sha>.apk
+# ═══════════════════════════════════════════════════════
+name: LSPosed Module Build
+
+on:
+  push:
+    paths:
+      - 'xposed-spoof/**'
+      - 'settings.gradle.kts'
+      - '.github/workflows/lsposed-module.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build LSPosed module APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify xposed-spoof is included
+        run: |
+          if ! grep -q 'include(":xposed-spoof")' settings.gradle.kts; then
+            echo "ERROR: xposed-spoof not included in settings.gradle.kts"
+            exit 1
+          fi
+          echo "xposed-spoof is included in settings.gradle.kts"
+
+      - name: Build debug APK
+        run: |
+          chmod +x ./gradlew
+          # Build debug APK (release requires signing config we don't have
+          # for the xposed module; debug is sufficient for LSPosed loading)
+          ./gradlew :xposed-spoof:assembleDebug --no-daemon --stacktrace
+
+      - name: Verify APK
+        run: |
+          echo "=== APK built ==="
+          find xposed-spoof/build/outputs/apk -name "*.apk" -exec ls -la {} \;
+          find xposed-spoof/build/outputs/apk -name "*.apk" -exec file {} \;
+
+      - name: Rename APK
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          APK=$(find xposed-spoof/build/outputs/apk -name "*.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "ERROR: No APK found"
+            exit 1
+          fi
+          cp "$APK" "AstraVeil-LSPosed-${SHORT_SHA}.apk"
+          echo "Renamed to: AstraVeil-LSPosed-${SHORT_SHA}.apk"
+          ls -la "AstraVeil-LSPosed-${SHORT_SHA}.apk"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AstraVeil-LSPosed-Module
+          path: AstraVeil-LSPosed-*.apk
+          if-no-files-found: error
+          retention-days: 90

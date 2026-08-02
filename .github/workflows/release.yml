@@ -1,3 +1,14 @@
+# ═══════════════════════════════════════════════════════
+#  Full Release — Tag-triggered, builds all components
+#
+#  Trigger: git tag v*
+#  Output: GitHub Release with all artifacts:
+#    - AstraVeil App APK (signed)
+#    - astra_root.ko (4 GKI versions)
+#    - astra_su + test_root (native tools)
+#    - AstraVeil-Spoof zip (Zygisk module)
+#    - AstraVeil-LSPosed apk
+# ═══════════════════════════════════════════════════════
 name: Release
 
 on:
@@ -5,11 +16,14 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  # ── Job 1: Android App APK (signed) ──
+  app:
+    name: Build App APK
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +46,6 @@ jobs:
           fi
           echo "$ASTRAVEIL_KEYSTORE_BASE64" | base64 -d > app/astraveil.jks
           echo "Keystore decoded: $(wc -c < app/astraveil.jks) bytes"
-          # Verify it's a valid keystore
           keytool -list -keystore app/astraveil.jks \
             -storepass "${{ secrets.ASTRAVEIL_KEYSTORE_PASSWORD }}" \
             -alias "${{ secrets.ASTRAVEIL_KEY_ALIAS }}" 2>&1 | head -5
@@ -50,40 +63,146 @@ jobs:
           if [ -z "$APK_PATH" ]; then echo "No APK found"; exit 1; fi
           echo "APK found: $APK_PATH"
           APK_NAME=$(basename "$APK_PATH")
-          echo "APK filename: $APK_NAME"
           if [[ "$APK_NAME" == *unsigned* ]]; then
             echo "ERROR: APK is UNSIGNED — signing failed"
-            echo "Checking signing config..."
-            grep -A10 "signingConfig" app/build.gradle.kts || true
             exit 1
           fi
           echo "OK: APK is signed"
-          # Verify signature with apksigner (if available)
-          APKSIGNER=$(find $ANDROID_HOME -name apksigner 2>/dev/null | head -1)
-          if [ -n "$APKSIGNER" ]; then
-            "$APKSIGNER" verify --print-certs "$APK_PATH" 2>&1 | head -10
-          fi
 
       - name: Generate SHA-256 checksum
         run: |
           APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-          if [ -z "$APK_PATH" ]; then echo "No APK found"; exit 1; fi
-          echo "APK found: $APK_PATH"
           sha256sum "$APK_PATH" > "$APK_PATH.sha256"
           cat "$APK_PATH.sha256"
 
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
+      - name: Rename APK
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" ! -name "*.sha256" | head -1)
+          cp "$APK_PATH" "AstraVeil-${{ github.ref_name }}.apk"
+          cp "$APK_PATH.sha256" "AstraVeil-${{ github.ref_name }}.apk.sha256"
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: astraveil-release-apk
-          path: app/build/outputs/apk/release/*.apk
+          name: release-app
+          path: |
+            AstraVeil-${{ github.ref_name }}.apk
+            AstraVeil-${{ github.ref_name }}.apk.sha256
+
+  # ── Job 2: Kernel modules (all GKI versions) ──
+  kernel:
+    name: Build kernel modules
+    uses: ./.github/workflows/kernel.yml
+
+  # ── Job 3: Zygisk spoof module ──
+  zygisk:
+    name: Build Zygisk module
+    uses: ./.github/workflows/zygisk-module.yml
+
+  # ── Job 4: LSPosed spoof module ──
+  lsposed:
+    name: Build LSPosed module
+    uses: ./.github/workflows/lsposed-module.yml
+
+  # ── Job 5: Collect all artifacts + create release ──
+  release:
+    name: Create GitHub Release
+    needs: [app, kernel, zygisk, lsposed]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Organize release files
+        run: |
+          mkdir -p release/
+          echo "=== Downloaded artifacts ==="
+          find artifacts/ -type f | sort
+
+          # App APK
+          find artifacts/release-app -name "*.apk" -exec cp {} release/ \; 2>/dev/null || true
+          find artifacts/release-app -name "*.sha256" -exec cp {} release/ \; 2>/dev/null || true
+
+          # Kernel modules (4 GKI versions)
+          find artifacts/astra_root-android* -name "*.ko" | while read ko; do
+            gki=$(basename "$(dirname "$ko")")
+            cp "$ko" "release/astra_root-${gki}.ko"
+          done 2>/dev/null || true
+
+          # Native tools
+          find artifacts/astra-native-tools -type f -exec cp {} release/ \; 2>/dev/null || true
+
+          # Zygisk module
+          find artifacts/AstraVeil-Zygisk-Spoof -name "*.zip" -exec cp {} release/ \; 2>/dev/null || true
+
+          # LSPosed module
+          find artifacts/AstraVeil-LSPosed-Module -name "*.apk" -exec cp {} release/ \; 2>/dev/null || true
+
+          echo ""
+          echo "=== Final release contents ==="
+          ls -la release/
+          echo ""
+          echo "=== Generating checksums ==="
+          cd release/
+          for f in *; do
+            if [ -f "$f" ] && [[ "$f" != *.sha256 ]]; then
+              sha256sum "$f" > "$f.sha256"
+            fi
+          done
+          ls -la
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: AstraVeil ${{ github.ref_name }}
-          body_path: release/release_notes.md
-          files: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/release/*.apk.sha256
-          prerelease: false
+          body: |
+            # AstraVeil ${{ github.ref_name }}
+
+            ## Components
+
+            | File | Description |
+            |------|-------------|
+            | `AstraVeil-*.apk` | Manager App (signed) |
+            | `astra_root-android12-5.10.ko` | Kernel module (Android 12 / 5.10) |
+            | `astra_root-android13-5.15.ko` | Kernel module (Android 13 / 5.15) |
+            | `astra_root-android14-6.1.ko` | Kernel module (Android 14 / 6.1) |
+            | `astra_root-android15-6.6.ko` | Kernel module (Android 15 / 6.6) |
+            | `astra_su` | su binary (ARM64, static) |
+            | `test_root` | Privilege test tool (ARM64, static) |
+            | `AstraVeil-Spoof-*.zip` | Zygisk spoof module (Magisk flashable) |
+            | `AstraVeil-LSPosed-*.apk` | LSPosed spoof module |
+
+            ## Install (with existing Magisk)
+
+            ```bash
+            # Push kernel module + su
+            adb push astra_root-android14-6.1.ko /data/local/tmp/astra_root.ko
+            adb push astra_su /data/local/tmp/
+
+            # Load module
+            adb shell su -c "insmod /data/local/tmp/astra_root.ko"
+
+            # Test
+            adb shell su -c "/data/local/tmp/astra_su -c id"
+            # Expected: uid=0(root)
+            ```
+
+            ## Install Zygisk spoof module
+
+            ```bash
+            # Flash via Magisk
+            adb push AstraVeil-Spoof-*.zip /data/local/tmp/
+            # Magisk Manager → Modules → Install from storage → select zip
+            ```
+
+            ## Checksums
+
+            Each file has a corresponding `.sha256` checksum file.
+          files: release/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}

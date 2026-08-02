@@ -17,6 +17,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven("https://api.xposed.info/")
     }
 }
 
@@ -39,6 +40,9 @@ include(":modules")
 
 // Native C++ JNI bridge module
 include(":native")
+
+// LSPosed spoof module (Xposed framework hooks for device identity spoofing)
+include(":xposed-spoof")
 
 // Protobuf protocol definitions
 include(":proto")
