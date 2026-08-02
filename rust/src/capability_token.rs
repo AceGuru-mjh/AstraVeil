@@ -104,11 +104,14 @@ impl TokenAuthority {
             .unwrap_or_default()
             .as_secs();
 
-        // Generate a unique nonce from time + module_id hash.
+        // Generate a unique nonce from time + module_id hash + counter.
         let nonce = {
             use sha2::Digest;
+            static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let count = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             let mut h = sha2::Sha256::new();
             h.update(now.to_le_bytes());
+            h.update(count.to_le_bytes());
             h.update(module_id.as_bytes());
             h.update(capability.as_bytes());
             let hash = h.finalize();
