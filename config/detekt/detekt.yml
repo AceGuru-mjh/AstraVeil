@@ -30,9 +30,6 @@ complexity:
     active: true
     thresholdInFiles: 30
     thresholdInClasses: 25
-  TooManyProperties:
-    active: true
-    threshold: 20
   LargeClass:
     active: true
     threshold: 200
