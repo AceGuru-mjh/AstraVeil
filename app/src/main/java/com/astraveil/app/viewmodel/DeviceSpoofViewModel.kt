@@ -169,13 +169,7 @@ class DeviceSpoofViewModel : ViewModel() {
         lastContext = context
         viewModelScope.launch {
             try {
-                val info = runCatching {
-                    ProviderRegistry.detectActive()
-                }.getOrNull()
-
-                val provider = info?.let {
-                    ProviderRegistry.byId(it.providerName)
-                }
+                val provider = ProviderRegistry.activeProvider()
 
                 if (provider == null || !provider.available()) {
                     _uiState.value = _uiState.value.copy(
@@ -216,13 +210,7 @@ class DeviceSpoofViewModel : ViewModel() {
                 isApplying = true, errorMessage = null, successMessage = null,
             )
             try {
-                val info = runCatching {
-                    ProviderRegistry.detectActive()
-                }.getOrNull()
-
-                val provider = info?.let {
-                    ProviderRegistry.byId(it.providerName)
-                } ?: run {
+                val provider = ProviderRegistry.activeProvider() ?: run {
                     _uiState.value = _uiState.value.copy(
                         isApplying = false,
                         errorMessage = "No root backend detected.",
@@ -282,12 +270,7 @@ class DeviceSpoofViewModel : ViewModel() {
                 isApplying = true, successMessage = null,
             )
             try {
-                val info = runCatching {
-                    ProviderRegistry.detectActive()
-                }.getOrNull()
-                val provider = info?.let {
-                    ProviderRegistry.byId(it.providerName)
-                } ?: run {
+                val provider = ProviderRegistry.activeProvider() ?: run {
                     _uiState.value = _uiState.value.copy(
                         isApplying = false,
                         errorMessage = "No root backend detected.",
