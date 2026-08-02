@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeChild
 
 /**
@@ -40,7 +41,7 @@ import dev.chrisbanes.haze.hazeChild
 val AstraGlassStyle: HazeStyle
     @Composable
     get() = HazeStyle(
-        tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
         blurRadius = 28.dp,
     )
 
