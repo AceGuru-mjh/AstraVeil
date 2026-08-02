@@ -33,3 +33,8 @@ sdk/build/
 *.iml
 local.properties
 .gradle/
+
+# Python (tools/ validators)
+__pycache__/
+*.pyc
+

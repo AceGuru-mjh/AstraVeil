@@ -222,11 +222,20 @@ Download from the [Releases page](https://github.com/AceGuru-mjh/AstraVeil/relea
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Threat Model](docs/THREAT_MODEL.md)
-- [Module Developer Guide](docs/MODULE_DEVELOPER_GUIDE.md)
-- [AstraHub Submission](docs/ASTRAHUB_SUBMISSION.md)
-- [Roadmap](docs/ROADMAP.md)
+| 文档 | 内容 |
+|------|------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 系统架构、模块依赖图 (Mermaid)、构建系统、安全模型 |
+| [docs/MODULE_DEPENDENCY_GRAPH.md](docs/MODULE_DEPENDENCY_GRAPH.md) | Gradle 模块 DAG、依赖方向规则 |
+| [docs/MODULE_CONTRACTS.md](docs/MODULE_CONTRACTS.md) | 模块间 API 契约、禁止事项 |
+| [docs/DATA_FLOW.md](docs/DATA_FLOW.md) | 数据流时序图、IPC 协议、错误处理 |
+| [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | STRIDE 分析、攻击树 |
+| [docs/MODULE_DEVELOPER_GUIDE.md](docs/MODULE_DEVELOPER_GUIDE.md) | .avm 格式、签名、SDK |
+| [docs/ASTRAHUB_SCHEMA.md](docs/ASTRAHUB_SCHEMA.md) | AstraHub 索引 Schema |
+| [docs/ASTRAHUB_SUBMISSION.md](docs/ASTRAHUB_SUBMISSION.md) | 模块提交指南 |
+| [docs/SECURITY.md](docs/SECURITY.md) | 漏洞报告策略 |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | 路线图 |
+| [native/RUST_BUILD.md](native/RUST_BUILD.md) | Rust 构建集成、降级策略 |
+| [proto/README.md](proto/README.md) | Protobuf 协议定义 |
 
 ---
 

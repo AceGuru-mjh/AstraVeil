@@ -30,4 +30,6 @@ dependencies {
     implementation(project(":core"))
     // AstraClient references ProviderRegistry + ProviderExecResult from :providers.
     implementation(project(":providers"))
+    // P3: Protobuf protocol definitions — exposed to SDK consumers via api().
+    api(project(":proto"))
 }

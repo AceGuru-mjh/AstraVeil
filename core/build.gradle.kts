@@ -70,6 +70,9 @@ android {
 }
 
 dependencies {
+    // P3: Protobuf protocol definitions — exposed to consumers via api().
+    api(project(":proto"))
+
     // AndroidX core utilities (Context, BuildCompat, etc.).
     implementation(libs.androidx.core.ktx)
 
@@ -83,5 +86,5 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
-    testImplementation("org.jetbrains.kotlin:kotlin-test:2.0.21")
+    testImplementation(libs.kotlin.test)
 }

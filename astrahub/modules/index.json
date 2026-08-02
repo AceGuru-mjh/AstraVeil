@@ -51,7 +51,12 @@
         "verified": true
       },
       "category": "network",
-      "tags": ["firewall", "ebpf", "network", "filter"],
+      "tags": [
+        "firewall",
+        "ebpf",
+        "network",
+        "filter"
+      ],
       "icon_url": "icons/com.astraveil.module.firewall.png",
       "license": "Apache-2.0",
       "source_url": "https://github.com/AceGuru-mjh/AstraVeil/tree/main/modules/firewall",
@@ -59,8 +64,14 @@
       "max_sdk_version": 35,
       "min_daemon_version": "1.0.0",
       "min_app_version": "1.0.0",
-      "required_capabilities": ["network.filter", "ebpf.load"],
-      "permissions": ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"],
+      "required_capabilities": [
+        "network.filter",
+        "ebpf.load"
+      ],
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
       "dependencies": [],
       "package": {
         "url": "com.astraveil.module.firewall/1.2.0/module.astra",
@@ -120,14 +131,23 @@
         "verified": true
       },
       "category": "privacy",
-      "tags": ["permission", "privacy", "automation"],
+      "tags": [
+        "permission",
+        "privacy",
+        "automation"
+      ],
       "license": "Apache-2.0",
       "min_sdk_version": 26,
       "max_sdk_version": 35,
       "min_daemon_version": "1.0.0",
       "min_app_version": "1.0.0",
-      "required_capabilities": ["permission.grant", "permission.revoke"],
-      "permissions": ["android.permission.GRANT_RUNTIME_PERMISSIONS"],
+      "required_capabilities": [
+        "permission.grant",
+        "permission.revoke"
+      ],
+      "permissions": [
+        "android.permission.GRANT_RUNTIME_PERMISSIONS"
+      ],
       "dependencies": [],
       "package": {
         "url": "com.astraveil.module.permission/1.0.3/module.astra",
@@ -169,13 +189,21 @@
         "verified": true
       },
       "category": "system",
-      "tags": ["audit", "logging", "security", "compliance"],
+      "tags": [
+        "audit",
+        "logging",
+        "security",
+        "compliance"
+      ],
       "license": "Apache-2.0",
       "min_sdk_version": 26,
       "max_sdk_version": 35,
       "min_daemon_version": "1.0.0",
       "min_app_version": "1.0.0",
-      "required_capabilities": ["audit.write", "file.write.sandbox"],
+      "required_capabilities": [
+        "audit.write",
+        "file.write.sandbox"
+      ],
       "permissions": [],
       "dependencies": [],
       "package": {

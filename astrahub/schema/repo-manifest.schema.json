@@ -4,7 +4,11 @@
   "title": "AstraHub Repository Manifest",
   "description": "仓库级清单，定义仓库元数据和信任锚。",
   "type": "object",
-  "required": ["manifest_version", "repository_id", "trust_anchors"],
+  "required": [
+    "manifest_version",
+    "repository_id",
+    "trust_anchors"
+  ],
   "additionalProperties": false,
   "properties": {
     "manifest_version": {
@@ -28,7 +32,11 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["key_id", "algorithm", "public_key"],
+        "required": [
+          "key_id",
+          "algorithm",
+          "public_key"
+        ],
         "properties": {
           "key_id": {
             "type": "string",
@@ -36,7 +44,10 @@
           },
           "algorithm": {
             "type": "string",
-            "enum": ["ed25519", "rsa-pss-sha256"]
+            "enum": [
+              "ed25519",
+              "rsa-pss-sha256"
+            ]
           },
           "public_key": {
             "type": "string",
@@ -61,15 +72,31 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["path", "checksum"],
+        "required": [
+          "path",
+          "checksum"
+        ],
         "properties": {
-          "path": { "type": "string" },
+          "path": {
+            "type": "string"
+          },
           "checksum": {
             "type": "object",
-            "required": ["algorithm", "value"],
+            "required": [
+              "algorithm",
+              "value"
+            ],
             "properties": {
-              "algorithm": { "type": "string", "enum": ["sha256", "blake3"] },
-              "value": { "type": "string" }
+              "algorithm": {
+                "type": "string",
+                "enum": [
+                  "sha256",
+                  "blake3"
+                ]
+              },
+              "value": {
+                "type": "string"
+              }
             }
           }
         }

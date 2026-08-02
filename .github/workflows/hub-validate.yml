@@ -1,0 +1,81 @@
+name: AstraHub Index Validation
+
+on:
+  pull_request:
+    paths:
+      - 'astrahub/**'
+      - 'tools/validate-hub.py'
+      - 'tools/validate-hub.sh'
+  push:
+    branches: [main]
+    paths:
+      - 'astrahub/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install jsonschema semver
+
+      - name: Validate index (strict)
+        run: python3 tools/validate-hub.py --all --strict
+
+      - name: Verify JSON formatting
+        run: |
+          python3 -c "
+          import json, sys, pathlib
+          errors = []
+          for f in pathlib.Path('astrahub').rglob('*.json'):
+              with open(f) as fh:
+                  data = json.load(fh)
+              formatted = json.dumps(data, indent=2, ensure_ascii=False) + '\n'
+              with open(f) as fh:
+                  original = fh.read()
+              if original != formatted:
+                  errors.append(str(f))
+          if errors:
+              print('FORMAT ERRORS:')
+              for e in errors:
+                  print(f'  {e}')
+              sys.exit(1)
+          print('All JSON files properly formatted')
+          "
+
+      - name: Check duplicate module IDs
+        run: |
+          python3 -c "
+          import json
+          with open('astrahub/modules/index.json') as f:
+              data = json.load(f)
+          ids = [m['module_id'] for m in data.get('modules', [])]
+          dupes = set(x for x in ids if ids.count(x) > 1)
+          if dupes:
+              print(f'DUPLICATE module_ids: {dupes}')
+              exit(1)
+          print(f'OK: {len(ids)} unique modules')
+          "
+
+      - name: Validate schema files are valid JSON Schema
+        run: |
+          python3 -c "
+          import json, pathlib
+          from jsonschema import Draft7Validator
+          for f in pathlib.Path('astrahub/schema').glob('*.schema.json'):
+              with open(f) as fh:
+                  schema = json.load(fh)
+              Draft7Validator.check_schema(schema)
+              print(f'  ✓ {f.name}')
+          print('All schemas valid')
+          "

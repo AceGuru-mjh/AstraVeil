@@ -48,16 +48,28 @@
     },
     "entry_point": {
       "type": "object",
-      "required": ["type", "path"],
+      "required": [
+        "type",
+        "path"
+      ],
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["native", "dex", "script", "wasm"]
+          "enum": [
+            "native",
+            "dex",
+            "script",
+            "wasm"
+          ]
         },
         "path": {
           "type": "string",
           "description": "包内相对路径",
-          "examples": ["lib/arm64-v8a/libmodule.so", "classes.dex", "init.sh"]
+          "examples": [
+            "lib/arm64-v8a/libmodule.so",
+            "classes.dex",
+            "init.sh"
+          ]
         },
         "init_function": {
           "type": "string",
@@ -76,26 +88,54 @@
         "type": "string"
       },
       "description": "模块请求的权限列表",
-      "examples": [["network.filter", "file.read.sandbox", "process.monitor"]]
+      "examples": [
+        [
+          "network.filter",
+          "file.read.sandbox",
+          "process.monitor"
+        ]
+      ]
     },
     "resource_quota": {
       "type": "object",
       "properties": {
-        "memory_bytes": { "type": "integer", "minimum": 0 },
-        "cpu_millicores": { "type": "integer", "minimum": 0 },
-        "disk_bytes": { "type": "integer", "minimum": 0 },
-        "max_threads": { "type": "integer", "minimum": 1 },
-        "max_fds": { "type": "integer", "minimum": 1 }
+        "memory_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cpu_millicores": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "disk_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_threads": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_fds": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "dependencies": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["module_id", "min_version"],
+        "required": [
+          "module_id",
+          "min_version"
+        ],
         "properties": {
-          "module_id": { "type": "string" },
-          "min_version": { "type": "string" }
+          "module_id": {
+            "type": "string"
+          },
+          "min_version": {
+            "type": "string"
+          }
         }
       }
     },
@@ -107,18 +147,33 @@
       "type": "object",
       "description": "生命周期钩子脚本（包内相对路径）",
       "properties": {
-        "pre_install": { "type": "string" },
-        "post_install": { "type": "string" },
-        "pre_uninstall": { "type": "string" },
-        "post_uninstall": { "type": "string" },
-        "on_update": { "type": "string" }
+        "pre_install": {
+          "type": "string"
+        },
+        "post_install": {
+          "type": "string"
+        },
+        "pre_uninstall": {
+          "type": "string"
+        },
+        "post_uninstall": {
+          "type": "string"
+        },
+        "on_update": {
+          "type": "string"
+        }
       }
     },
     "supported_abis": {
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["arm64-v8a", "x86_64", "armeabi-v7a", "x86"]
+        "enum": [
+          "arm64-v8a",
+          "x86_64",
+          "armeabi-v7a",
+          "x86"
+        ]
       },
       "description": "支持的 ABI（native 模块必填）"
     },

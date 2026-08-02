@@ -133,6 +133,33 @@ endif()
 # task). When that lands, link `libprotobuf-lite` here and switch the handler
 # in `main.cpp` to decode `astra.Request` instead of the manual framing.
 
+# ---- P3: Protobuf IPC 集成（可选，缺失时降为 JSON） -----------------------
+# 当 protobuf-lite 可用时，daemon 可以使用 protobuf 编解码 IPC 消息。
+# 当前 JSON 编解码 (json_codec.cpp) 仍然是默认路径。
+# Protobuf 路径通过 ASTRA_HAVE_PROTOBUF 编译定义启用。
+option(ASTRA_USE_PROTOBUF "Enable protobuf IPC (requires protoc + libprotobuf-lite)" OFF)
+
+if(ASTRA_USE_PROTOBUF)
+    find_package(Protobuf QUIET)
+    if(Protobuf_FOUND)
+        add_subdirectory(proto)
+        if(ASTRA_DAEMON_HAVE_PROTOBUF)
+            target_link_libraries(astrad PRIVATE astra_proto)
+            target_compile_definitions(astrad PRIVATE ASTRA_HAVE_PROTOBUF=1)
+            message(STATUS "[AstraVeil] Daemon IPC: protobuf enabled")
+        else()
+            target_compile_definitions(astrad PRIVATE ASTRA_HAVE_PROTOBUF=0)
+            message(STATUS "[AstraVeil] Daemon IPC: JSON fallback (protoc not functional)")
+        endif()
+    else()
+        target_compile_definitions(astrad PRIVATE ASTRA_HAVE_PROTOBUF=0)
+        message(STATUS "[AstraVeil] Daemon IPC: JSON fallback (protobuf not found)")
+    endif()
+else()
+    target_compile_definitions(astrad PRIVATE ASTRA_HAVE_PROTOBUF=0)
+    message(STATUS "[AstraVeil] Daemon IPC: JSON (protobuf disabled by option)")
+endif()
+
 # PR-F: daemon tests
 option(ASTRA_BUILD_TESTS "Build daemon unit tests" ON)
 if(ASTRA_BUILD_TESTS)
