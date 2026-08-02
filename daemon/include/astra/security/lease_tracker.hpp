@@ -49,11 +49,8 @@ private:
 };
 
 } // namespace astra::security
-```
 
-**文件：`daemon/src/security/lease_tracker.cpp`**
 
-```cpp
 #include "astra/security/lease_tracker.hpp"
 #include "astra/logger/logger.hpp"
 
@@ -132,5 +129,4 @@ void LeaseTracker::sweep() {
 }
 
 } // namespace astra::security
-```
 

@@ -349,7 +349,3 @@ mod tests {
         assert!(verify_transcript(&parsed));
     }
 }
-```
-
----
-

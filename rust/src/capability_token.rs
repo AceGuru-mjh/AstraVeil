@@ -357,7 +357,3 @@ mod tests {
         assert_ne!(t1.nonce, t2.nonce);
     }
 }
-```
-
----
-
