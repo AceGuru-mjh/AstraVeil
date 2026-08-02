@@ -22,10 +22,12 @@
 //! fast and reproducible.
 
 pub mod attestation;
+pub mod capability_token;
 pub mod execution_policy;
 pub mod ffi;
 pub mod policy;
 pub mod sandbox;
+pub mod zk_capability;
 
 /// Static version string of the `astra_rust` crate.
 pub fn version() -> &'static str {
