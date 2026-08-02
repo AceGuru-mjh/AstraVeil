@@ -123,3 +123,15 @@ fun AstraGlassTopBar(
         )
     }
 }
+// ── Pill 导航栏专用增强样式 ──
+// 比标准 AstraGlassStyle 稍高 alpha + 稍大 blur，
+// 因为 pill 形状面积小，需要更强的对比度。
+val AstraNavPillGlassStyle: HazeStyle
+    @Composable
+    get() = HazeStyle(
+        tint = HazeTint(
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.62f),
+        ),
+        blurRadius = 32.dp,
+    )
+
