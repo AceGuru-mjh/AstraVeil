@@ -93,6 +93,8 @@ set(ASTRAD_SOURCES
     src/recovery/rollback_manager.cpp
     src/recovery/crash_guard.cpp
     src/update/update_manager.cpp
+    src/kernel_bridge.cpp
+    src/policy_to_kernel.cpp
 )
 
 add_executable(astrad ${ASTRAD_SOURCES})
