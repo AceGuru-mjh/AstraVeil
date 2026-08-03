@@ -109,7 +109,7 @@ jobs:
           retention-days: 30
 
   build-native-tools:
-    name: Build native tools (test_root + astra_su)
+    name: Build native tools (test_root + astra_su + p4_ipc_client)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -133,6 +133,13 @@ jobs:
           file astra_su
           ls -lh astra_su
 
+      - name: Build p4_ipc_client
+        run: |
+          cd native
+          aarch64-linux-gnu-gcc -static -O2 -o p4_ipc_client p4_ipc_client.c
+          file p4_ipc_client
+          ls -lh p4_ipc_client
+
       - name: Upload native tools
         uses: actions/upload-artifact@v4
         with:
@@ -140,5 +147,6 @@ jobs:
           path: |
             native/test_root
             native/astra_su
+            native/p4_ipc_client
           if-no-files-found: error
           retention-days: 30
