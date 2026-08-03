@@ -1,0 +1,132 @@
+# ═══════════════════════════════════════════════════════
+#  Daemon Cross-Compile — astrad for Android ARM64
+#
+#  Cross-compiles the AstraVeil daemon (astrad) for Android arm64-v8a
+#  using the Android NDK. The resulting binary runs as a system service
+#  on-device, providing structured IPC for capability/provider/module
+#  operations.
+#
+#  Output: astrad (ARM64 PIE executable, statically linked where possible)
+# ═══════════════════════════════════════════════════════
+name: Daemon Build
+
+on:
+  push:
+    paths:
+      - 'daemon/**'
+      - '.github/workflows/daemon.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build-arm64:
+    name: Build astrad (arm64-v8a)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27
+          add-to-path: false
+
+      - name: Install CMake + Ninja
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
+
+      - name: Verify daemon source
+        run: |
+          echo "=== Daemon source files ==="
+          find daemon/src -name "*.cpp" | wc -l
+          echo "cpp files found"
+          echo ""
+          echo "=== Third-party ==="
+          ls daemon/third_party/nlohmann/
+          echo ""
+          echo "=== CMakeLists exists ==="
+          test -f daemon/CMakeLists.txt && echo "OK" || exit 1
+
+      - name: Configure (ARM64 cross-compile)
+        run: |
+          NDK="${{ steps.setup-ndk.outputs.ndk-path }}"
+          CMAKE_TOOLCHAIN="$NDK/build/cmake/android.toolchain.cmake"
+
+          cmake -S daemon -B build-daemon \
+            -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-29 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DASTRA_BUILD_TESTS=OFF \
+            -GNinja
+
+      - name: Build astrad
+        run: |
+          cmake --build build-daemon -j$(nproc) 2>&1 | tail -30
+
+      - name: Verify binary
+        run: |
+          echo "=== astrad binary ==="
+          find build-daemon -name "astrad" -type f -exec ls -la {} \;
+          find build-daemon -name "astrad" -type f -exec file {} \;
+
+          # Verify it's ARM64
+          ASTRAD=$(find build-daemon -name "astrad" -type f | head -1)
+          if [ -z "$ASTRAD" ]; then
+            echo "ERROR: astrad binary not found"
+            exit 1
+          fi
+
+          file "$ASTRAD" | grep -q "ARM aarch64" || {
+            echo "ERROR: astrad is not ARM64"
+            file "$ASTRAD"
+            exit 1
+          }
+          echo "OK: astrad is ARM64 ELF"
+
+          # Check it's PIE (position-independent executable)
+          file "$ASTRAD" | grep -q "PIE executable" && echo "OK: PIE executable" || echo "WARN: not PIE"
+
+          # Size check
+          SIZE=$(stat -c%s "$ASTRAD")
+          echo "Size: $SIZE bytes ($((SIZE / 1024)) KB)"
+
+      - name: Rename for artifact
+        run: |
+          ASTRAD=$(find build-daemon -name "astrad" -type f | head -1)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          cp "$ASTRAD" "astrad-${SHORT_SHA}-arm64"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: astrad-arm64
+          path: astrad-*-arm64
+          if-no-files-found: error
+          retention-days: 30
+
+  # ── Also run host build + tests (existing native.yml covers this, but
+  #    include here for a single daemon CI view) ──
+  host-test:
+    name: Build + test (host x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+
+      - name: Configure daemon (host)
+        run: cmake -S daemon -B build-daemon -DCMAKE_CXX_STANDARD=20 -DASTRA_BUILD_TESTS=ON
+
+      - name: Build daemon + tests
+        run: cmake --build build-daemon -j$(nproc)
+
+      - name: Run daemon tests
+        run: ctest --test-dir build-daemon --output-on-failure

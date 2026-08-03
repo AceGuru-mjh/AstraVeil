@@ -103,10 +103,15 @@ jobs:
     name: Build LSPosed module
     uses: ./.github/workflows/lsposed-module.yml
 
-  # ── Job 5: Collect all artifacts + create release ──
+  # ── Job 5: Daemon (astrad) cross-compile ──
+  daemon:
+    name: Build daemon (astrad)
+    uses: ./.github/workflows/daemon.yml
+
+  # ── Job 6: Collect all artifacts + create release ──
   release:
     name: Create GitHub Release
-    needs: [app, kernel, zygisk, lsposed]
+    needs: [app, kernel, zygisk, lsposed, daemon]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -143,6 +148,9 @@ jobs:
           # LSPosed module
           find artifacts/AstraVeil-LSPosed-Module -name "*.apk" -exec cp {} release/ \; 2>/dev/null || true
 
+          # Daemon binary (astrad ARM64)
+          find artifacts/astrad-arm64 -name "astrad*" -exec cp {} release/astrad-arm64 \; 2>/dev/null || true
+
           echo ""
           echo "=== Final release contents ==="
           ls -la release/
@@ -174,6 +182,7 @@ jobs:
             | `astra_root-android15-6.6.ko` | Kernel module (Android 15 / 6.6) |
             | `astra_su` | su binary (ARM64, static) |
             | `test_root` | Privilege test tool (ARM64, static) |
+            | `astrad-arm64` | Daemon binary (ARM64 PIE) |
             | `AstraVeil-Spoof-*.zip` | Zygisk spoof module (Magisk flashable) |
             | `AstraVeil-LSPosed-*.apk` | LSPosed spoof module |
 
