@@ -101,7 +101,7 @@ jobs:
           modinfo kernel/astra_root.ko || true
 
       - name: Upload astra_root.ko
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: astra_root-${{ matrix.gki }}
           path: kernel/astra_root.ko
@@ -141,7 +141,7 @@ jobs:
           ls -lh p4_ipc_client
 
       - name: Upload native tools
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: astra-native-tools
           path: |

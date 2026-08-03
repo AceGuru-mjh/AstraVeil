@@ -17,7 +17,7 @@ jobs:
           clang++ -g -fsanitize=fuzzer,address daemon/fuzz/fuzz_frame_codec.cpp -o fuzz_frame
           ./fuzz_frame -max_total_time=60 -artifact_prefix=fuzz_artifacts/
         continue-on-error: true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with: { name: cpp-crashes, path: fuzz_artifacts/ }
   rust-fuzz:
