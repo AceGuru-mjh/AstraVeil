@@ -36,7 +36,7 @@ jobs:
             branch: android15-6.6
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install build dependencies
         run: |
@@ -112,7 +112,7 @@ jobs:
     name: Build native tools (test_root + astra_su + p4_ipc_client)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install aarch64 cross-compiler
         run: |
