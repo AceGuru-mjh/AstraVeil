@@ -1,38 +1,52 @@
+# Dependabot configuration — DISABLED
+#
+# All Dependabot ecosystems are disabled (open-pull-requests-limit: 0)
+# to prevent noise during AstraRoot (P1-P12) development.
+#
+# Major version bumps (Kotlin 2.4, AGP 9.x, activity-compose 1.13, etc.)
+# are breaking changes that risk compile failures and would block
+# kernel module / daemon / IPC work.
+#
+# All 16 open Dependabot PRs were closed on 2025-08-03.
+#
+# To re-enable after AstraRoot is feature-complete:
+#   - Set open-pull-requests-limit back to 10 (gradle/cargo) and 5 (github-actions)
+#   - Change schedule.interval to "monthly" to reduce noise
+#   - Review each PR carefully before merging (no major version bumps)
+#   - Pin breaking upgrades behind a feature branch
+
 version: 2
 updates:
-  # Gradle / Android dependencies
+  # Gradle / Android dependencies — DISABLED
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 10
+      interval: "monthly"
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
       - "gradle"
     commit-message:
       prefix: "deps(gradle)"
 
-  # GitHub Actions
+  # GitHub Actions — DISABLED
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
       - "ci"
     commit-message:
       prefix: "deps(ci)"
 
-  # Rust crate dependencies
+  # Rust crate dependencies — DISABLED
   - package-ecosystem: "cargo"
     directory: "/rust"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 10
+      interval: "monthly"
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
       - "rust"
