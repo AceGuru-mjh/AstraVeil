@@ -105,7 +105,7 @@ interface RootProvider {
 
     /**
      * List all installed modules.
-     * Reads /data/adb/modules/*/module.prop on all backends.
+     * Reads each module.prop under /data/adb/modules/ on all backends.
      */
     suspend fun listModules(): List<com.astraveil.core.modules.model.ModuleInfo> = emptyList()
 
@@ -118,13 +118,13 @@ interface RootProvider {
 
     /**
      * Remove a module by id.
-     * Universal: rm -rf /data/adb/modules/$id
+     * Universal: rm -rf the module directory under /data/adb/modules/.
      */
     suspend fun removeModule(id: String): Boolean = false
 
     /**
      * Enable or disable a module.
-     * Universal: touch/rm /data/adb/modules/$id/disable
+     * Universal: touch or remove the disable flag file in the module directory.
      */
     suspend fun setModuleState(id: String, enabled: Boolean): Boolean = false
 }
