@@ -94,6 +94,39 @@ interface RootProvider {
             error = if (r.success) null else r.stderr,
         )
     }
+
+    // ---------------------------------------------------------------- v3.1 API
+    // Module management. All three backends (Magisk, KernelSU, APatch)
+    // share the same /data/adb/modules/ directory structure and module.prop
+    // format. The difference is only in the install command.
+    //
+    // Default implementations return empty/false so providers that
+    // haven't been migrated yet don't break compilation.
+
+    /**
+     * List all installed modules.
+     * Reads /data/adb/modules/*/module.prop on all backends.
+     */
+    suspend fun listModules(): List<com.astraveil.core.modules.model.ModuleInfo> = emptyList()
+
+    /**
+     * Install a module from a zip file.
+     * Backend-specific: magisk --install-module / ksud module install / apd module install.
+     */
+    suspend fun installModule(zipFile: java.io.File): com.astraveil.core.modules.model.ModuleInfo =
+        throw UnsupportedOperationException("Module install not supported by $displayName")
+
+    /**
+     * Remove a module by id.
+     * Universal: rm -rf /data/adb/modules/$id
+     */
+    suspend fun removeModule(id: String): Boolean = false
+
+    /**
+     * Enable or disable a module.
+     * Universal: touch/rm /data/adb/modules/$id/disable
+     */
+    suspend fun setModuleState(id: String, enabled: Boolean): Boolean = false
 }
 
 /**

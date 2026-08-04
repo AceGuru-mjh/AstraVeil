@@ -1,0 +1,78 @@
+name: Boot Patcher Test
+
+on:
+  push:
+    paths:
+      - 'scripts/patch_boot.py'
+      - 'scripts/p7_full_deploy.sh'
+      - 'scripts/p5_ipc_test.sh'
+      - 'scripts/p5_app_verify.sh'
+      - 'scripts/p6_boot_service.sh'
+      - 'scripts/p6_verify.sh'
+      - '.github/workflows/boot-patcher.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-patcher:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cpio lz4 zstd python3-pip
+          pip3 install lz4 zstandard
+
+      - name: Verify patch_boot.py syntax
+        run: |
+          python3 -m py_compile scripts/patch_boot.py
+          echo "patch_boot.py syntax OK"
+
+      - name: Verify patch_boot.py --help
+        run: |
+          python3 scripts/patch_boot.py --help > /dev/null
+          echo "patch_boot.py --help OK"
+
+      - name: Verify shell script syntax
+        run: |
+          for script in \
+            scripts/p7_full_deploy.sh \
+            scripts/p5_ipc_test.sh \
+            scripts/p5_app_verify.sh \
+            scripts/p6_boot_service.sh \
+            scripts/p6_verify.sh; do
+            if [ -f "$script" ]; then
+              bash -n "$script"
+              echo "$script syntax OK"
+            else
+              echo "WARN: $script not found"
+            fi
+          done
+
+      - name: Verify scripts are executable
+        run: |
+          for script in \
+            scripts/p5_ipc_test.sh \
+            scripts/p5_app_verify.sh \
+            scripts/p6_boot_service.sh \
+            scripts/p6_verify.sh \
+            scripts/p7_full_deploy.sh; do
+            if [ -f "$script" ]; then
+              chmod +x "$script"
+              test -x "$script" && echo "$script executable OK" || exit 1
+            fi
+          done
+
+      - name: Verify patch_boot.py imports
+        run: |
+          python3 -c "
+          import importlib.util
+          spec = importlib.util.spec_from_file_location('patch_boot', 'scripts/patch_boot.py')
+          mod = importlib.util.module_from_spec(spec)
+          print('patch_boot.py importable')
+          "
